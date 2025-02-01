@@ -1,18 +1,25 @@
 // ============================================
-// ONYX - MMKV Storage Configuration
-// Stockage local ultra-rapide et sécurisé
+// ONYX - Storage Configuration
+// MMKV pour les builds natifs (APK)
 // ============================================
 
 import { MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 
+// ============================================
 // Instance MMKV principale
+// Stockage local rapide et sécurisé
+// ============================================
+
 export const storage = new MMKV({
   id: 'onyx-storage',
   encryptionKey: 'onyx-secure-key-2024',
 });
 
-// Adaptateur pour Zustand persist
+// ============================================
+// Adapter Zustand pour persistence
+// ============================================
+
 export const zustandStorage: StateStorage = {
   getItem: (name: string): string | null => {
     const value = storage.getString(name);
@@ -29,41 +36,14 @@ export const zustandStorage: StateStorage = {
 // ============================================
 // Helpers pour accès direct
 // ============================================
+
 export const mmkvHelpers = {
-  // String
-  getString: (key: string): string | undefined => storage.getString(key),
-  setString: (key: string, value: string): void => storage.set(key, value),
-  
-  // Number
-  getNumber: (key: string): number | undefined => storage.getNumber(key),
-  setNumber: (key: string, value: number): void => storage.set(key, value),
-  
-  // Boolean
-  getBoolean: (key: string): boolean | undefined => storage.getBoolean(key),
-  setBoolean: (key: string, value: boolean): void => storage.set(key, value),
-  
-  // Object (JSON)
-  getObject: <T>(key: string): T | undefined => {
-    const value = storage.getString(key);
-    if (value) {
-      try {
-        return JSON.parse(value) as T;
-      } catch {
-        return undefined;
-      }
-    }
-    return undefined;
-  },
-  setObject: <T>(key: string, value: T): void => {
-    storage.set(key, JSON.stringify(value));
-  },
-  
-  // Delete
-  delete: (key: string): void => storage.delete(key),
-  
-  // Clear all
-  clearAll: (): void => storage.clearAll(),
-  
-  // Get all keys
-  getAllKeys: (): string[] => storage.getAllKeys(),
+  getString: (key: string) => storage.getString(key),
+  setString: (key: string, value: string) => storage.set(key, value),
+  getNumber: (key: string) => storage.getNumber(key),
+  setNumber: (key: string, value: number) => storage.set(key, value),
+  getBoolean: (key: string) => storage.getBoolean(key),
+  setBoolean: (key: string, value: boolean) => storage.set(key, value),
+  delete: (key: string) => storage.delete(key),
+  clearAll: () => storage.clearAll(),
 };

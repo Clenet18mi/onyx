@@ -1,133 +1,177 @@
 # 🔨 Guide de Build APK - ONYX
 
-Ce guide t'explique comment créer un APK et mettre à jour ton application sans jamais perdre les données utilisateur.
+Guide complet pour créer ton APK et gérer les mises à jour.
+
+---
 
 ## 📋 Prérequis
 
-```bash
-# 1. Installer Node.js (v18+)
-# https://nodejs.org/
+### 1. Installer les outils
 
-# 2. Installer EAS CLI globalement
+```bash
+# Installer Node.js 18+ depuis https://nodejs.org/
+
+# Installer EAS CLI
 npm install -g eas-cli
 
-# 3. Créer un compte Expo (gratuit)
-# https://expo.dev/signup
+# Vérifier l'installation
+eas --version
+```
 
-# 4. Se connecter
+### 2. Créer un compte Expo
+
+1. Va sur https://expo.dev/signup
+2. Crée un compte gratuit
+3. Connecte-toi :
+
+```bash
 eas login
 ```
 
-## 🚀 Build APK (Première fois)
+---
 
-### Option 1 : Build dans le Cloud (Recommandé)
+## 🚀 Build APK - Étapes
+
+### Étape 1 : Installer les dépendances
 
 ```bash
-# Dans le dossier du projet
-cd /home/mclenet/Onyx
-
-# Installer les dépendances
+cd ~/Onyx
 npm install
+```
 
-# Configurer le projet (première fois uniquement)
+### Étape 2 : Configurer EAS (première fois uniquement)
+
+```bash
 eas build:configure
+```
 
-# Lancer le build APK
+Réponds aux questions :
+- Platform : Android
+- Accepte les valeurs par défaut
+
+### Étape 3 : Lancer le build
+
+```bash
+# Build APK de test/preview
 eas build --platform android --profile preview
 ```
 
-Le build prend ~15-20 minutes. Tu recevras un lien pour télécharger l'APK.
+### Étape 4 : Attendre et télécharger
 
-### Option 2 : Build Local (Plus rapide après config)
+- Le build prend **15-20 minutes**
+- Tu peux suivre la progression sur https://expo.dev
+- Une fois terminé, télécharge l'APK depuis le lien fourni
 
-```bash
-# Installer les outils Android
-# - Android Studio avec SDK 33+
-# - Java JDK 17
-
-# Build local
-eas build --platform android --profile preview --local
-```
-
-L'APK sera dans le dossier `build/`.
-
-## 📱 Installer l'APK
+### Étape 5 : Installer l'APK
 
 1. Transfère l'APK sur ton téléphone
-2. Active "Sources inconnues" dans les paramètres
+2. Active "Sources inconnues" dans Paramètres > Sécurité
 3. Installe l'APK
-4. Lance ONYX !
+4. Lance ONYX ! 🎉
 
 ---
 
-## 🔄 Mettre à Jour sans Perdre les Données
+## 📁 Fichiers de Configuration
 
-### Comment ça marche ?
+### app.json
 
-ONYX utilise **MMKV** pour stocker les données localement. Ces données sont stockées dans un espace privé de l'application qui **persiste entre les mises à jour** tant que :
-
-1. ✅ Tu installes une **mise à jour** (même package name)
-2. ✅ Tu ne **désinstalles** pas l'app
-3. ✅ Tu ne **vides** pas les données de l'app
-
-### Workflow de Mise à Jour
-
-```bash
-# 1. Fais tes modifications dans le code
-
-# 2. Incrémente la version dans app.json
-#    "version": "1.0.0" → "1.1.0"
-#    "android.versionCode": 1 → 2
-
-# 3. Si tu changes la structure des données, ajoute une migration
-#    (voir section Migrations ci-dessous)
-
-# 4. Build le nouvel APK
-eas build --platform android --profile preview
-
-# 5. Installe par-dessus l'ancienne version
-#    → Les données sont préservées !
+```json
+{
+  "expo": {
+    "name": "ONYX",
+    "slug": "onyx",
+    "version": "1.0.0",          // Version affichée
+    "android": {
+      "package": "com.onyx.finance",
+      "versionCode": 1           // INCRÉMENTER à chaque build
+    }
+  }
+}
 ```
 
-### ⚠️ Règles Importantes
+### eas.json
+
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"        // Génère un APK
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle" // Pour Play Store
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🔄 Mettre à Jour l'App
+
+### Workflow pour chaque mise à jour
+
+1. **Modifie** le code
+2. **Incrémente** la version dans `app.json` :
+   ```json
+   "version": "1.0.0" → "1.1.0"
+   "versionCode": 1 → 2
+   ```
+3. **Build** le nouvel APK :
+   ```bash
+   eas build --platform android --profile preview
+   ```
+4. **Installe** par-dessus l'ancienne version
+5. **Les données sont préservées !** ✅
+
+### Tableau des versions
+
+| Build | version | versionCode | Notes |
+|-------|---------|-------------|-------|
+| 1er   | 1.0.0   | 1           | Initial |
+| 2ème  | 1.1.0   | 2           | Nouvelles fonctionnalités |
+| 3ème  | 1.1.1   | 3           | Corrections de bugs |
+| 4ème  | 1.2.0   | 4           | Mise à jour majeure |
+
+---
+
+## 💾 Préserver les Données
+
+### Ce qui préserve les données
 
 | Action | Données |
 |--------|---------|
-| Installer mise à jour | ✅ Préservées |
-| Désinstaller l'app | ❌ Perdues |
-| Vider les données (Paramètres Android) | ❌ Perdues |
-| Changer le package name | ❌ Perdues |
+| ✅ Installer mise à jour (même package) | Préservées |
+| ✅ Fermer/rouvrir l'app | Préservées |
+| ❌ Désinstaller l'app | Perdues |
+| ❌ Vider les données (Paramètres Android) | Perdues |
+| ❌ Changer le package name | Perdues |
 
----
+### Système de migrations
 
-## 🔧 Système de Migrations
-
-Quand tu modifies la structure des données (ajouter un champ, renommer, etc.), tu dois créer une migration.
-
-### Exemple : Ajouter un champ "currency" aux comptes
+Si tu modifies la structure des données :
 
 1. **Ouvre** `utils/migrations.ts`
+2. **Incrémente** `CURRENT_DATA_VERSION`
+3. **Ajoute** une migration :
 
-2. **Incrémente** `CURRENT_DATA_VERSION` :
-```typescript
-export const CURRENT_DATA_VERSION = 2; // était 1
-```
-
-3. **Ajoute** la migration dans le tableau :
 ```typescript
 const migrations: Migration[] = [
   {
     version: 2,
-    name: 'Add currency field to accounts',
+    name: 'Add currency to accounts',
     up: () => {
-      const accountsData = storage.getString('onyx-accounts');
-      if (accountsData) {
-        const parsed = JSON.parse(accountsData);
-        const accounts = parsed.state.accounts.map((acc: any) => ({
+      const data = storage.getString('onyx-accounts');
+      if (data) {
+        const parsed = JSON.parse(data);
+        parsed.state.accounts = parsed.state.accounts.map((acc: any) => ({
           ...acc,
-          currency: acc.currency || 'EUR', // Valeur par défaut
+          currency: acc.currency || 'EUR',
         }));
-        parsed.state.accounts = accounts;
         storage.set('onyx-accounts', JSON.stringify(parsed));
       }
     },
@@ -135,99 +179,15 @@ const migrations: Migration[] = [
 ];
 ```
 
-4. **Mets à jour** les types dans `types/index.ts` :
-```typescript
-export interface Account {
-  // ... existant
-  currency: string; // Nouveau champ
-}
-```
-
-5. **Build** et installe la mise à jour
-
-Les utilisateurs existants auront automatiquement leurs données migrées !
-
 ---
 
-## 💾 Sauvegardes Automatiques
-
-ONYX crée automatiquement des sauvegardes :
-- Avant chaque migration
-- Les 3 dernières sauvegardes sont conservées
-
-### Restaurer manuellement (Debug)
-
-```typescript
-import { restoreBackup, exportAllData } from '@/utils/migrations';
-
-// Exporter toutes les données (pour debug)
-const jsonData = exportAllData();
-console.log(jsonData);
-
-// Restaurer la dernière sauvegarde
-restoreBackup();
-```
-
----
-
-## 📊 Versions et Changelog
-
-### app.json - Gestion des versions
-
-```json
-{
-  "expo": {
-    "version": "1.2.0",        // Version affichée (semver)
-    "android": {
-      "versionCode": 3         // DOIT être incrémenté à chaque build
-    }
-  }
-}
-```
-
-| Build | version | versionCode |
-|-------|---------|-------------|
-| 1er   | 1.0.0   | 1           |
-| 2ème  | 1.1.0   | 2           |
-| 3ème  | 1.2.0   | 3           |
-
----
-
-## 🐛 Troubleshooting
-
-### "App not installed"
-- Vérifie que le versionCode est supérieur à l'ancien
-- Vérifie que le package name est identique
-
-### Données perdues après mise à jour
-- As-tu changé le package name dans app.json ?
-- As-tu désinstallé l'app avant de réinstaller ?
-
-### Build échoue
-```bash
-# Nettoyer le cache
-npx expo start --clear
-eas build --clear-cache --platform android --profile preview
-```
-
----
-
-## 📁 Structure des Builds
-
-```
-eas.json
-├── development    # Pour développement avec Expo Go
-├── preview        # APK pour tests (ce qu'on utilise)
-└── production     # AAB pour Play Store
-```
-
-### Commandes Utiles
+## 🛠 Commandes Utiles
 
 ```bash
-# Build APK de test
+# Build APK preview
 eas build -p android --profile preview
 
-# Build pour Play Store (AAB)
+# Build AAB pour Play Store
 eas build -p android --profile production
 
 # Voir les builds en cours
@@ -235,22 +195,59 @@ eas build:list
 
 # Annuler un build
 eas build:cancel
+
+# Nettoyer le cache
+rm -rf node_modules/.cache .expo
+npm start -- --clear
 ```
 
 ---
 
-## ✅ Checklist Avant Chaque Release
+## 🐛 Résolution de Problèmes
 
-- [ ] Code testé localement
-- [ ] Version incrémentée dans app.json
-- [ ] versionCode incrémenté
-- [ ] Migration ajoutée si structure de données modifiée
-- [ ] CURRENT_DATA_VERSION mis à jour si migration ajoutée
-- [ ] Commit Git avec tag de version
-- [ ] Build APK
-- [ ] Test d'installation par-dessus ancienne version
-- [ ] Vérifier que les données sont préservées
+### "App not installed"
+- Vérifie que le `versionCode` est supérieur à l'ancien
+- Vérifie que le package name est identique
+
+### Build échoue
+```bash
+# Nettoyer et réessayer
+rm -rf node_modules
+npm install
+eas build --clear-cache -p android --profile preview
+```
+
+### Données perdues après mise à jour
+- As-tu changé le `package` dans app.json ?
+- As-tu désinstallé l'app avant de réinstaller ?
 
 ---
 
-Bonne continuation avec ONYX ! 🚀
+## ✅ Checklist Avant Release
+
+- [ ] Code testé
+- [ ] `version` incrémentée dans app.json
+- [ ] `versionCode` incrémenté
+- [ ] Migration ajoutée si nécessaire
+- [ ] Build lancé
+- [ ] APK téléchargé
+- [ ] Test d'installation par-dessus ancienne version
+- [ ] Données préservées
+
+---
+
+## 📊 Commandes Rapides
+
+```bash
+# === BUILD ===
+npm run build:android        # APK preview
+npm run build:android:prod   # AAB production
+
+# === DÉVELOPPEMENT ===
+npm start                    # Démarrer Expo
+npm start -- --clear         # Démarrer avec cache nettoyé
+```
+
+---
+
+Bonne création d'APK ! 🚀
