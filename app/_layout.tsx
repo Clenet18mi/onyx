@@ -10,6 +10,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
+import { runMigrations, CURRENT_DATA_VERSION } from '@/utils/migrations';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -29,6 +30,12 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
+        // Exécuter les migrations de données si nécessaire
+        const migrationResult = runMigrations();
+        if (!migrationResult.success) {
+          console.warn('[ONYX] Some migrations failed');
+        }
+        
         // Traiter les abonnements en attente
         processSubscriptions();
       } catch (e) {

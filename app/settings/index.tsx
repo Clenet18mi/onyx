@@ -195,6 +195,12 @@ export default function SettingsScreen() {
             <Text className="text-onyx-500 text-sm font-medium mb-3 uppercase">Données</Text>
             <GlassCard noPadding>
               <SettingsItem
+                icon={<Icons.Database size={20} color="#6366F1" />}
+                label="Gestion des données"
+                sublabel="Sauvegarde, export, import"
+                onPress={() => router.push('/settings/data')}
+              />
+              <SettingsItem
                 icon={<Icons.Trash2 size={20} color="#EF4444" />}
                 label="Réinitialiser toutes les données"
                 onPress={handleResetAll}

@@ -18,6 +18,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="categories" />
       <Stack.Screen name="account-types" />
       <Stack.Screen name="quick-expenses" />
+      <Stack.Screen name="data" />
     </Stack>
   );
 }
