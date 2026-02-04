@@ -276,7 +276,7 @@ function generatePDFHTML(data: ExportData): string {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">💎 ONYX</div>
+      <div class="logo">💎 Onyx</div>
       <div class="subtitle">Relevé de compte personnel</div>
       <div class="month-title">${monthNameCapitalized}</div>
     </div>
