@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { Subscription, RecurrenceFrequency } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
@@ -82,7 +82,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         set((state) => ({
           subscriptions: [...state.subscriptions, newSubscription],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -95,6 +95,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
               : sub
           ),
         }));
+        persistNow();
       },
 
       // Supprimer un abonnement
@@ -102,6 +103,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         set((state) => ({
           subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
         }));
+        persistNow();
       },
 
       // Activer/désactiver un abonnement
@@ -113,6 +115,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
               : sub
           ),
         }));
+        persistNow();
       },
 
       // Traiter les abonnements dus (créer les transactions automatiquement)
@@ -144,6 +147,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             get().updateSubscription(sub.id, { nextBillingDate: nextDate });
           }
         });
+        persistNow();
       },
 
       // Getters

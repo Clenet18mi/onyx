@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { Settings } from '@/types';
 
 interface SettingsState extends Settings {
@@ -32,22 +32,27 @@ export const useSettingsStore = create<SettingsState>()(
 
       updateSettings: (newSettings) => {
         set((state) => ({ ...state, ...newSettings }));
+        persistNow();
       },
 
       resetSettings: () => {
         set(defaultSettings);
+        persistNow();
       },
 
       toggleHaptic: () => {
         set((state) => ({ hapticEnabled: !state.hapticEnabled }));
+        persistNow();
       },
 
       setCurrency: (currency) => {
         set({ currency });
+        persistNow();
       },
 
       setTheme: (theme) => {
         set({ theme });
+        persistNow();
       },
     }),
     {

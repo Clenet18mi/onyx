@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { hashPin, verifyPin } from '@/utils/crypto';
 
 interface AuthState {
@@ -57,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
           lastUnlocked: new Date().toISOString(),
           failedAttempts: 0,
         });
+        persistNow();
       },
 
       // Vérifier le PIN et déverrouiller
@@ -75,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
             failedAttempts: 0,
             lockoutUntil: null,
           });
+          persistNow();
           return true;
         }
         
@@ -88,13 +90,14 @@ export const useAuthStore = create<AuthState>()(
         } else {
           set({ failedAttempts: newFailedAttempts });
         }
-        
+        persistNow();
         return false;
       },
 
       // Activer/désactiver la biométrie
       enableBiometric: (enabled: boolean) => {
         set({ biometricEnabled: enabled });
+        persistNow();
       },
 
       // Déverrouiller avec biométrie
@@ -104,6 +107,7 @@ export const useAuthStore = create<AuthState>()(
           lastUnlocked: new Date().toISOString(),
           failedAttempts: 0,
         });
+        persistNow();
       },
 
       // Verrouiller l'app
@@ -120,6 +124,7 @@ export const useAuthStore = create<AuthState>()(
             pinHash: newHash,
             pinLength: newPin.length as 4 | 6,
           });
+          persistNow();
           return true;
         }
         return false;
@@ -137,6 +142,7 @@ export const useAuthStore = create<AuthState>()(
           failedAttempts: 0,
           lockoutUntil: null,
         });
+        persistNow();
       },
 
       // Vérifier si bloqué

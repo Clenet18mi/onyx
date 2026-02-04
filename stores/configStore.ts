@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { generateId } from '@/utils/crypto';
 
 // ============================================
@@ -180,7 +180,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           categories: [...state.categories, newCategory],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -190,6 +190,7 @@ export const useConfigStore = create<ConfigState>()(
             cat.id === id ? { ...cat, ...updates } : cat
           ),
         }));
+        persistNow();
       },
 
       deleteCategory: (id) => {
@@ -199,6 +200,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           categories: state.categories.filter((cat) => cat.id !== id),
         }));
+        persistNow();
       },
 
       toggleCategoryVisibility: (id) => {
@@ -207,14 +209,17 @@ export const useConfigStore = create<ConfigState>()(
             cat.id === id ? { ...cat, isHidden: !cat.isHidden } : cat
           ),
         }));
+        persistNow();
       },
 
       reorderCategories: (categories) => {
         set({ categories });
+        persistNow();
       },
 
       resetCategoriesToDefault: () => {
         set({ categories: DEFAULT_CATEGORIES });
+        persistNow();
       },
 
       // ============================================
@@ -235,7 +240,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           accountTypes: [...state.accountTypes, newAccountType],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -245,6 +250,7 @@ export const useConfigStore = create<ConfigState>()(
             type.id === id ? { ...type, ...updates } : type
           ),
         }));
+        persistNow();
       },
 
       deleteAccountType: (id) => {
@@ -254,6 +260,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           accountTypes: state.accountTypes.filter((type) => type.id !== id),
         }));
+        persistNow();
       },
 
       toggleAccountTypeVisibility: (id) => {
@@ -262,10 +269,12 @@ export const useConfigStore = create<ConfigState>()(
             type.id === id ? { ...type, isHidden: !type.isHidden } : type
           ),
         }));
+        persistNow();
       },
 
       resetAccountTypesToDefault: () => {
         set({ accountTypes: DEFAULT_ACCOUNT_TYPES });
+        persistNow();
       },
 
       // ============================================
@@ -285,7 +294,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           quickExpenses: [...state.quickExpenses, newTemplate],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -295,12 +304,14 @@ export const useConfigStore = create<ConfigState>()(
             template.id === id ? { ...template, ...updates } : template
           ),
         }));
+        persistNow();
       },
 
       deleteQuickExpense: (id) => {
         set((state) => ({
           quickExpenses: state.quickExpenses.filter((template) => template.id !== id),
         }));
+        persistNow();
       },
 
       toggleQuickExpenseActive: (id) => {
@@ -309,14 +320,17 @@ export const useConfigStore = create<ConfigState>()(
             template.id === id ? { ...template, isActive: !template.isActive } : template
           ),
         }));
+        persistNow();
       },
 
       reorderQuickExpenses: (templates) => {
         set({ quickExpenses: templates });
+        persistNow();
       },
 
       resetQuickExpensesToDefault: () => {
         set({ quickExpenses: DEFAULT_QUICK_EXPENSES });
+        persistNow();
       },
 
       // ============================================
@@ -327,6 +341,7 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           profile: { ...state.profile, ...updates },
         }));
+        persistNow();
       },
 
       // ============================================

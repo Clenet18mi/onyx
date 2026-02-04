@@ -122,6 +122,16 @@ export async function flushPendingWrites(): Promise<void> {
   await storage.flushPendingWrites?.();
 }
 
+// Sauvegarde immédiate à chaque action (enregistrée par persistStores)
+let onPersistNow: (() => Promise<void>) | null = null;
+export function registerPersistNow(callback: () => Promise<void>): void {
+  onPersistNow = callback;
+}
+/** À appeler après CHAQUE action (création compte, virement, etc.) pour sauvegarder tout sur le disque. */
+export function persistNow(): void {
+  if (onPersistNow) onPersistNow().catch(() => {});
+}
+
 // ============================================
 // Adapter Zustand - setItem retourne une Promise pour que la sauvegarde soit bien attendue
 // ============================================

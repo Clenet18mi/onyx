@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { Budget, TransactionCategory } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
@@ -46,7 +46,7 @@ export const useBudgetStore = create<BudgetState>()(
         set((state) => ({
           budgets: [...state.budgets, newBudget],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -59,6 +59,7 @@ export const useBudgetStore = create<BudgetState>()(
               : budget
           ),
         }));
+        persistNow();
       },
 
       // Supprimer un budget
@@ -66,6 +67,7 @@ export const useBudgetStore = create<BudgetState>()(
         set((state) => ({
           budgets: state.budgets.filter((budget) => budget.id !== id),
         }));
+        persistNow();
       },
 
       // Obtenir un budget par ID

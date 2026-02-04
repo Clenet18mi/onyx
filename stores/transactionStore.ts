@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '@/utils/storage';
+import { zustandStorage, persistNow } from '@/utils/storage';
 import { Transaction, TransactionType, TransactionCategory } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore } from './accountStore';
@@ -61,7 +61,7 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [newTransaction, ...state.transactions],
         }));
-        
+        persistNow();
         return id;
       },
 
@@ -91,6 +91,7 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [transfer, ...state.transactions],
         }));
+        persistNow();
       },
 
       // Mettre à jour une transaction
@@ -100,6 +101,7 @@ export const useTransactionStore = create<TransactionState>()(
             tx.id === id ? { ...tx, ...updates } : tx
           ),
         }));
+        persistNow();
       },
 
       // Supprimer une transaction (et annuler son effet sur le solde)
@@ -124,6 +126,7 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: state.transactions.filter((tx) => tx.id !== id),
         }));
+        persistNow();
       },
 
       // Getters

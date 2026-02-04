@@ -12,6 +12,7 @@ import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { storage, flushPendingWrites } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
+import { saveAllStoresToDisk, startPersistOnChange } from '@/utils/persistStores';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -31,15 +32,14 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Initialiser le stockage (obligatoire si fallback AsyncStorage)
         await storage.initialize();
-        // Exécuter les migrations de données si nécessaire
         const migrationResult = runMigrations();
         if (!migrationResult.success) {
           console.warn('[ONYX] Some migrations failed');
         }
-        // Traiter les abonnements en attente
         processSubscriptions();
+        // Sauvegarde automatique à chaque changement de store
+        startPersistOnChange();
       } catch (e) {
         console.warn(e);
       } finally {
@@ -56,12 +56,15 @@ export default function RootLayout() {
     }
   }, [appIsReady, fontsLoaded]);
 
-  // À chaque passage en arrière-plan : attendre que toutes les écritures soient bien enregistrées
+  // À chaque passage en arrière-plan : sauvegarde EXPLICITE de tous les stores sur le disque
   const appStateRef = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (appStateRef.current.match(/active/) && nextState.match(/inactive|background/)) {
+        // 1) Attendre les écritures en cours (Zustand persist)
         flushPendingWrites();
+        // 2) Sauvegarde directe de TOUS les stores dans AsyncStorage
+        saveAllStoresToDisk();
       }
       appStateRef.current = nextState;
     });
