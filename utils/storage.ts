@@ -1,6 +1,7 @@
 // ============================================
 // ONYX - Storage Configuration
-// MMKV en priorité, fallback AsyncStorage si MMKV plante (ex: certains appareils)
+// AsyncStorage UNIQUEMENT pour la persistance des données.
+// Garantit que les données restent après fermeture de l'app sur tous les appareils.
 // ============================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,213 +9,121 @@ import { StateStorage } from 'zustand/middleware';
 
 const ASYNC_STORAGE_PREFIX = 'onyx_storage_';
 
-// Interface unifiée pour les deux backends
+// Interface du stockage
 export interface IStorage {
   initialize(): Promise<void>;
   getString(key: string): string | undefined;
-  set(key: string, value: string | number): void;
+  set(key: string, value: string | number): void | Promise<void>;
   getNumber(key: string): number | undefined;
   setNumber(key: string, value: number): void;
   getBoolean(key: string): boolean | undefined;
   setBoolean(key: string, value: boolean): void;
-  delete(key: string): void;
+  delete(key: string): void | Promise<void>;
   getAllKeys(): string[];
-  clearAll(): void;
+  clearAll(): void | Promise<void>;
+  flushPendingWrites?(): Promise<void>;
 }
 
 // ============================================
-// Backend AsyncStorage (fallback)
-// Cache en mémoire pour accès synchrone après initialize()
+// Backend AsyncStorage (seul backend utilisé)
 // ============================================
 
-function createAsyncStorageBackend(): IStorage {
-  const cache: Record<string, string> = {};
-  const prefixed = (key: string) => `${ASYNC_STORAGE_PREFIX}${key}`;
+const cache: Record<string, string> = {};
+const pendingWrites: Promise<void>[] = [];
+const prefixed = (key: string) => `${ASYNC_STORAGE_PREFIX}${key}`;
 
-  return {
-    async initialize() {
-      try {
-        const keys = await AsyncStorage.getAllKeys();
-        const onyxKeys = keys.filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX));
-        if (onyxKeys.length === 0) return;
-        const pairs = await AsyncStorage.multiGet(onyxKeys);
-        for (const [k, v] of pairs) {
-          if (v != null) cache[k] = v;
-        }
-      } catch (e) {
-        console.warn('[ONYX] AsyncStorage init failed', e);
-      }
-    },
-
-    getString(key: string) {
-      const v = cache[prefixed(key)];
-      return v !== undefined ? v : undefined;
-    },
-
-    set(key: string, value: string | number) {
-      const k = prefixed(key);
-      const str = typeof value === 'number' ? String(value) : value;
-      cache[k] = str;
-      AsyncStorage.setItem(k, str).catch(() => {});
-    },
-
-    getNumber(key: string) {
-      const v = cache[prefixed(key)];
-      if (v === undefined) return undefined;
-      const n = Number(v);
-      return Number.isNaN(n) ? undefined : n;
-    },
-
-    setNumber(key: string, value: number) {
-      this.set(key, String(value));
-    },
-
-    getBoolean(key: string) {
-      const v = cache[prefixed(key)];
-      if (v === undefined) return undefined;
-      return v === 'true';
-    },
-
-    setBoolean(key: string, value: boolean) {
-      this.set(key, value ? 'true' : 'false');
-    },
-
-    delete(key: string) {
-      const k = prefixed(key);
-      delete cache[k];
-      AsyncStorage.removeItem(k).catch(() => {});
-    },
-
-    getAllKeys() {
-      return Object.keys(cache)
-        .filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX))
-        .map((k) => k.slice(ASYNC_STORAGE_PREFIX.length));
-    },
-
-    clearAll() {
-      const keys = Object.keys(cache).filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX));
-      for (const k of keys) delete cache[k];
-      AsyncStorage.multiRemove(keys).catch(() => {});
-    },
-  };
-}
-
-// ============================================
-// Backend MMKV (principal)
-// ============================================
-
-function createMMKVBackend(): IStorage | null {
-  try {
-    const { MMKV } = require('react-native-mmkv');
-    const inst = new MMKV({
-      id: 'onyx-storage',
-      encryptionKey: 'onyx-secure-key-2024',
-    });
-    return {
-      async initialize() {},
-      getString(key: string) {
-        const v = inst.getString(key);
-        return v !== undefined ? v : undefined;
-      },
-      set(key: string, value: string) {
-        inst.set(key, value);
-      },
-      getNumber(key: string) {
-        const v = inst.getNumber(key);
-        return v !== undefined ? v : undefined;
-      },
-      setNumber(key: string, value: number) {
-        inst.set(key, value);
-      },
-      getBoolean(key: string) {
-        const v = inst.getBoolean(key);
-        return v !== undefined ? v : undefined;
-      },
-      setBoolean(key: string, value: boolean) {
-        inst.set(key, value);
-      },
-      delete(key: string) {
-        inst.delete(key);
-      },
-      getAllKeys() {
-        return inst.getAllKeys();
-      },
-      clearAll() {
-        inst.clearAll();
-      },
-    };
-  } catch (e) {
-    console.warn('[ONYX] MMKV failed, using AsyncStorage fallback', e);
-    return null;
-  }
-}
-
-// ============================================
-// Instance unique : MMKV ou fallback AsyncStorage
-// ============================================
-
-let backend: IStorage;
-
-try {
-  const MMKV = require('react-native-mmkv').MMKV;
-  const inst = new MMKV({
-    id: 'onyx-storage',
-    encryptionKey: 'onyx-secure-key-2024',
+function track<T>(p: Promise<T>): Promise<T> {
+  pendingWrites.push(p as Promise<void>);
+  p.finally(() => {
+    const i = pendingWrites.indexOf(p as Promise<void>);
+    if (i !== -1) pendingWrites.splice(i, 1);
   });
-  backend = {
-    async initialize() {},
-    getString(key: string) {
-      const v = inst.getString(key);
-      return v !== undefined ? v : undefined;
-    },
-    set(key: string, value: string | number) {
-      if (typeof value === 'number') inst.set(key, value);
-      else inst.set(key, value);
-    },
-    getNumber(key: string) {
-      const v = inst.getNumber(key);
-      return v !== undefined ? v : undefined;
-    },
-    setNumber(key: string, value: number) {
-      inst.set(key, value);
-    },
-    getBoolean(key: string) {
-      const v = inst.getBoolean(key);
-      return v !== undefined ? v : undefined;
-    },
-    setBoolean(key: string, value: boolean) {
-      inst.set(key, value);
-    },
-    delete(key: string) {
-      inst.delete(key);
-    },
-    getAllKeys() {
-      return inst.getAllKeys();
-    },
-    clearAll() {
-      inst.clearAll();
-    },
-  };
-} catch {
-  backend = createAsyncStorageBackend();
+  return p;
 }
 
-// Objet storage exposé (API synchrone après initialize)
+let initialized = false;
+
+// Objet storage exposé - 100% AsyncStorage
 export const storage: IStorage = {
-  initialize: () => backend.initialize(),
-  getString: (k) => backend.getString(k),
-  set: (k, v) => backend.set(k, v),
-  getNumber: (k) => backend.getNumber(k),
-  setNumber: (k, v) => backend.setNumber(k, v),
-  getBoolean: (k) => backend.getBoolean(k),
-  setBoolean: (k, v) => backend.setBoolean(k, v),
-  delete: (k) => backend.delete(k),
-  getAllKeys: () => backend.getAllKeys(),
-  clearAll: () => backend.clearAll(),
+  async initialize() {
+    if (initialized) return;
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const onyxKeys = keys.filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX));
+      for (const k of onyxKeys) {
+        const v = await AsyncStorage.getItem(k);
+        if (v != null) cache[k] = v;
+      }
+      initialized = true;
+    } catch (e) {
+      console.warn('[ONYX] Storage init failed', e);
+      initialized = true;
+    }
+  },
+
+  getString(key: string) {
+    const v = cache[prefixed(key)];
+    return v !== undefined ? v : undefined;
+  },
+
+  async set(key: string, value: string | number) {
+    const k = prefixed(key);
+    const str = typeof value === 'number' ? String(value) : value;
+    cache[k] = str;
+    await track(AsyncStorage.setItem(k, str));
+  },
+
+  getNumber(key: string) {
+    const v = cache[prefixed(key)];
+    if (v === undefined) return undefined;
+    const n = Number(v);
+    return Number.isNaN(n) ? undefined : n;
+  },
+
+  setNumber(key: string, value: number) {
+    this.set(key, String(value));
+  },
+
+  getBoolean(key: string) {
+    const v = cache[prefixed(key)];
+    if (v === undefined) return undefined;
+    return v === 'true';
+  },
+
+  setBoolean(key: string, value: boolean) {
+    this.set(key, value ? 'true' : 'false');
+  },
+
+  async delete(key: string) {
+    const k = prefixed(key);
+    delete cache[k];
+    await track(AsyncStorage.removeItem(k));
+  },
+
+  getAllKeys() {
+    return Object.keys(cache)
+      .filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX))
+      .map((k) => k.slice(ASYNC_STORAGE_PREFIX.length));
+  },
+
+  async clearAll() {
+    const keys = Object.keys(cache).filter((k) => k.startsWith(ASYNC_STORAGE_PREFIX));
+    for (const k of keys) delete cache[k];
+    await track(AsyncStorage.multiRemove(keys));
+  },
+
+  async flushPendingWrites() {
+    await Promise.all([...pendingWrites]);
+  },
 };
 
+/** À appeler quand l'app passe en arrière-plan. */
+export async function flushPendingWrites(): Promise<void> {
+  await storage.flushPendingWrites?.();
+}
+
 // ============================================
-// Adapter Zustand pour persistence
+// Adapter Zustand - setItem retourne une Promise pour que la sauvegarde soit bien attendue
 // ============================================
 
 export const zustandStorage: StateStorage = {
@@ -222,16 +131,18 @@ export const zustandStorage: StateStorage = {
     const value = storage.getString(name);
     return value ?? null;
   },
-  setItem: (name: string, value: string): void => {
-    storage.set(name, value);
+  setItem: (name: string, value: string): Promise<void> => {
+    const p = storage.set(name, value);
+    return p instanceof Promise ? p : Promise.resolve();
   },
-  removeItem: (name: string): void => {
-    storage.delete(name);
+  removeItem: (name: string): Promise<void> => {
+    const p = storage.delete(name);
+    return p instanceof Promise ? p : Promise.resolve();
   },
 };
 
 // ============================================
-// Helpers pour accès direct
+// Helpers
 // ============================================
 
 export const mmkvHelpers = {

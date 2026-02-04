@@ -3,14 +3,14 @@
 // Layout principal avec protection d'authentification
 // ============================================
 
-import React, { useEffect, useState } from 'react';
-import { View, StatusBar } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, View, StatusBar } from 'react-native';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
-import { storage } from '@/utils/storage';
+import { storage, flushPendingWrites } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import '../global.css';
 
@@ -55,6 +55,18 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [appIsReady, fontsLoaded]);
+
+  // À chaque passage en arrière-plan : attendre que toutes les écritures soient bien enregistrées
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (appStateRef.current.match(/active/) && nextState.match(/inactive|background/)) {
+        flushPendingWrites();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!appIsReady || !fontsLoaded) {
     return null;
