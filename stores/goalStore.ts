@@ -13,6 +13,7 @@ import { useAccountStore } from './accountStore';
 
 interface GoalState {
   goals: SavingsGoal[];
+  hasHydrated: boolean;
   
   // Actions
   addGoal: (goal: Omit<SavingsGoal, 'id' | 'currentAmount' | 'isCompleted' | 'createdAt' | 'updatedAt'>) => string;
@@ -32,6 +33,7 @@ export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
       goals: [],
+      hasHydrated: false,
 
       // Ajouter un projet d'épargne
       addGoal: (goalData) => {
@@ -187,6 +189,11 @@ export const useGoalStore = create<GoalState>()(
     {
       name: 'onyx-goals',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

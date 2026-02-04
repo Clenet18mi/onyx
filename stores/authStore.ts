@@ -18,6 +18,7 @@ interface AuthState {
   lastUnlocked: string | null;
   failedAttempts: number;
   lockoutUntil: string | null;
+  hasHydrated: boolean;
   
   // Actions
   setupPin: (pin: string, length: 4 | 6) => void;
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
       lastUnlocked: null,
       failedAttempts: 0,
       lockoutUntil: null,
+      hasHydrated: false,
 
       // Configurer le PIN initial
       setupPin: (pin: string, length: 4 | 6) => {
@@ -165,6 +167,13 @@ export const useAuthStore = create<AuthState>()(
         failedAttempts: state.failedAttempts,
         lockoutUntil: state.lockoutUntil,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+          // Toujours démarrer non authentifié
+          state.isAuthenticated = false;
+        }
+      },
     }
   )
 );

@@ -13,6 +13,7 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYea
 
 interface BudgetState {
   budgets: Budget[];
+  hasHydrated: boolean;
   
   // Actions
   addBudget: (budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -30,6 +31,7 @@ export const useBudgetStore = create<BudgetState>()(
   persist(
     (set, get) => ({
       budgets: [],
+      hasHydrated: false,
 
       // Ajouter un budget
       addBudget: (budgetData) => {
@@ -146,6 +148,11 @@ export const useBudgetStore = create<BudgetState>()(
     {
       name: 'onyx-budgets',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

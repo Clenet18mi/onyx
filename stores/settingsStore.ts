@@ -9,6 +9,7 @@ import { zustandStorage, persistNow } from '@/utils/storage';
 import { Settings } from '@/types';
 
 interface SettingsState extends Settings {
+  hasHydrated: boolean;
   // Actions
   updateSettings: (settings: Partial<Settings>) => void;
   resetSettings: () => void;
@@ -29,6 +30,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       ...defaultSettings,
+      hasHydrated: false,
 
       updateSettings: (newSettings) => {
         set((state) => ({ ...state, ...newSettings }));
@@ -58,6 +60,11 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'onyx-settings',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

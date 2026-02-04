@@ -13,6 +13,7 @@ import { addDays, addWeeks, addMonths, addYears, isBefore, parseISO, startOfDay 
 
 interface SubscriptionState {
   subscriptions: Subscription[];
+  hasHydrated: boolean;
   
   // Actions
   addSubscription: (subscription: Omit<Subscription, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -66,6 +67,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
   persist(
     (set, get) => ({
       subscriptions: [],
+      hasHydrated: false,
 
       // Ajouter un abonnement
       addSubscription: (subscriptionData) => {
@@ -187,6 +189,11 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     {
       name: 'onyx-subscriptions',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

@@ -118,6 +118,7 @@ interface ConfigState {
   accountTypes: CustomAccountType[];
   quickExpenses: QuickExpenseTemplate[];
   profile: UserProfile;
+  hasHydrated: boolean;
   
   // Category actions
   addCategory: (category: Omit<CustomCategory, 'id' | 'isDefault' | 'order'>) => string;
@@ -161,6 +162,7 @@ export const useConfigStore = create<ConfigState>()(
       accountTypes: DEFAULT_ACCOUNT_TYPES,
       quickExpenses: DEFAULT_QUICK_EXPENSES,
       profile: DEFAULT_PROFILE,
+      hasHydrated: false,
 
       // ============================================
       // Category Actions
@@ -380,6 +382,11 @@ export const useConfigStore = create<ConfigState>()(
     {
       name: 'onyx-config',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

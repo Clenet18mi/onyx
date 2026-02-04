@@ -10,9 +10,9 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
-import { storage, flushPendingWrites } from '@/utils/storage';
+import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
-import { saveAllStoresToDisk, startPersistOnChange } from '@/utils/persistStores';
+import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -20,6 +20,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [storesHydrated, setStoresHydrated] = useState(false);
   
   const { isSetup, isAuthenticated } = useAuthStore();
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
@@ -32,16 +33,33 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        await storage.initialize();
+        // MMKV est immédiatement disponible, pas besoin d'initialisation asynchrone
+        await storageHelper.initialize();
         const migrationResult = runMigrations();
         if (!migrationResult.success) {
           console.warn('[ONYX] Some migrations failed');
         }
-        processSubscriptions();
-        // Sauvegarde automatique à chaque changement de store
+        // Zustand persist gère automatiquement la persistance
         startPersistOnChange();
+        
+        // Attendre que tous les stores soient hydratés
+        const checkHydration = setInterval(() => {
+          if (areAllStoresHydrated()) {
+            clearInterval(checkHydration);
+            setStoresHydrated(true);
+            processSubscriptions();
+          }
+        }, 50);
+        
+        // Timeout de sécurité après 2 secondes
+        setTimeout(() => {
+          clearInterval(checkHydration);
+          setStoresHydrated(true);
+          processSubscriptions();
+        }, 2000);
       } catch (e) {
         console.warn(e);
+        setStoresHydrated(true);
       } finally {
         setAppIsReady(true);
       }
@@ -56,22 +74,17 @@ export default function RootLayout() {
     }
   }, [appIsReady, fontsLoaded]);
 
-  // À chaque passage en arrière-plan : sauvegarde EXPLICITE de tous les stores sur le disque
+  // MMKV est synchrone, Zustand persist gère automatiquement la persistance
+  // Plus besoin de sauvegarde manuelle en arrière-plan
   const appStateRef = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
-      if (appStateRef.current.match(/active/) && nextState.match(/inactive|background/)) {
-        // 1) Attendre les écritures en cours (Zustand persist)
-        flushPendingWrites();
-        // 2) Sauvegarde directe de TOUS les stores dans AsyncStorage
-        saveAllStoresToDisk();
-      }
       appStateRef.current = nextState;
     });
     return () => sub.remove();
   }, []);
 
-  if (!appIsReady || !fontsLoaded) {
+  if (!appIsReady || !fontsLoaded || !storesHydrated) {
     return null;
   }
 

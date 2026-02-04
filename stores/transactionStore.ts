@@ -13,6 +13,7 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isWithinInt
 
 interface TransactionState {
   transactions: Transaction[];
+  hasHydrated: boolean;
   
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => string;
@@ -39,6 +40,7 @@ export const useTransactionStore = create<TransactionState>()(
   persist(
     (set, get) => ({
       transactions: [],
+      hasHydrated: false,
 
       // Ajouter une transaction
       addTransaction: (transactionData) => {
@@ -235,6 +237,11 @@ export const useTransactionStore = create<TransactionState>()(
     {
       name: 'onyx-transactions',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );

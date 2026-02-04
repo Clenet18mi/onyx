@@ -11,6 +11,7 @@ import { generateId } from '@/utils/crypto';
 
 interface AccountState {
   accounts: Account[];
+  hasHydrated: boolean;
   
   // Actions
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -28,6 +29,7 @@ export const useAccountStore = create<AccountState>()(
   persist(
     (set, get) => ({
       accounts: [],
+      hasHydrated: false,
 
       // Ajouter un compte
       addAccount: (accountData) => {
@@ -125,6 +127,11 @@ export const useAccountStore = create<AccountState>()(
     {
       name: 'onyx-accounts',
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hasHydrated = true;
+        }
+      },
     }
   )
 );
