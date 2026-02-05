@@ -56,13 +56,20 @@ Write-Host ""
 Write-Host "[INFO] Build de l'APK ($BuildType)..." -ForegroundColor Yellow
 Write-Host ""
 
-# Aller dans le dossier android et builder
+# Appliquer les optimisations Gradle si le script existe (secours si prebuild n'a pas utilise le plugin)
+$applyScript = Join-Path $PSScriptRoot "scripts\apply-gradle-optimizations.ps1"
+if ((Test-Path $applyScript) -and (Test-Path "android")) {
+    & $applyScript -AndroidDir "android"
+}
+
+# Aller dans le dossier android et builder (options pour reduire le temps de build)
 Push-Location android
 try {
+    $gradleArgs = @("--build-cache", "--parallel", "--max-workers=4")
     if ($BuildType -eq "debug") {
-        .\gradlew.bat assembleDebug
+        .\gradlew.bat assembleDebug @gradleArgs
     } else {
-        .\gradlew.bat assembleRelease
+        .\gradlew.bat assembleRelease @gradleArgs
     }
     
     if ($LASTEXITCODE -eq 0) {

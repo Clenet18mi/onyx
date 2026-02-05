@@ -49,10 +49,23 @@
           "faceIDPermission": "ONYX utilise Face ID pour sécuriser l'accès à vos données financières."
         }
       ],
+      "./plugins/gradle-optimization",
       [
-        "react-native-mmkv",
+        "expo-build-properties",
         {
-          "id": "onyx-storage"
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "packagingOptions": {
+              "pickFirst": [
+                "lib/x86/libc++_shared.so",
+                "lib/x86_64/libc++_shared.so",
+                "lib/armeabi-v7a/libc++_shared.so",
+                "lib/arm64-v8a/libc++_shared.so"
+              ]
+            },
+            "extraProguardRules": "# React Native\n-keep class com.facebook.react.** { *; }\n-keep class com.facebook.hermes.** { *; }\n# Expo\n-keep class expo.** { *; }\n# MMKV\n-keep class com.tencent.mmkv.** { *; }\n-optimizationpasses 5\n-dontusemixedcaseclassnames\n-dontskipnonpubliclibraryclasses\n-assumenosideeffects class android.util.Log { public static *** d(...); public static *** v(...); public static *** i(...); }"
+          }
         }
       ]
     ],

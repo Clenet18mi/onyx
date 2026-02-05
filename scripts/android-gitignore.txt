@@ -1,0 +1,17 @@
+# Copier vers android/.gitignore si vous versionnez le dossier android/
+# (Par defaut ce projet ignore android/ dans le .gitignore racine.)
+
+# Build outputs
+build/
+.gradle/
+*.iml
+local.properties
+
+# Keystores (IMPORTANT - ne pas versionner)
+*.keystore
+*.jks
+keystore.properties
+
+# Caches
+.cxx/
+.externalNativeBuild/

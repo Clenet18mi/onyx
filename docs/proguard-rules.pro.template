@@ -1,0 +1,26 @@
+# Template de regles ProGuard pour ONYX (Expo SDK 54)
+# Les regles actives sont injectees via app.json > expo-build-properties > extraProguardRules.
+# Ce fichier sert de reference et peut etre merge manuellement si besoin.
+
+# React Native
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.** { *; }
+
+# Expo
+-keep class expo.** { *; }
+
+# MMKV
+-keep class com.tencent.mmkv.** { *; }
+
+# Optimisations
+-optimizationpasses 5
+-dontusemixedcaseclassnames
+-dontskipnonpubliclibraryclasses
+-verbose
+
+# Suppression des logs en production (optionnel)
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}

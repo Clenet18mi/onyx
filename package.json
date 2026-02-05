@@ -12,7 +12,12 @@
     "build:android": "powershell -ExecutionPolicy Bypass -File build-android.ps1 release",
     "build:android:debug": "powershell -ExecutionPolicy Bypass -File build-android.ps1 debug",
     "build:android:eas": "eas build --platform android --profile preview",
-    "build:android:prod": "eas build --platform android --profile production"
+    "build:android:prod": "eas build --platform android --profile production",
+    "android:clean": "powershell -NoProfile -Command \"if (Test-Path android) { Push-Location android; .\\gradlew.bat clean; Pop-Location } else { Write-Host 'Dossier android absent.' }\"",
+    "android:build": "powershell -ExecutionPolicy Bypass -File build-android.ps1 release",
+    "android:build:debug": "powershell -ExecutionPolicy Bypass -File build-android.ps1 debug",
+    "android:build:fast": "powershell -NoProfile -Command \"if (-not (Test-Path android)) { npm run prebuild:android }; Push-Location android; .\\gradlew.bat assembleRelease --build-cache --parallel --max-workers=4; Pop-Location\"",
+    "prebuild:clean": "expo prebuild --platform android --clean"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -20,6 +25,7 @@
     "date-fns": "^3.6.0",
     "expo": "~54.0.0",
     "expo-asset": "~12.0.12",
+    "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.21",

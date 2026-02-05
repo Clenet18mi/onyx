@@ -1,0 +1,9 @@
+# Copier ce contenu dans : C:\Users\miloc\.gradle\gradle.properties
+# (Creer le fichier ou le dossier .gradle si necessaire)
+# Cela applique les optimisations a tous les projets Gradle de l'utilisateur.
+
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
+org.gradle.workers.max=4
