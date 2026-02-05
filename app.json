@@ -48,6 +48,12 @@
         {
           "faceIDPermission": "ONYX utilise Face ID pour sécuriser l'accès à vos données financières."
         }
+      ],
+      [
+        "react-native-mmkv",
+        {
+          "id": "onyx-storage"
+        }
       ]
     ],
     "experiments": {

@@ -145,12 +145,16 @@ export default function GoalsScreen() {
   const totalSaved = goals.reduce((sum, g) => sum + g.currentAmount, 0);
   const totalTarget = goals.reduce((sum, g) => sum + g.targetAmount, 0);
 
+  // Filtrer pour ne montrer que les comptes de type "savings" (livrets)
+  const savingsAccounts = accounts.filter((a) => a.type === 'savings');
+
   const resetForm = () => {
     setName('');
     setTargetAmount('');
     setIcon('Target');
     setColor(AVAILABLE_COLORS[0]);
-    setAccountId(accounts[0]?.id || '');
+    // Sélectionner le premier compte livret par défaut
+    setAccountId(savingsAccounts[0]?.id || accounts[0]?.id || '');
     setEditingGoal(null);
   };
 
@@ -186,7 +190,14 @@ export default function GoalsScreen() {
       return;
     }
     if (!accountId) {
-      Alert.alert('Erreur', 'Veuillez sélectionner un compte');
+      Alert.alert('Erreur', 'Veuillez sélectionner un compte livret');
+      return;
+    }
+    
+    // Vérifier que le compte sélectionné est bien un compte livret
+    const selectedAccount = accounts.find((a) => a.id === accountId);
+    if (selectedAccount && selectedAccount.type !== 'savings') {
+      Alert.alert('Erreur', 'Veuillez sélectionner un compte de type "Épargne" (livret)');
       return;
     }
 
@@ -388,12 +399,23 @@ export default function GoalsScreen() {
                   />
                 </View>
 
-                {/* Compte lié */}
+                {/* Compte livret de destination */}
                 <View className="mb-6">
-                  <Text className="text-onyx-500 text-sm mb-2">Compte lié</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View className="flex-row" style={{ gap: 8 }}>
-                      {accounts.map((account) => {
+                  <Text className="text-onyx-500 text-sm mb-2">Compte livret de destination</Text>
+                  <Text className="text-onyx-600 text-xs mb-3">
+                    L'argent épargné sera transféré sur ce compte livret
+                  </Text>
+                  {savingsAccounts.length === 0 ? (
+                    <View className="bg-onyx-100 p-4 rounded-xl">
+                      <Text className="text-onyx-500 text-sm text-center">
+                        Aucun compte livret disponible.{'\n'}
+                        Créez d'abord un compte de type "Épargne" dans les comptes.
+                      </Text>
+                    </View>
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View className="flex-row" style={{ gap: 8 }}>
+                        {savingsAccounts.map((account) => {
                         const AccountIcon = getIcon(account.icon);
                         const isSelected = accountId === account.id;
                         return (
@@ -416,9 +438,10 @@ export default function GoalsScreen() {
                             </Text>
                           </TouchableOpacity>
                         );
-                      })}
-                    </View>
-                  </ScrollView>
+                        })}
+                      </View>
+                    </ScrollView>
+                  )}
                 </View>
 
                 {/* Icône */}
@@ -506,11 +529,22 @@ export default function GoalsScreen() {
                           size: 32, 
                           color: selectedGoal.color 
                         })}
-                        <View className="ml-4">
+                        <View className="ml-4 flex-1">
                           <Text className="text-white text-lg font-semibold">{selectedGoal.name}</Text>
                           <Text className="text-onyx-500">
                             {formatCurrency(selectedGoal.currentAmount)} / {formatCurrency(selectedGoal.targetAmount)}
                           </Text>
+                          {(() => {
+                            const savingsAccount = accounts.find((a) => a.id === selectedGoal.accountId);
+                            if (savingsAccount) {
+                              return (
+                                <Text className="text-onyx-600 text-xs mt-1">
+                                  Vers le livret: {savingsAccount.name}
+                                </Text>
+                              );
+                            }
+                            return null;
+                          })()}
                         </View>
                       </View>
                     </GlassCard>

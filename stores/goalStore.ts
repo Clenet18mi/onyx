@@ -40,11 +40,16 @@ export const useGoalStore = create<GoalState>()(
         const id = generateId();
         const now = new Date().toISOString();
         
+        // Récupérer le solde actuel du compte livret pour initialiser currentAmount
+        const accountStore = useAccountStore.getState();
+        const savingsAccount = accountStore.getAccount(goalData.accountId);
+        const initialAmount = savingsAccount ? savingsAccount.balance : 0;
+        
         const newGoal: SavingsGoal = {
           ...goalData,
           id,
-          currentAmount: 0,
-          isCompleted: false,
+          currentAmount: initialAmount,
+          isCompleted: initialAmount >= goalData.targetAmount,
           createdAt: now,
           updatedAt: now,
         };
@@ -69,13 +74,13 @@ export const useGoalStore = create<GoalState>()(
       },
 
       // Supprimer un projet
+      // Note: L'argent reste sur le compte livret, on supprime juste le goal
       deleteGoal: (id) => {
         const goal = get().goals.find((g) => g.id === id);
-        if (goal && goal.currentAmount > 0) {
-          // Retourner l'argent au compte lié
-          const accountStore = useAccountStore.getState();
-          accountStore.updateBalance(goal.accountId, goal.currentAmount);
-        }
+        if (!goal) return;
+        
+        // L'argent reste sur le compte livret, on ne fait rien
+        // L'utilisateur peut toujours accéder à son argent via le compte
         
         set((state) => ({
           goals: state.goals.filter((goal) => goal.id !== id),
@@ -84,24 +89,39 @@ export const useGoalStore = create<GoalState>()(
       },
 
       // Contribuer à un projet (ajouter de l'argent)
+      // L'argent est transféré du compte source vers le compte livret du goal
       contributeToGoal: (goalId, amount, fromAccountId) => {
         const goal = get().goals.find((g) => g.id === goalId);
         if (!goal) return;
 
-        // Créer la transaction
-        const transactionStore = useTransactionStore.getState();
-        transactionStore.addTransaction({
-          accountId: fromAccountId,
-          type: 'expense',
-          category: 'savings',
-          amount,
-          description: `Épargne vers: ${goal.name}`,
-          date: new Date().toISOString(),
-          goalId,
-        });
+        const accountStore = useAccountStore.getState();
+        const savingsAccount = accountStore.getAccount(goal.accountId);
+        
+        if (!savingsAccount) {
+          console.error('[ONYX] Compte livret introuvable pour le goal:', goalId);
+          return;
+        }
 
-        // Mettre à jour le montant du projet
-        const newAmount = goal.currentAmount + amount;
+        // Vérifier que le compte source a suffisamment de fonds
+        const fromAccount = accountStore.getAccount(fromAccountId);
+        if (!fromAccount || fromAccount.balance < amount) {
+          console.error('[ONYX] Solde insuffisant sur le compte source');
+          return;
+        }
+
+        // Créer un transfert : débit du compte source, crédit du compte livret
+        const transactionStore = useTransactionStore.getState();
+        transactionStore.addTransfer(
+          fromAccountId,      // Compte source (débit)
+          goal.accountId,     // Compte livret (crédit)
+          amount,
+          `Épargne vers: ${goal.name}`
+        );
+
+        // Mettre à jour le montant du projet pour refléter le solde réel sur le livret
+        // Le solde du compte livret a déjà été mis à jour par addTransfer
+        const updatedSavingsAccount = accountStore.getAccount(goal.accountId);
+        const newAmount = updatedSavingsAccount ? updatedSavingsAccount.balance : goal.currentAmount + amount;
         const isCompleted = newAmount >= goal.targetAmount;
 
         set((state) => ({
@@ -120,24 +140,38 @@ export const useGoalStore = create<GoalState>()(
       },
 
       // Retirer de l'argent d'un projet
+      // L'argent est transféré du compte livret vers le compte de destination
       withdrawFromGoal: (goalId, amount, toAccountId) => {
         const goal = get().goals.find((g) => g.id === goalId);
-        if (!goal || amount > goal.currentAmount) return;
+        if (!goal) return;
 
-        // Créer la transaction
+        const accountStore = useAccountStore.getState();
+        const savingsAccount = accountStore.getAccount(goal.accountId);
+        
+        if (!savingsAccount) {
+          console.error('[ONYX] Compte livret introuvable pour le goal:', goalId);
+          return;
+        }
+
+        // Vérifier que le compte livret a suffisamment de fonds
+        if (savingsAccount.balance < amount) {
+          console.error('[ONYX] Solde insuffisant sur le compte livret');
+          return;
+        }
+
+        // Créer un transfert : débit du compte livret, crédit du compte destination
         const transactionStore = useTransactionStore.getState();
-        transactionStore.addTransaction({
-          accountId: toAccountId,
-          type: 'income',
-          category: 'savings',
+        transactionStore.addTransfer(
+          goal.accountId,    // Compte livret (débit)
+          toAccountId,       // Compte destination (crédit)
           amount,
-          description: `Retrait de: ${goal.name}`,
-          date: new Date().toISOString(),
-          goalId,
-        });
+          `Retrait de: ${goal.name}`
+        );
 
-        // Mettre à jour le montant du projet
-        const newAmount = goal.currentAmount - amount;
+        // Mettre à jour le montant du projet (reflète le solde réel sur le livret)
+        // Le solde du compte livret a déjà été mis à jour par addTransfer
+        const updatedSavingsAccount = accountStore.getAccount(goal.accountId);
+        const newAmount = updatedSavingsAccount ? updatedSavingsAccount.balance : Math.max(goal.currentAmount - amount, 0);
 
         set((state) => ({
           goals: state.goals.map((g) =>
@@ -173,13 +207,18 @@ export const useGoalStore = create<GoalState>()(
           return { current: 0, target: 0, percentage: 0, remaining: 0 };
         }
 
+        // Synchroniser currentAmount avec le solde réel du compte livret
+        const accountStore = useAccountStore.getState();
+        const savingsAccount = accountStore.getAccount(goal.accountId);
+        const currentAmount = savingsAccount ? savingsAccount.balance : goal.currentAmount;
+
         const percentage = goal.targetAmount > 0 
-          ? (goal.currentAmount / goal.targetAmount) * 100 
+          ? (currentAmount / goal.targetAmount) * 100 
           : 0;
-        const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
+        const remaining = Math.max(goal.targetAmount - currentAmount, 0);
 
         return {
-          current: goal.currentAmount,
+          current: currentAmount,
           target: goal.targetAmount,
           percentage: Math.min(percentage, 100),
           remaining,

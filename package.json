@@ -4,10 +4,14 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:android": "eas build --platform android --profile preview",
+    "prebuild": "expo prebuild --clean",
+    "prebuild:android": "expo prebuild --platform android --clean",
+    "build:android": "powershell -ExecutionPolicy Bypass -File build-android.ps1 release",
+    "build:android:debug": "powershell -ExecutionPolicy Bypass -File build-android.ps1 debug",
+    "build:android:eas": "eas build --platform android --profile preview",
     "build:android:prod": "eas build --platform android --profile production"
   },
   "dependencies": {
@@ -45,6 +49,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.10",
+    "cross-env": "^7.0.3",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3"
   },

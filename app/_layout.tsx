@@ -10,6 +10,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
@@ -33,35 +34,80 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
+        console.log('[ONYX] Initializing app...');
+        
         // MMKV est immédiatement disponible, pas besoin d'initialisation asynchrone
-        await storageHelper.initialize();
-        const migrationResult = runMigrations();
-        if (!migrationResult.success) {
-          console.warn('[ONYX] Some migrations failed');
+        try {
+          await storageHelper.initialize();
+          console.log('[ONYX] Storage initialized');
+        } catch (storageError) {
+          console.error('[ONYX] Storage initialization failed:', storageError);
+          // Continuer même si le storage échoue
         }
+        
+        // Exécuter les migrations avec gestion d'erreur
+        try {
+          const migrationResult = runMigrations();
+          if (!migrationResult.success) {
+            console.warn('[ONYX] Some migrations failed');
+          } else {
+            console.log('[ONYX] Migrations completed');
+          }
+        } catch (migrationError) {
+          console.error('[ONYX] Migration error:', migrationError);
+          // Continuer même si les migrations échouent
+        }
+        
         // Zustand persist gère automatiquement la persistance
-        startPersistOnChange();
+        try {
+          startPersistOnChange();
+          console.log('[ONYX] Persist system started');
+        } catch (persistError) {
+          console.error('[ONYX] Persist system error:', persistError);
+        }
         
         // Attendre que tous les stores soient hydratés
+        let hydrationChecked = false;
         const checkHydration = setInterval(() => {
-          if (areAllStoresHydrated()) {
+          try {
+            if (areAllStoresHydrated()) {
+              clearInterval(checkHydration);
+              hydrationChecked = true;
+              console.log('[ONYX] All stores hydrated');
+              setStoresHydrated(true);
+              try {
+                processSubscriptions();
+              } catch (subError) {
+                console.error('[ONYX] Process subscriptions error:', subError);
+              }
+            }
+          } catch (hydrationError) {
+            console.error('[ONYX] Hydration check error:', hydrationError);
             clearInterval(checkHydration);
             setStoresHydrated(true);
-            processSubscriptions();
           }
         }, 50);
         
-        // Timeout de sécurité après 2 secondes
+        // Timeout de sécurité après 3 secondes
         setTimeout(() => {
-          clearInterval(checkHydration);
-          setStoresHydrated(true);
-          processSubscriptions();
-        }, 2000);
+          if (!hydrationChecked) {
+            clearInterval(checkHydration);
+            console.warn('[ONYX] Hydration timeout, continuing anyway');
+            setStoresHydrated(true);
+            try {
+              processSubscriptions();
+            } catch (subError) {
+              console.error('[ONYX] Process subscriptions error:', subError);
+            }
+          }
+        }, 3000);
       } catch (e) {
-        console.warn(e);
+        console.error('[ONYX] Fatal initialization error:', e);
+        // Même en cas d'erreur, on continue pour afficher l'UI
         setStoresHydrated(true);
       } finally {
         setAppIsReady(true);
+        console.log('[ONYX] App ready');
       }
     }
 
@@ -91,34 +137,39 @@ export default function RootLayout() {
   // Premier lancement - Configuration du PIN
   if (!isSetup) {
     return (
-      <View className="flex-1 bg-onyx">
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
-        <SetupPinScreen onComplete={() => {}} />
-      </View>
+      <ErrorBoundary>
+        <View className="flex-1 bg-onyx">
+          <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+          <SetupPinScreen onComplete={() => {}} />
+        </View>
+      </ErrorBoundary>
     );
   }
 
   // Non authentifié - Écran de verrouillage
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 bg-onyx">
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
-        <LockScreen onUnlock={() => {}} />
-      </View>
+      <ErrorBoundary>
+        <View className="flex-1 bg-onyx">
+          <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+          <LockScreen onUnlock={() => {}} />
+        </View>
+      </ErrorBoundary>
     );
   }
 
   // Authentifié - Navigation principale
   return (
-    <View className="flex-1 bg-onyx">
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#0A0A0B' },
-          animation: 'fade',
-        }}
-      >
+    <ErrorBoundary>
+      <View className="flex-1 bg-onyx">
+        <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#0A0A0B' },
+            animation: 'fade',
+          }}
+        >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen 
           name="account/[id]" 
@@ -163,6 +214,7 @@ export default function RootLayout() {
           }} 
         />
       </Stack>
-    </View>
+      </View>
+    </ErrorBoundary>
   );
 }

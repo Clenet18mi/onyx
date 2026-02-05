@@ -8,9 +8,17 @@ import { MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 
 // Instance MMKV unique pour toute l'application
-export const storage = new MMKV({
-  id: 'onyx-storage',
-});
+// Protégé avec try-catch pour éviter les crashes au démarrage
+let storage: MMKV;
+try {
+  storage = new MMKV({
+    id: 'onyx-storage',
+  });
+} catch (error) {
+  console.error('[ONYX] Failed to initialize MMKV:', error);
+  // Fallback: créer une instance par défaut
+  storage = new MMKV();
+}
 
 // Interface du stockage (compatibilité)
 export interface IStorage {
@@ -96,14 +104,27 @@ export function persistNow(): void {
 
 export const zustandStorage: StateStorage = {
   getItem: (name: string): string | null => {
-    const value = storage.getString(name);
-    return value ?? null;
+    try {
+      const value = storage.getString(name);
+      return value ?? null;
+    } catch (error) {
+      console.error(`[ONYX] Error getting item ${name}:`, error);
+      return null;
+    }
   },
   setItem: (name: string, value: string): void => {
-    storage.set(name, value);
+    try {
+      storage.set(name, value);
+    } catch (error) {
+      console.error(`[ONYX] Error setting item ${name}:`, error);
+    }
   },
   removeItem: (name: string): void => {
-    storage.delete(name);
+    try {
+      storage.delete(name);
+    } catch (error) {
+      console.error(`[ONYX] Error removing item ${name}:`, error);
+    }
   },
 };
 
