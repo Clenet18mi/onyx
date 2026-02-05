@@ -49,8 +49,10 @@ function mergeGradleProperties(propertiesList) {
 }
 
 function withGradleOptimization(config) {
-  return withGradleProperties(config, (config, { modResults }) => {
-    return mergeGradleProperties(modResults);
+  return withGradleProperties(config, (data) => {
+    const modResults = data?.modResults;
+    if (!Array.isArray(modResults)) return data;
+    return { ...data, modResults: mergeGradleProperties(modResults) };
   });
 }
 
