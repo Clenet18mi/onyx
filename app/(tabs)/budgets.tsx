@@ -14,6 +14,7 @@ import { formatCurrency, formatPercentage } from '@/utils/format';
 import { CATEGORIES, TransactionCategory, Budget, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
+import { BudgetAssistant } from '@/components/budgets/BudgetAssistant';
 
 interface BudgetGaugeProps {
   budget: Budget;
@@ -233,6 +234,12 @@ export default function BudgetsScreen() {
               {formatPercentage(totalPercentage)} du budget total utilisé
             </Text>
           </GlassCard>
+
+          {/* Assistant budget (suggestions 3 mois) */}
+          <View className="mb-6">
+            <Text className="text-onyx-500 text-sm font-medium mb-3 uppercase">Assistant budget</Text>
+            <BudgetAssistant />
+          </View>
 
           {/* Liste des budgets */}
           {budgetsWithProgress.length === 0 ? (
