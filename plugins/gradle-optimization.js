@@ -26,8 +26,8 @@ const GRADLE_OPTIMIZATIONS = {
   'android.useAndroidX': 'true',
   'android.enableJetifier': 'true',
   'android.enableR8.fullMode': 'true',
-  'android.enableD8': 'true',
-  'android.enableBuildCache': 'true',
+  // android.enableD8 et android.enableBuildCache supprimés : dépréciés/supprimés en AGP 7+
+  // (D8 par défaut ; cache géré par org.gradle.caching)
 };
 
 function mergeGradleProperties(propertiesList) {

@@ -28,8 +28,6 @@ $optimizations = @{
     "android.useAndroidX" = "true"
     "android.enableJetifier" = "true"
     "android.enableR8.fullMode" = "true"
-    "android.enableD8" = "true"
-    "android.enableBuildCache" = "true"
 }
 
 $content = Get-Content $gradlePropsPath -Raw

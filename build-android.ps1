@@ -25,32 +25,45 @@ if (-not (Test-Path "android")) {
     }
 }
 
-# Creer local.properties si necessaire
-if (-not (Test-Path "android\local.properties")) {
-    Write-Host "[INFO] Creation de local.properties..." -ForegroundColor Yellow
-    
-    $sdkPath = $env:ANDROID_HOME
-    if (-not $sdkPath) {
-        $possiblePaths = @(
-            "$env:LOCALAPPDATA\Android\Sdk",
-            "$env:USERPROFILE\AppData\Local\Android\Sdk",
-            "C:\Android\Sdk"
-        )
-        
-        foreach ($path in $possiblePaths) {
-            if (Test-Path $path) {
-                $sdkPath = $path
-                break
-            }
-        }
-    }
-    
-    if ($sdkPath) {
-        $sdkPathNormalized = $sdkPath -replace '\\', '/'
-        Set-Content -Path "android\local.properties" -Value "sdk.dir=$sdkPathNormalized" -Encoding UTF8
-        Write-Host "[OK] local.properties cree" -ForegroundColor Green
+# --- local.properties : OBLIGATOIRE pour Gradle ---
+$localPropsPath = Join-Path $PSScriptRoot "android\local.properties"
+$sdkPath = $env:ANDROID_HOME
+if (-not $sdkPath) { $sdkPath = $env:ANDROID_SDK_ROOT }
+if (-not $sdkPath) {
+    $candidates = @(
+        (Join-Path $env:LOCALAPPDATA "Android\Sdk"),
+        (Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk"),
+        "C:\Android\Sdk"
+    )
+    foreach ($p in $candidates) {
+        if ($p -and (Test-Path $p)) { $sdkPath = $p; break }
     }
 }
+if (-not $sdkPath -or -not (Test-Path $sdkPath)) {
+    $sdkPath = Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk"
+}
+$sdkDirValue = $sdkPath -replace '\\', '/'
+$sdkDirLine = "sdk.dir=$sdkDirValue"
+$androidDir = Join-Path $PSScriptRoot "android"
+if (-not (Test-Path $androidDir)) { New-Item -ItemType Directory -Path $androidDir -Force | Out-Null }
+Set-Content -Path $localPropsPath -Value $sdkDirLine -Encoding UTF8 -Force
+# S'assurer que Gradle voit bien le SDK via les variables d'environnement
+$env:ANDROID_HOME = $sdkPath
+$env:ANDROID_SDK_ROOT = $sdkPath
+if (-not (Test-Path $sdkPath)) {
+    Write-Host "[ERREUR] Android SDK introuvable." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Le fichier android\local.properties pointe vers :" -ForegroundColor Yellow
+    Write-Host "  $sdkPath" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Faites UNE des actions suivantes :" -ForegroundColor Yellow
+    Write-Host "  1. Installer Android Studio (il installe le SDK a cet emplacement par defaut)" -ForegroundColor White
+    Write-Host "  2. Ou editer android\local.properties et mettre sdk.dir= vers votre SDK" -ForegroundColor White
+    Write-Host "  3. Ou definir ANDROID_HOME puis relancer le build" -ForegroundColor White
+    Write-Host ""
+    exit 1
+}
+Write-Host "[OK] SDK Android : $sdkDirValue" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "[INFO] Build de l'APK ($BuildType)..." -ForegroundColor Yellow
@@ -58,12 +71,12 @@ Write-Host ""
 
 # Appliquer les optimisations Gradle si le script existe (secours si prebuild n'a pas utilise le plugin)
 $applyScript = Join-Path $PSScriptRoot "scripts\apply-gradle-optimizations.ps1"
-if ((Test-Path $applyScript) -and (Test-Path "android")) {
-    & $applyScript -AndroidDir "android"
+if ((Test-Path $applyScript) -and (Test-Path $androidDir)) {
+    & $applyScript -AndroidDir $androidDir
 }
 
 # Aller dans le dossier android et builder (options pour reduire le temps de build)
-Push-Location android
+Push-Location $androidDir
 try {
     $gradleArgs = @("--build-cache", "--parallel", "--max-workers=4")
     if ($BuildType -eq "debug") {
