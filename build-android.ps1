@@ -74,6 +74,14 @@ if (-not (Test-Path $sdkPath)) {
 Write-Host "[OK] SDK Android : $sdkDirValue" -ForegroundColor Green
 
 Write-Host ""
+# Redemarrer les daemons pour prendre en compte les nouveaux jvmargs (evite crash)
+if (Test-Path (Join-Path $androidDir "gradlew.bat")) {
+    Write-Host "[INFO] Arret des daemons Gradle (nouveau demarrage avec plus de memoire)..." -ForegroundColor Yellow
+    Push-Location $androidDir
+    & .\gradlew.bat --stop 2>$null
+    Pop-Location
+    Start-Sleep -Seconds 2
+}
 Write-Host "[INFO] Build de l'APK ($BuildType)..." -ForegroundColor Yellow
 Write-Host ""
 
