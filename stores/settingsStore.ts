@@ -10,12 +10,14 @@ import { Settings } from '@/types';
 
 interface SettingsState extends Settings {
   hasHydrated: boolean;
-  // Actions
   updateSettings: (settings: Partial<Settings>) => void;
   resetSettings: () => void;
   toggleHaptic: () => void;
   setCurrency: (currency: string) => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
+  addIgnoredDuplicateSignature: (signature: string) => void;
+  removeIgnoredDuplicateSignature: (signature: string) => void;
+  clearIgnoredDuplicateSignatures: () => void;
 }
 
 const defaultSettings: Settings = {
@@ -24,6 +26,8 @@ const defaultSettings: Settings = {
   theme: 'dark',
   hapticEnabled: true,
   notificationsEnabled: true,
+  duplicateAlertEnabled: true,
+  ignoredDuplicateSignatures: [],
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -48,10 +52,27 @@ export const useSettingsStore = create<SettingsState>()(
         set({ currency });
       },
 
-      setTheme: (theme) => {
-        set({ theme });
-      },
-    }),
+  setTheme: (theme) => {
+    set({ theme });
+  },
+
+  // Doublons
+  addIgnoredDuplicateSignature: (signature: string) => {
+    set((state) => ({
+      ignoredDuplicateSignatures: [...(state.ignoredDuplicateSignatures || []), signature].filter(
+        (v, i, a) => a.indexOf(v) === i
+      ),
+    }));
+  },
+  removeIgnoredDuplicateSignature: (signature: string) => {
+    set((state) => ({
+      ignoredDuplicateSignatures: (state.ignoredDuplicateSignatures || []).filter((s) => s !== signature),
+    }));
+  },
+  clearIgnoredDuplicateSignatures: () => {
+    set({ ignoredDuplicateSignatures: [] });
+  },
+}),
     {
       name: 'onyx-settings',
       storage: createJSONStorage(() => zustandStorage),
