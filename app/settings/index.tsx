@@ -46,8 +46,16 @@ export default function SettingsScreen() {
   const router = useRouter();
   
   const { lock, biometricEnabled, enableBiometric, resetAuth } = useAuthStore();
-  const { hapticEnabled, toggleHaptic } = useSettingsStore();
+  const {
+    hapticEnabled,
+    toggleHaptic,
+    duplicateAlertEnabled,
+    updateSettings,
+    ignoredDuplicateSignatures,
+    clearIgnoredDuplicateSignatures,
+  } = useSettingsStore();
   const { profile, categories, accountTypes, quickExpenses } = useConfigStore();
+  const ignoredCount = ignoredDuplicateSignatures?.length ?? 0;
 
   const handleResetAll = () => {
     Alert.alert(
@@ -186,6 +194,73 @@ export default function SettingsScreen() {
                     thumbColor="#fff"
                   />
                 }
+              />
+              <SettingsItem
+                icon={<Icons.Copy size={20} color="#8B5CF6" />}
+                label="Alerte doublons"
+                sublabel="Alerter avant d'ajouter une transaction similaire"
+                rightElement={
+                  <Switch
+                    value={duplicateAlertEnabled ?? true}
+                    onValueChange={(v) => updateSettings({ duplicateAlertEnabled: v })}
+                    trackColor={{ false: '#3F3F46', true: '#6366F1' }}
+                    thumbColor="#fff"
+                  />
+                }
+              />
+              {ignoredCount > 0 && (
+                <SettingsItem
+                  icon={<Icons.List size={20} color="#71717A" />}
+                  label="Règles ignorées"
+                  sublabel={`${ignoredCount} type(s) sans alerte doublon`}
+                  onPress={() =>
+                    Alert.alert(
+                      'Règles ignorées',
+                      'Réinitialiser toutes les règles "Ne plus alerter" pour les doublons ?',
+                      [
+                        { text: 'Annuler', style: 'cancel' },
+                        { text: 'Réinitialiser', onPress: () => clearIgnoredDuplicateSignatures() },
+                      ]
+                    )
+                  }
+                />
+              )}
+            </GlassCard>
+          </View>
+
+          {/* Automatisation & outils */}
+          <View className="mb-6">
+            <Text className="text-onyx-500 text-sm font-medium mb-3 uppercase">Automatisation & outils</Text>
+            <GlassCard noPadding>
+              <SettingsItem
+                icon={<Icons.GitBranch size={20} color="#8B5CF6" />}
+                label="Règles automatiques"
+                sublabel="Si... Alors..."
+                onPress={() => router.push('/settings/automation-rules')}
+              />
+              <SettingsItem
+                icon={<Icons.Bell size={20} color="#F59E0B" />}
+                label="Rappels"
+                sublabel="Rappels personnalisés"
+                onPress={() => router.push('/settings/reminders')}
+              />
+              <SettingsItem
+                icon={<Icons.Star size={20} color="#EC4899" />}
+                label="Liste d'envies"
+                sublabel="Wishlist"
+                onPress={() => router.push('/settings/wishlist')}
+              />
+              <SettingsItem
+                icon={<Icons.FileText size={20} color="#10B981" />}
+                label="Templates"
+                sublabel="Transactions rapides"
+                onPress={() => router.push('/settings/templates')}
+              />
+              <SettingsItem
+                icon={<Icons.Trophy size={20} color="#F59E0B" />}
+                label="Réalisations"
+                sublabel="Badges et défis"
+                onPress={() => router.push('/settings/achievements')}
               />
             </GlassCard>
           </View>
