@@ -61,6 +61,10 @@ export interface Transaction {
   // Liaison avec abonnements/goals
   subscriptionId?: string;
   goalId?: string;
+  /** URIs des photos de tickets (ex. file:// ou base64) */
+  photoUris?: string[];
+  /** URI ou base64 de la note vocale */
+  voiceNoteUri?: string;
   createdAt: string;
 }
 
@@ -134,6 +138,10 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system';
   hapticEnabled: boolean;
   notificationsEnabled: boolean;
+  /** Alerte doublons avant ajout transaction */
+  duplicateAlertEnabled?: boolean;
+  /** Signatures "ne plus alerter" (type|catégorie|tranche montant) */
+  ignoredDuplicateSignatures?: string[];
 }
 
 // ============================================

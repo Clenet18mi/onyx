@@ -13,29 +13,51 @@ import * as Haptics from 'expo-haptics';
 import { useAccountStore, useTransactionStore, useSettingsStore } from '@/stores';
 import { CATEGORIES, TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
+import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
+import { Calculator } from '@/components/ui/Calculator';
+import { DuplicateAlertModal, ReceiptScanner, VoiceNote } from '@/components/transactions';
+import { Modal } from 'react-native';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
-  const { accountId: defaultAccountId } = useLocalSearchParams<{ accountId?: string }>();
+  const params = useLocalSearchParams<{ accountId?: string; category?: string; type?: string; amount?: string; description?: string }>();
   
-  const [type, setType] = useState<TransactionType>('expense');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TransactionCategory>('other');
-  const [accountId, setAccountId] = useState(defaultAccountId || '');
+  const [type, setType] = useState<TransactionType>((params.type as TransactionType) || 'expense');
+  const [amount, setAmount] = useState(params.amount ?? '');
+  const [description, setDescription] = useState(params.description ?? '');
+  const [category, setCategory] = useState<TransactionCategory>((params.category as TransactionCategory) || 'other');
+  const [accountId, setAccountId] = useState(params.accountId || '');
   
   const accounts = useAccountStore((state) => state.getActiveAccounts());
   const addTransaction = useTransactionStore((state) => state.addTransaction);
+  const transactions = useTransactionStore((state) => state.transactions);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
+  const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
+  const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
 
-  // Sélectionner le premier compte si aucun n'est sélectionné
+  const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
+  const [pendingDuplicateMatches, setPendingDuplicateMatches] = useState<ReturnType<typeof findSimilarTransactions>>([]);
+  const [calculatorVisible, setCalculatorVisible] = useState(false);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [voiceNoteModalVisible, setVoiceNoteModalVisible] = useState(false);
+
+  // Sélectionner le premier compte si aucun n'est sélectionné ; appliquer params template
   React.useEffect(() => {
     if (!accountId && accounts.length > 0) {
-      setAccountId(accounts[0].id);
+      setAccountId(params.accountId || accounts[0].id);
     }
-  }, [accounts]);
+  }, [accounts, params.accountId]);
+  React.useEffect(() => {
+    if (params.category) setCategory(params.category as TransactionCategory);
+    if (params.type) setType(params.type as TransactionType);
+    if (params.amount != null) setAmount(params.amount);
+    if (params.description != null) setDescription(params.description);
+  }, [params.category, params.type, params.amount, params.description]);
 
   const getIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName];
@@ -45,6 +67,26 @@ export default function AddTransactionScreen() {
   const filteredCategories = CATEGORIES.filter(
     (c) => c.type === type || c.type === 'both'
   );
+
+  const doSave = () => {
+    if (!accountId) return;
+    if (hapticEnabled) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    addTransaction({
+      accountId,
+      type,
+      category,
+      amount: parseFloat(amount),
+      description: description.trim() || undefined,
+      date: new Date().toISOString(),
+      ...(photoUris.length > 0 && { photoUris: [...photoUris] }),
+      ...(voiceNoteUri && { voiceNoteUri: voiceNoteUri }),
+    });
+    setDuplicateModalVisible(false);
+    setPendingDuplicateMatches([]);
+    router.back();
+  };
 
   const handleSave = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -56,20 +98,29 @@ export default function AddTransactionScreen() {
       return;
     }
 
-    if (hapticEnabled) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-
-    addTransaction({
+    const candidate = {
       accountId,
       type,
       category,
       amount: parseFloat(amount),
-      description: description.trim() || undefined,
+      description: description.trim(),
       date: new Date().toISOString(),
-    });
+    };
 
-    router.back();
+    if (duplicateAlertEnabled && type !== 'transfer') {
+      const signature = getDuplicateIgnoreSignature(candidate);
+      const ignored = ignoredDuplicateSignatures.includes(signature);
+      if (!ignored) {
+        const matches = findSimilarTransactions(candidate, transactions, { lookbackDays: 7 });
+        if (matches.length > 0) {
+          setPendingDuplicateMatches(matches);
+          setDuplicateModalVisible(true);
+          return;
+        }
+      }
+    }
+
+    doSave();
   };
 
   const handleNumberPad = (value: string) => {
@@ -136,13 +187,28 @@ export default function AddTransactionScreen() {
 
           {/* Amount Display */}
           <View className="px-6 mb-8 items-center">
-            <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
+            <View className="flex-row items-center justify-center">
+              <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
+              <TouchableOpacity
+                onPress={() => setCalculatorVisible(true)}
+                className="ml-2 w-8 h-8 rounded-lg items-center justify-center"
+                style={{ backgroundColor: 'rgba(99,102,241,0.3)' }}
+              >
+                <Icons.Calculator size={18} color="#6366F1" />
+              </TouchableOpacity>
+            </View>
             <Text 
               className="text-5xl font-bold"
               style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
             >
               {type === 'income' ? '+' : '-'}{amount || '0'} €
             </Text>
+            <Calculator
+              visible={calculatorVisible}
+              onClose={() => setCalculatorVisible(false)}
+              onConfirm={(val) => { setAmount(String(val)); setCalculatorVisible(false); }}
+              initialValue={amount}
+            />
           </View>
 
           {/* Account Selector */}
@@ -221,6 +287,50 @@ export default function AddTransactionScreen() {
             />
           </View>
 
+          {/* Ticket + Note vocale */}
+          <View className="px-6 mb-6 flex-row" style={{ gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => setReceiptModalVisible(true)}
+              className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+            >
+              <Icons.Camera size={18} color="#71717A" />
+              <Text className="text-onyx-500 ml-2">Ticket</Text>
+              {photoUris.length > 0 && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setVoiceNoteModalVisible(true)}
+              className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+            >
+              <Icons.Mic size={18} color="#71717A" />
+              <Text className="text-onyx-500 ml-2">Note vocale</Text>
+              {voiceNoteUri && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
+            </TouchableOpacity>
+          </View>
+
+          <Modal visible={receiptModalVisible} transparent animationType="slide">
+            <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+              <View className="bg-onyx-100 rounded-t-3xl max-h-[80%]">
+                <ReceiptScanner
+                  onPhotosTaken={(uris) => { setPhotoUris(uris.slice(0, 3)); setReceiptModalVisible(false); }}
+                  onCancel={() => setReceiptModalVisible(false)}
+                  maxPhotos={3}
+                />
+              </View>
+            </View>
+          </Modal>
+          <Modal visible={voiceNoteModalVisible} transparent animationType="slide">
+            <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+              <View className="bg-onyx-100 rounded-t-3xl max-h-[80%]">
+                <VoiceNote
+                  onRecordingDone={(uri) => { setVoiceNoteUri(uri); setVoiceNoteModalVisible(false); }}
+                  onCancel={() => setVoiceNoteModalVisible(false)}
+                />
+              </View>
+            </View>
+          </Modal>
+
           {/* Number Pad */}
           <View className="px-6 mb-6">
             <View className="flex-row flex-wrap justify-center" style={{ gap: 12 }}>
@@ -240,6 +350,41 @@ export default function AddTransactionScreen() {
               ))}
             </View>
           </View>
+
+          {/* Duplicate alert modal */}
+          <DuplicateAlertModal
+            visible={duplicateModalVisible}
+            candidate={{
+              accountId,
+              type,
+              category,
+              amount: parseFloat(amount) || 0,
+              description: description.trim(),
+              date: new Date().toISOString(),
+            }}
+            matches={pendingDuplicateMatches}
+            onConfirmAdd={doSave}
+            onCancel={() => {
+              setDuplicateModalVisible(false);
+              setPendingDuplicateMatches([]);
+            }}
+            onViewTransaction={(txId) => {
+              const tx = transactions.find((t) => t.id === txId);
+              setDuplicateModalVisible(false);
+              if (tx) router.push(`/account/${tx.accountId}`);
+            }}
+            onDontAlertAgain={() => {
+              const candidate = {
+                accountId,
+                type,
+                category,
+                amount: parseFloat(amount) || 0,
+                description: description.trim(),
+                date: new Date().toISOString(),
+              };
+              addIgnoredDuplicateSignature(getDuplicateIgnoreSignature(candidate));
+            }}
+          />
 
           {/* Save Button */}
           <View className="px-6 mb-8">
