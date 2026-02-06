@@ -20,6 +20,9 @@ import {
   PaydayModal,
   TransactionFeed,
   SmartInsights,
+  FinancialInsights,
+  BalanceForecast,
+  MerchantAnalysis,
 } from '@/components/dashboard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -155,6 +158,15 @@ export default function DashboardScreen() {
           
           {/* Smart Insights */}
           <SmartInsights />
+
+          {/* Prédictions & tendances */}
+          <FinancialInsights />
+
+          {/* Prévision solde 30j */}
+          <BalanceForecast />
+
+          {/* Analyse par commerçant */}
+          <MerchantAnalysis />
           
           {/* Cashflow Chart */}
           <CashflowChart />
