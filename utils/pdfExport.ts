@@ -3,6 +3,7 @@
 // Génération de relevés PDF élégants
 // ============================================
 
+import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -463,10 +464,26 @@ export async function exportToJSON(
   };
   const json = JSON.stringify(data, null, 2);
   const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.json`;
-  const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
+  const dir = FileSystem.documentDirectory || FileSystem.cacheDirectory || '';
+  if (!dir) throw new Error('Aucun répertoire de stockage disponible');
+  const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
   await FileSystem.writeAsStringAsync(filePath, json, { encoding: FileSystem.EncodingType.UTF8 });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(filePath, { mimeType: 'application/json', dialogTitle: 'Exporter les données ONYX' });
+
+  let shareUri = filePath;
+  if (Platform.OS === 'android') {
+    try {
+      const { getContentUriAsync } = await import('expo-file-system/legacy');
+      shareUri = await getContentUriAsync(filePath);
+    } catch (_) {}
+  }
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(shareUri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Exporter les données ONYX',
+      UTI: 'public.json',
+    });
   }
 }
 
