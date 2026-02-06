@@ -11,6 +11,7 @@ import {
   Wallet, 
   Target, 
   Receipt, 
+  BarChart3,
   Settings 
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -121,7 +122,18 @@ export default function TabsLayout() {
           tabPress: handleTabPress,
         }}
       />
-      
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: 'Stats',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={BarChart3} focused={focused} color={color} />
+          ),
+        }}
+        listeners={{
+          tabPress: handleTabPress,
+        }}
+      />
       <Tabs.Screen
         name="more"
         options={{
