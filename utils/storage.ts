@@ -90,25 +90,3 @@ export const storageHelper = {
   },
 };
 
-export const mmkvHelpers = {
-  getString: (k: string) => storage.getString(k),
-  setString: (k: string, v: string) => storage.set(k, v),
-  getNumber: (k: string) => storage.getNumber(k),
-  setNumber: (k: string, v: number) => storage.set(k, v),
-  getBoolean: async (k: string): Promise<boolean | undefined> => {
-    const v = await storage.getString(k);
-    if (v === undefined) return undefined;
-    return v === 'true';
-  },
-  setBoolean: (k: string, v: boolean) => storage.set(k, String(v)),
-  delete: (k: string) => storage.delete(k),
-  clearAll: () => storage.clearAll(),
-};
-
-export function persistNow(): void {
-  // Zustand persist sauvegarde automatiquement à chaque changement
-}
-
-export function registerPersistNow(_callback: () => Promise<void>): void {}
-
-export async function flushPendingWrites(): Promise<void> {}

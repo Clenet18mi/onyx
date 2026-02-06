@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage, persistNow } from '@/utils/storage';
+import { zustandStorage } from '@/utils/storage';
 import { SavingsGoal } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
@@ -57,7 +57,6 @@ export const useGoalStore = create<GoalState>()(
         set((state) => ({
           goals: [...state.goals, newGoal],
         }));
-        persistNow();
         return id;
       },
 
@@ -70,7 +69,6 @@ export const useGoalStore = create<GoalState>()(
               : goal
           ),
         }));
-        persistNow();
       },
 
       // Supprimer un projet
@@ -85,7 +83,6 @@ export const useGoalStore = create<GoalState>()(
         set((state) => ({
           goals: state.goals.filter((goal) => goal.id !== id),
         }));
-        persistNow();
       },
 
       // Contribuer à un projet (ajouter de l'argent)
@@ -136,7 +133,6 @@ export const useGoalStore = create<GoalState>()(
               : g
           ),
         }));
-        persistNow();
       },
 
       // Retirer de l'argent d'un projet
@@ -185,7 +181,6 @@ export const useGoalStore = create<GoalState>()(
               : g
           ),
         }));
-        persistNow();
       },
 
       // Getters

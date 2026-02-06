@@ -1,7 +1,5 @@
 // ============================================
-// ONYX - Persistance des stores
-// Zustand persist gère automatiquement la sauvegarde avec MMKV
-// Réhydratation manuelle après que JSI/MMKV soit prêt (évite données perdues au redémarrage)
+// ONYX - Persistance des stores (AsyncStorage + Zustand persist)
 // ============================================
 
 import {
@@ -32,24 +30,7 @@ export function areAllStoresHydrated(): boolean {
   );
 }
 
-/**
- * Fonction de compatibilité - MMKV est synchrone, Zustand persist gère tout automatiquement.
- * Plus besoin de sauvegarde manuelle.
- */
-export async function saveAllStoresToDisk(): Promise<void> {
-  // Zustand persist gère automatiquement la sauvegarde avec MMKV
-  // Cette fonction est conservée pour compatibilité mais ne fait rien
-  return Promise.resolve();
-}
-
-/**
- * Fonction de compatibilité - Zustand persist gère automatiquement les changements.
- * Plus besoin d'abonnement manuel.
- */
+/** No-op : Zustand persist sauvegarde automatiquement à chaque changement. */
 export function startPersistOnChange(): () => void {
-  // Zustand persist gère automatiquement la persistance
-  // Cette fonction est conservée pour compatibilité mais retourne un no-op
-  return () => {
-    // No-op
-  };
+  return () => {};
 }

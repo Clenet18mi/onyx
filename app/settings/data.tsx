@@ -250,7 +250,7 @@ export default function DataManagementScreen() {
               <View className="flex-1 ml-3">
                 <Text className="text-white font-medium mb-1">Vos données sont sécurisées</Text>
                 <Text className="text-onyx-500 text-sm">
-                  • Stockées localement avec MMKV (chiffré){'\n'}
+                  • Stockées localement (AsyncStorage){'\n'}
                   • Jamais envoyées sur internet{'\n'}
                   • Préservées lors des mises à jour{'\n'}
                   • 3 sauvegardes automatiques conservées

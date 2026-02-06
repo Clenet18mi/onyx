@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage, persistNow } from '@/utils/storage';
+import { zustandStorage } from '@/utils/storage';
 import { Account, AccountType } from '@/types';
 import { generateId } from '@/utils/crypto';
 
@@ -46,7 +46,6 @@ export const useAccountStore = create<AccountState>()(
         set((state) => ({
           accounts: [...state.accounts, newAccount],
         }));
-        persistNow();
         return id;
       },
 
@@ -59,7 +58,6 @@ export const useAccountStore = create<AccountState>()(
               : account
           ),
         }));
-        persistNow();
       },
 
       // Supprimer un compte
@@ -67,7 +65,6 @@ export const useAccountStore = create<AccountState>()(
         set((state) => ({
           accounts: state.accounts.filter((account) => account.id !== id),
         }));
-        persistNow();
       },
 
       // Archiver un compte
@@ -79,7 +76,6 @@ export const useAccountStore = create<AccountState>()(
               : account
           ),
         }));
-        persistNow();
       },
 
       // Mettre à jour le solde (ajouter/soustraire)
@@ -95,7 +91,6 @@ export const useAccountStore = create<AccountState>()(
               : account
           ),
         }));
-        persistNow();
       },
 
       // Obtenir un compte par ID

@@ -220,7 +220,7 @@ export default function SettingsScreen() {
                 </View>
                 <View className="flex-row justify-between">
                   <Text className="text-onyx-500">Stockage</Text>
-                  <Text className="text-white">100% Local (MMKV)</Text>
+                  <Text className="text-white">100% Local (AsyncStorage)</Text>
                 </View>
               </View>
             </GlassCard>

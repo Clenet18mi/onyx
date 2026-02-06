@@ -111,8 +111,6 @@ export default function RootLayout() {
     }
   }, [appIsReady, fontsLoaded]);
 
-  // MMKV est synchrone, Zustand persist gère automatiquement la persistance
-  // Plus besoin de sauvegarde manuelle en arrière-plan
   const appStateRef = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
