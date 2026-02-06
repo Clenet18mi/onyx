@@ -44,16 +44,16 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
   // Récupérer le dernier salaire saisi
   useEffect(() => {
     if (visible) {
-      const lastSalary = storage.getString('last_salary_amount');
-      const lastAccountId = storage.getString('last_salary_account');
-      
-      if (lastSalary) setAmount(lastSalary);
-      if (lastAccountId && accounts.find(a => a.id === lastAccountId)) {
-        setAccountId(lastAccountId);
-      } else if (accounts.length > 0) {
-        setAccountId(accounts[0].id);
-      }
-      
+      (async () => {
+        const lastSalary = await storage.getString('last_salary_amount');
+        const lastAccountId = await storage.getString('last_salary_account');
+        if (lastSalary) setAmount(lastSalary);
+        if (lastAccountId && accounts.find((a) => a.id === lastAccountId)) {
+          setAccountId(lastAccountId);
+        } else if (accounts.length > 0) {
+          setAccountId(accounts[0].id);
+        }
+      })();
       scale.value = withSpring(1, { damping: 15 });
     }
   }, [visible, accounts]);
@@ -71,8 +71,8 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
     }
 
     // Sauvegarder pour la prochaine fois
-    storage.set('last_salary_amount', amount);
-    storage.set('last_salary_account', accountId);
+    storage.set('last_salary_amount', amount).catch(() => {});
+    storage.set('last_salary_account', accountId).catch(() => {});
 
     // Ajouter la transaction
     addTransaction({

@@ -157,7 +157,6 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'onyx-auth',
       storage: createJSONStorage(() => zustandStorage),
-      skipHydration: true,
       // Ne pas persister isAuthenticated (toujours false au démarrage)
       partialize: (state) => ({
         isSetup: state.isSetup,

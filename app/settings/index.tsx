@@ -67,8 +67,8 @@ export default function SettingsScreen() {
                 {
                   text: 'Confirmer',
                   style: 'destructive',
-                  onPress: () => {
-                    storage.clearAll();
+                  onPress: async () => {
+                    await storage.clearAll();
                     resetAuth();
                   },
                 },

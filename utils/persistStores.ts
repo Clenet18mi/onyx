@@ -16,23 +16,6 @@ import {
 } from '@/stores';
 
 /**
- * Lance la réhydratation de tous les stores depuis MMKV.
- * À appeler une seule fois au démarrage, une fois que l'app (et JSI) est prête.
- */
-export async function rehydrateAllStores(): Promise<void> {
-  await Promise.all([
-    useAuthStore.persist.rehydrate(),
-    useAccountStore.persist.rehydrate(),
-    useTransactionStore.persist.rehydrate(),
-    useBudgetStore.persist.rehydrate(),
-    useGoalStore.persist.rehydrate(),
-    useSubscriptionStore.persist.rehydrate(),
-    useSettingsStore.persist.rehydrate(),
-    useConfigStore.persist.rehydrate(),
-  ]);
-}
-
-/**
  * Vérifie que tous les stores sont hydratés.
  * À utiliser pour attendre que les données soient chargées avant d'afficher l'UI.
  */

@@ -228,7 +228,6 @@ export const useGoalStore = create<GoalState>()(
     {
       name: 'onyx-goals',
       storage: createJSONStorage(() => zustandStorage),
-      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

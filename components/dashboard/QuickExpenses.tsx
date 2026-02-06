@@ -34,12 +34,13 @@ function QuickExpenseModal({ visible, template, onClose }: QuickExpenseModalProp
     if (visible && template) {
       setAmount(template.defaultAmount?.toString() || '');
       setDescription(template.name);
-      const lastAccount = storage.getString('last_expense_account');
-      if (lastAccount && accounts.find(a => a.id === lastAccount)) {
-        setAccountId(lastAccount);
-      } else if (accounts.length > 0) {
-        setAccountId(accounts[0].id);
-      }
+      storage.getString('last_expense_account').then((lastAccount) => {
+        if (lastAccount && accounts.find((a) => a.id === lastAccount)) {
+          setAccountId(lastAccount);
+        } else if (accounts.length > 0) {
+          setAccountId(accounts[0].id);
+        }
+      });
     }
   }, [visible, template]);
 
@@ -55,7 +56,7 @@ function QuickExpenseModal({ visible, template, onClose }: QuickExpenseModalProp
       return;
     }
 
-    storage.set('last_expense_account', accountId);
+    storage.set('last_expense_account', accountId).catch(() => {});
 
     if (hapticEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

@@ -148,7 +148,6 @@ export const useBudgetStore = create<BudgetState>()(
     {
       name: 'onyx-budgets',
       storage: createJSONStorage(() => zustandStorage),
-      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

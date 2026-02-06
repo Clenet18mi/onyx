@@ -3,7 +3,7 @@
 // Gestion des données : sauvegarde, export, import
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -29,13 +29,16 @@ export default function DataManagementScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
+  const [dataVersion, setDataVersion] = useState<number>(0);
 
-  const dataVersion = getStoredDataVersion();
+  useEffect(() => {
+    getStoredDataVersion().then(setDataVersion);
+  }, []);
 
-  const handleCreateBackup = () => {
+  const handleCreateBackup = async () => {
     setLoading(true);
     try {
-      const backupKey = createBackup();
+      await createBackup();
       setLastBackup(new Date().toISOString());
       Alert.alert('Succès', 'Sauvegarde créée avec succès !');
     } catch (error) {
@@ -54,10 +57,10 @@ export default function DataManagementScreen() {
         {
           text: 'Restaurer',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             setLoading(true);
             try {
-              const success = restoreBackup();
+              const success = await restoreBackup();
               if (success) {
                 Alert.alert('Succès', 'Données restaurées ! Redémarrez l\'application.');
               } else {
@@ -77,7 +80,7 @@ export default function DataManagementScreen() {
   const handleExportData = async () => {
     setLoading(true);
     try {
-      const jsonData = exportAllData();
+      const jsonData = await exportAllData();
       const fileName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
       const filePath = `${FileSystem.cacheDirectory}${fileName}`;
       
@@ -121,7 +124,7 @@ export default function DataManagementScreen() {
               const fileUri = result.assets[0].uri;
               const jsonData = await FileSystem.readAsStringAsync(fileUri);
               
-              const success = importData(jsonData);
+              const success = await importData(jsonData);
               
               if (success) {
                 Alert.alert('Succès', 'Données importées ! Redémarrez l\'application.');
