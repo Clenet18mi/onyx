@@ -4,38 +4,41 @@
 // ============================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, SectionList } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore } from '@/stores';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { useTransactionStore, useAccountStore, useFilterStore } from '@/stores';
+import { formatCurrency } from '@/utils/format';
 import { CATEGORIES, Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
-import { format, parseISO, isToday, isYesterday, isThisWeek, startOfDay } from 'date-fns';
+import { AdvancedFilters, SplitBillModal } from '@/components/transactions';
+import { format, parseISO, isToday, isYesterday, isThisWeek, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 type FilterType = 'all' | 'income' | 'expense' | 'transfer';
 
 interface TransactionItemProps {
   transaction: Transaction;
+  onSplit?: (tx: Transaction) => void;
 }
 
-function TransactionItem({ transaction }: TransactionItemProps) {
+function TransactionItem({ transaction, onSplit }: TransactionItemProps) {
   const router = useRouter();
   const account = useAccountStore((state) => state.getAccount(transaction.accountId));
-  const toAccount = transaction.toAccountId 
+  const toAccount = transaction.toAccountId
     ? useAccountStore((state) => state.getAccount(transaction.toAccountId))
     : null;
-  
+
   const category = CATEGORIES.find((c) => c.id === transaction.category);
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
-  
+
   const isIncome = transaction.type === 'income';
   const isTransfer = transaction.type === 'transfer';
-  
+  const canSplit = transaction.type === 'expense' && transaction.amount > 0;
+
   let amountColor = isIncome ? '#10B981' : '#EF4444';
   let amountPrefix = isIncome ? '+' : '-';
-  
+
   if (isTransfer) {
     amountColor = '#6366F1';
     amountPrefix = '';
@@ -44,6 +47,7 @@ function TransactionItem({ transaction }: TransactionItemProps) {
   return (
     <TouchableOpacity
       onPress={() => {}}
+      onLongPress={() => canSplit && onSplit?.(transaction)}
       className="flex-row items-center py-3 px-4"
       activeOpacity={0.7}
     >
@@ -66,40 +70,85 @@ function TransactionItem({ transaction }: TransactionItemProps) {
         </Text>
       </View>
       
-      <View className="items-end">
-        <Text 
-          className="text-base font-semibold"
-          style={{ color: amountColor }}
-        >
-          {amountPrefix}{formatCurrency(transaction.amount)}
-        </Text>
-        <Text className="text-onyx-500 text-xs">
-          {format(parseISO(transaction.date), 'HH:mm', { locale: fr })}
-        </Text>
+      <View className="items-end flex-row items-center">
+        {canSplit && (
+          <TouchableOpacity onPress={() => onSplit?.(transaction)} style={{ marginRight: 8, padding: 4 }}>
+            <Icons.Share2 size={18} color="#71717A" />
+          </TouchableOpacity>
+        )}
+        <View>
+          <Text className="text-base font-semibold" style={{ color: amountColor }}>
+            {amountPrefix}{formatCurrency(transaction.amount)}
+          </Text>
+          <Text className="text-onyx-500 text-xs">
+            {format(parseISO(transaction.date), 'HH:mm', { locale: fr })}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
+}
+
+function getDateRangeForPeriod(period: string): { start: Date; end: Date } {
+  const now = new Date();
+  const end = endOfDay(now);
+  switch (period) {
+    case 'today':
+      return { start: startOfDay(now), end };
+    case 'week':
+      return { start: startOfDay(subDays(now, 7)), end };
+    case 'month':
+      return { start: startOfDay(subDays(now, 30)), end };
+    case '3months':
+      return { start: startOfDay(subDays(now, 90)), end };
+    case '6months':
+      return { start: startOfDay(subDays(now, 180)), end };
+    case 'year':
+      return { start: startOfDay(subDays(now, 365)), end };
+    default:
+      return { start: startOfDay(subDays(now, 30)), end };
+  }
 }
 
 export function TransactionFeed() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterType>('all');
   const [expanded, setExpanded] = useState(false);
-  
+  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
+  const [splitTransaction, setSplitTransaction] = useState<Transaction | null>(null);
+
   const transactions = useTransactionStore((state) => state.transactions);
-  
-  // Filtrer les transactions
+  const activeFilter = useFilterStore((state) => state.activeFilter);
+
   const filteredTransactions = useMemo(() => {
     let filtered = [...transactions];
-    
-    if (filter !== 'all') {
+
+    const typeFilter = activeFilter?.types?.length ? activeFilter.types : (filter !== 'all' ? [filter] : null);
+    if (typeFilter?.length && typeFilter.length < 3) {
+      filtered = filtered.filter((t) => typeFilter.includes(t.type));
+    } else if (filter !== 'all' && !activeFilter?.types?.length) {
       filtered = filtered.filter((t) => t.type === filter);
     }
-    
-    return filtered.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  }, [transactions, filter]);
+
+    if (activeFilter?.period) {
+      const { start, end } = getDateRangeForPeriod(activeFilter.period);
+      filtered = filtered.filter((t) => {
+        const d = parseISO(t.date);
+        return d >= start && d <= end;
+      });
+    }
+
+    if (activeFilter?.searchQuery?.trim()) {
+      const q = activeFilter.searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          (t.description || '').toLowerCase().includes(q) ||
+          (t.category || '').toLowerCase().includes(q)
+      );
+    }
+
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, filter, activeFilter]);
 
   // Grouper par date
   const sections = useMemo(() => {
@@ -200,8 +249,15 @@ export function TransactionFeed() {
           </TouchableOpacity>
         </View>
         
-        {/* Filtres */}
-        <View className="flex-row" style={{ gap: 8 }}>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => setFiltersModalVisible(true)}
+            className="flex-row items-center px-3 py-2 rounded-xl"
+            style={{ backgroundColor: activeFilter ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)' }}
+          >
+            <Icons.Filter size={14} color={activeFilter ? '#6366F1' : '#71717A'} />
+            <Text style={{ color: activeFilter ? '#6366F1' : '#71717A', fontSize: 14, marginLeft: 6 }}>Filtres</Text>
+          </TouchableOpacity>
           {filters.map((f) => {
             const isActive = filter === f.id;
             return (
@@ -246,7 +302,7 @@ export function TransactionFeed() {
           {/* Transactions */}
           {section.data.map((transaction, index) => (
             <View key={transaction.id}>
-              <TransactionItem transaction={transaction} />
+              <TransactionItem transaction={transaction} onSplit={setSplitTransaction} />
               {index < section.data.length - 1 && (
                 <View className="h-px bg-onyx-200/5 mx-4" />
               )}
@@ -276,6 +332,17 @@ export function TransactionFeed() {
             </>
           )}
         </TouchableOpacity>
+      )}
+
+      <AdvancedFilters visible={filtersModalVisible} onClose={() => setFiltersModalVisible(false)} />
+      {splitTransaction && (
+        <SplitBillModal
+          visible={!!splitTransaction}
+          onClose={() => setSplitTransaction(null)}
+          transactionId={splitTransaction.id}
+          totalAmount={splitTransaction.amount}
+          description={splitTransaction.description}
+        />
       )}
     </GlassCard>
   );
