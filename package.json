@@ -17,7 +17,8 @@
     "android:build": "powershell -ExecutionPolicy Bypass -File build-android.ps1 release",
     "android:build:debug": "powershell -ExecutionPolicy Bypass -File build-android.ps1 debug",
     "android:build:fast": "powershell -NoProfile -Command \"if (-not (Test-Path android)) { npm run prebuild:android }; Push-Location android; .\\gradlew.bat assembleRelease --build-cache --parallel --max-workers=4; Pop-Location\"",
-    "prebuild:clean": "expo prebuild --platform android --clean"
+    "prebuild:clean": "expo prebuild --platform android --clean",
+    "android:config": "powershell -ExecutionPolicy Bypass -File scripts/ensure-local-properties.ps1"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

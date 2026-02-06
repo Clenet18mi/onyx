@@ -42,11 +42,19 @@ if (-not $sdkPath) {
 if (-not $sdkPath -or -not (Test-Path $sdkPath)) {
     $sdkPath = Join-Path $env:USERPROFILE "AppData\Local\Android\Sdk"
 }
-$sdkDirValue = $sdkPath -replace '\\', '/'
+# Chemin absolu pour que Gradle trouve le SDK meme si lance depuis l'IDE ou autre repertoire
+try {
+    $sdkDirValue = (Resolve-Path -LiteralPath $sdkPath -ErrorAction Stop).Path
+} catch {
+    $sdkDirValue = $sdkPath
+}
+$sdkDirValue = $sdkDirValue -replace '\\', '/'
 $sdkDirLine = "sdk.dir=$sdkDirValue"
 $androidDir = Join-Path $PSScriptRoot "android"
 if (-not (Test-Path $androidDir)) { New-Item -ItemType Directory -Path $androidDir -Force | Out-Null }
-Set-Content -Path $localPropsPath -Value $sdkDirLine -Encoding UTF8 -Force
+# Ecrire sans BOM pour eviter tout souci de parsing Gradle
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($localPropsPath, $sdkDirLine + "`n", $utf8NoBom)
 # S'assurer que Gradle voit bien le SDK via les variables d'environnement
 $env:ANDROID_HOME = $sdkPath
 $env:ANDROID_SDK_ROOT = $sdkPath
@@ -74,6 +82,9 @@ $applyScript = Join-Path $PSScriptRoot "scripts\apply-gradle-optimizations.ps1"
 if ((Test-Path $applyScript) -and (Test-Path $androidDir)) {
     & $applyScript -AndroidDir $androidDir
 }
+
+# Reecrire local.properties juste avant Gradle (au cas ou IDE ou prebuild l'aurait supprime)
+[System.IO.File]::WriteAllText($localPropsPath, $sdkDirLine + "`n", $utf8NoBom)
 
 # Aller dans le dossier android et builder (options pour reduire le temps de build)
 Push-Location $androidDir
