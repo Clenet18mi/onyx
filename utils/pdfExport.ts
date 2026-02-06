@@ -5,6 +5,7 @@
 
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Transaction, Account, CATEGORIES } from '@/types';
@@ -415,19 +416,11 @@ export async function exportToCSV(
   });
   
   const csv = [headers.join(';'), ...rows].join('\n');
-  
   const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-  const filePath = `${FileSystem.documentDirectory}${fileName}`;
-  
-  await FileSystem.writeAsStringAsync(filePath, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-  
+  const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
+  await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(filePath, {
-      mimeType: 'text/csv',
-      dialogTitle: 'Exporter les données ONYX',
-    });
+    await Sharing.shareAsync(filePath, { mimeType: 'text/csv', dialogTitle: 'Exporter les données ONYX' });
   }
 }
 
@@ -470,14 +463,66 @@ export async function exportToJSON(
   };
   const json = JSON.stringify(data, null, 2);
   const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.json`;
-  const filePath = `${FileSystem.documentDirectory}${fileName}`;
-  await FileSystem.writeAsStringAsync(filePath, json, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
+  await FileSystem.writeAsStringAsync(filePath, json, { encoding: FileSystem.EncodingType.UTF8 });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(filePath, {
-      mimeType: 'application/json',
-      dialogTitle: 'Exporter les données ONYX',
-    });
+    await Sharing.shareAsync(filePath, { mimeType: 'application/json', dialogTitle: 'Exporter les données ONYX' });
   }
+}
+
+export interface ImportResult {
+  success: boolean;
+  accountsAdded: number;
+  transactionsAdded: number;
+  error?: string;
+}
+
+export async function importFromJSON(): Promise<ImportResult> {
+  const pick = await DocumentPicker.getDocumentAsync({
+    type: 'application/json',
+    copyToCacheDirectory: true,
+  });
+  if (pick.canceled || !pick.assets[0]) {
+    return { success: false, accountsAdded: 0, transactionsAdded: 0 };
+  }
+  const uri = pick.assets[0].uri;
+  const raw = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
+  let data: { accounts?: { id: string; name: string; balance: number; color: string }[]; transactions?: { id: string; accountId: string; type: string; category: string; amount: number; description?: string; date: string; createdAt: string }[] };
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return { success: false, accountsAdded: 0, transactionsAdded: 0, error: 'Fichier JSON invalide' };
+  }
+  const accounts = data.accounts || [];
+  const transactions = data.transactions || [];
+  const { useAccountStore } = await import('@/stores/accountStore');
+  const { useTransactionStore } = await import('@/stores/transactionStore');
+  const accountStore = useAccountStore.getState();
+  const transactionStore = useTransactionStore.getState();
+  const existingIds = new Set(accountStore.accounts.map((a) => a.id));
+  let accountsAdded = 0;
+  for (const a of accounts) {
+    if (!existingIds.has(a.id)) {
+      accountStore.addAccountFromImport({ id: a.id, name: a.name, balance: 0, color: a.color || '#6366F1' });
+      existingIds.add(a.id);
+      accountsAdded++;
+    }
+  }
+  const existingTxIds = new Set(transactionStore.transactions.map((t) => t.id));
+  let transactionsAdded = 0;
+  for (const t of transactions) {
+    if (!existingTxIds.has(t.id) && existingIds.has(t.accountId)) {
+      transactionStore.addTransaction({
+        accountId: t.accountId,
+        type: t.type as Transaction['type'],
+        category: (t.category || 'other') as Transaction['category'],
+        amount: t.amount,
+        description: t.description,
+        date: t.date,
+      });
+      existingTxIds.add(t.id);
+      transactionsAdded++;
+    }
+  }
+  return { success: true, accountsAdded, transactionsAdded };
 }

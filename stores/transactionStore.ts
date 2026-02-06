@@ -94,11 +94,29 @@ export const useTransactionStore = create<TransactionState>()(
         }));
       },
 
-      // Mettre à jour une transaction
+      // Mettre à jour une transaction (et ajuster les soldes)
       updateTransaction: (id, updates) => {
+        const prev = get().transactions.find((tx) => tx.id === id);
+        if (!prev) return;
+        const accountStore = useAccountStore.getState();
+        const next = { ...prev, ...updates };
+        if (prev.type === 'transfer' && prev.toAccountId) {
+          accountStore.updateBalance(prev.accountId, prev.amount);
+          accountStore.updateBalance(prev.toAccountId, -prev.amount);
+        } else {
+          const rev = prev.type === 'income' ? -prev.amount : prev.amount;
+          accountStore.updateBalance(prev.accountId, rev);
+        }
+        if (next.type === 'transfer' && next.toAccountId) {
+          accountStore.updateBalance(next.accountId, -next.amount);
+          accountStore.updateBalance(next.toAccountId, next.amount);
+        } else {
+          const delta = next.type === 'income' ? next.amount : -next.amount;
+          accountStore.updateBalance(next.accountId, delta);
+        }
         set((state) => ({
           transactions: state.transactions.map((tx) =>
-            tx.id === id ? { ...tx, ...updates } : tx
+            tx.id === id ? next : tx
           ),
         }));
       },

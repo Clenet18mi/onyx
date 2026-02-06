@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { exportToPDF, exportToCSV, exportToJSON } from '@/utils/pdfExport';
+import { exportToPDF, exportToCSV, exportToJSON, importFromJSON } from '@/utils/pdfExport';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -30,6 +30,7 @@ export default function MoreScreen() {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Form state
   const [name, setName] = useState('');
@@ -157,12 +158,12 @@ export default function MoreScreen() {
     setIsExporting(true);
     try {
       await exportToCSV(transactions, accounts);
+      setExportModalVisible(false);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'exporter les données');
       console.error(error);
+      Alert.alert('Erreur', 'Impossible d\'exporter en CSV. Réessayez.');
     } finally {
       setIsExporting(false);
-      setExportModalVisible(false);
     }
   };
 
@@ -170,12 +171,29 @@ export default function MoreScreen() {
     setIsExporting(true);
     try {
       await exportToJSON(transactions, accounts);
+      setExportModalVisible(false);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'exporter en JSON');
       console.error(error);
+      Alert.alert('Erreur', 'Impossible d\'exporter en JSON. Réessayez.');
     } finally {
       setIsExporting(false);
-      setExportModalVisible(false);
+    }
+  };
+
+  const handleImportJSON = async () => {
+    setIsImporting(true);
+    try {
+      const result = await importFromJSON();
+      if (result.success) {
+        Alert.alert('Import réussi', `${result.accountsAdded} compte(s) et ${result.transactionsAdded} transaction(s) ajoutés.`);
+      } else if (result.error) {
+        Alert.alert('Erreur', result.error);
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible d\'importer le fichier');
+      console.error(error);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -380,13 +398,27 @@ export default function MoreScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleExportJSON}
-                className="flex-row items-center justify-between p-4"
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
               >
                 <View className="flex-row items-center">
                   <Icons.Braces size={20} color="#F59E0B" />
                   <View className="ml-3">
                     <Text className="text-white">Export JSON</Text>
                     <Text className="text-onyx-500 text-sm">Données structurées</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleImportJSON}
+                disabled={isImporting}
+                className="flex-row items-center justify-between p-4"
+              >
+                <View className="flex-row items-center">
+                  <Icons.Upload size={20} color="#6366F1" />
+                  <View className="ml-3">
+                    <Text className="text-white">Import JSON</Text>
+                    <Text className="text-onyx-500 text-sm">{isImporting ? 'Import en cours…' : 'Fusionner un export ONYX'}</Text>
                   </View>
                 </View>
                 <Icons.ChevronRight size={20} color="#52525B" />

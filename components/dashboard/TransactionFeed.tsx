@@ -20,9 +20,11 @@ type FilterType = 'all' | 'income' | 'expense' | 'transfer';
 interface TransactionItemProps {
   transaction: Transaction;
   onSplit?: (tx: Transaction) => void;
+  onEdit?: (tx: Transaction) => void;
+  onDelete?: (tx: Transaction) => void;
 }
 
-function TransactionItem({ transaction, onSplit }: TransactionItemProps) {
+function TransactionItem({ transaction, onSplit, onEdit, onDelete }: TransactionItemProps) {
   const router = useRouter();
   const account = useAccountStore((state) => state.getAccount(transaction.accountId));
   const toAccount = transaction.toAccountId
@@ -44,10 +46,26 @@ function TransactionItem({ transaction, onSplit }: TransactionItemProps) {
     amountPrefix = '';
   }
 
+  const handleLongPress = () => {
+    if (canSplit) onSplit?.(transaction);
+    else {
+      const { Alert } = require('react-native');
+      Alert.alert(
+        transaction.description || category?.label || 'Transaction',
+        undefined,
+        [
+          { text: 'Modifier', onPress: () => router.push(`/transaction/${transaction.id}`) },
+          { text: 'Supprimer', style: 'destructive' as const, onPress: () => onDelete?.(transaction) },
+          { text: 'Annuler', style: 'cancel' as const },
+        ]
+      );
+    }
+  };
+
   return (
     <TouchableOpacity
-      onPress={() => {}}
-      onLongPress={() => canSplit && onSplit?.(transaction)}
+      onPress={() => router.push(`/transaction/${transaction.id}`)}
+      onLongPress={handleLongPress}
       className="flex-row items-center py-3 px-4"
       activeOpacity={0.7}
     >
@@ -116,6 +134,7 @@ export function TransactionFeed() {
   const [expanded, setExpanded] = useState(false);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [splitTransaction, setSplitTransaction] = useState<Transaction | null>(null);
+  const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
 
   const transactions = useTransactionStore((state) => state.transactions);
   const activeFilter = useFilterStore((state) => state.activeFilter);
@@ -302,7 +321,17 @@ export function TransactionFeed() {
           {/* Transactions */}
           {section.data.map((transaction, index) => (
             <View key={transaction.id}>
-              <TransactionItem transaction={transaction} onSplit={setSplitTransaction} />
+              <TransactionItem
+                transaction={transaction}
+                onSplit={setSplitTransaction}
+                onDelete={(t) => {
+                  const { Alert } = require('react-native');
+                  Alert.alert('Supprimer', 'Supprimer cette transaction ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    { text: 'Supprimer', style: 'destructive', onPress: () => deleteTransaction(t.id) },
+                  ]);
+                }}
+              />
               {index < section.data.length - 1 && (
                 <View className="h-px bg-onyx-200/5 mx-4" />
               )}

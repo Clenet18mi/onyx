@@ -178,6 +178,13 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="transaction/[id]" 
+          options={{ 
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }} 
+        />
+        <Stack.Screen 
           name="transfer" 
           options={{ 
             presentation: 'modal',

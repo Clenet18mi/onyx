@@ -38,11 +38,12 @@ export default function DataManagementScreen() {
   const handleCreateBackup = async () => {
     setLoading(true);
     try {
-      await createBackup();
-      setLastBackup(new Date().toISOString());
+      const key = await createBackup();
+      setLastBackup(key ? new Date().toISOString() : null);
       Alert.alert('Succès', 'Sauvegarde créée avec succès !');
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer la sauvegarde');
+      console.error('[ONYX] createBackup error:', error);
+      Alert.alert('Erreur', 'Impossible de créer la sauvegarde. Réessayez.');
     } finally {
       setLoading(false);
     }
@@ -82,21 +83,17 @@ export default function DataManagementScreen() {
     try {
       const jsonData = await exportAllData();
       const fileName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
-      const filePath = `${FileSystem.cacheDirectory}${fileName}`;
-      
-      await FileSystem.writeAsStringAsync(filePath, jsonData);
-      
+      const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+      const filePath = `${dir}${fileName}`;
+      await FileSystem.writeAsStringAsync(filePath, jsonData, { encoding: FileSystem.EncodingType.UTF8 });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(filePath, {
-          mimeType: 'application/json',
-          dialogTitle: 'Exporter les données ONYX',
-        });
+        await Sharing.shareAsync(filePath, { mimeType: 'application/json', dialogTitle: 'Exporter les données ONYX' });
       } else {
-        Alert.alert('Erreur', 'Le partage n\'est pas disponible sur cet appareil');
+        Alert.alert('Info', 'Fichier enregistré. Le partage n\'est pas disponible sur cet appareil.');
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert('Erreur', 'Impossible d\'exporter les données');
+      console.error('[ONYX] export error:', error);
+      Alert.alert('Erreur', 'Impossible d\'exporter les données. Réessayez.');
     } finally {
       setLoading(false);
     }

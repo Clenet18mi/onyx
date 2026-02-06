@@ -29,19 +29,12 @@ const BACKUP_PREFIX = 'onyx_backup_';
 export async function createBackup(): Promise<string> {
   const timestamp = Date.now();
   const backupKey = `${BACKUP_PREFIX}${timestamp}`;
-  const keysToBackup = [
-    'onyx-auth',
-    'onyx-accounts',
-    'onyx-transactions',
-    'onyx-budgets',
-    'onyx-goals',
-    'onyx-subscriptions',
-    'onyx-settings',
-    'onyx-config',
-  ];
+  const allKeys = await storage.getAllKeys();
+  const onyxKeys = allKeys.filter((k) => k.startsWith('onyx-') || k === 'onyx_data_version');
   const backup: Record<string, string | undefined> = {};
-  for (const key of keysToBackup) {
-    backup[key] = await storage.getString(key);
+  for (const key of onyxKeys) {
+    const val = await storage.getString(key);
+    if (val !== undefined) backup[key] = val;
   }
   await storage.set(backupKey, JSON.stringify(backup));
   await storage.set('onyx_last_backup', backupKey);

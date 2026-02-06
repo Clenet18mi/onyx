@@ -15,6 +15,7 @@ interface AccountState {
   
   // Actions
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => string;
+  addAccountFromImport: (account: { id: string; name: string; balance: number; color: string }) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   archiveAccount: (id: string) => void;
@@ -47,6 +48,26 @@ export const useAccountStore = create<AccountState>()(
           accounts: [...state.accounts, newAccount],
         }));
         return id;
+      },
+
+      addAccountFromImport: (account) => {
+        const now = new Date().toISOString();
+        const exists = get().accounts.some((a) => a.id === account.id);
+        if (exists) return;
+        set((state) => ({
+          accounts: [...state.accounts, {
+            id: account.id,
+            name: account.name,
+            type: 'checking',
+            balance: account.balance ?? 0,
+            color: account.color || '#6366F1',
+            icon: 'Wallet',
+            currency: 'EUR',
+            isArchived: false,
+            createdAt: now,
+            updatedAt: now,
+          }],
+        }));
       },
 
       // Mettre à jour un compte
