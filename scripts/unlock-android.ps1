@@ -1,33 +1,41 @@
-# Arrete le daemon Gradle et attend pour liberer les fichiers verrouilles (EBUSY)
+# Arrete Gradle et supprime le dossier android pour eviter EBUSY au prebuild
 # Usage: .\scripts\unlock-android.ps1
-# Puis relancer: npm run prebuild:android ou npm run build:android
+# Puis: npm run prebuild:android:clean (ou prebuild:android)
 
-$ErrorActionPreference = "Stop"
-$androidDir = Join-Path $PSScriptRoot "..\android"
+$ErrorActionPreference = "Continue"
+$rootDir = (Get-Item $PSScriptRoot).Parent.FullName
+$androidDir = Join-Path $rootDir "android"
 if (-not (Test-Path $androidDir)) {
-    Write-Host "[INFO] Pas de dossier android, rien a liberer." -ForegroundColor Yellow
+    Write-Host "[OK] Pas de dossier android." -ForegroundColor Green
     exit 0
 }
 $gradlew = Join-Path $androidDir "gradlew.bat"
 if (Test-Path $gradlew) {
-    Write-Host "[INFO] Arret du daemon Gradle..." -ForegroundColor Yellow
+    Write-Host "[1/3] Arret du daemon Gradle..." -ForegroundColor Cyan
     Push-Location $androidDir
-    try {
-        & .\gradlew.bat --stop 2>$null
-    } catch {}
+    & .\gradlew.bat --stop 2>$null
     Pop-Location
-    Write-Host "[INFO] Attente 3 s pour liberer les fichiers..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 3
 }
-# Supprimer les dossiers build (souvent verrouilles)
-$buildDirs = @(
-    (Join-Path $androidDir "app\build"),
-    (Join-Path $androidDir "build")
-)
-foreach ($d in $buildDirs) {
-    if (Test-Path $d) {
-        Write-Host "[INFO] Suppression de $d ..." -ForegroundColor Yellow
-        Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue
+Write-Host "[2/3] Attente 5 s pour liberer les fichiers..." -ForegroundColor Cyan
+Start-Sleep -Seconds 5
+Write-Host "[3/3] Suppression du dossier android..." -ForegroundColor Cyan
+$maxAttempts = 5
+for ($i = 1; $i -le $maxAttempts; $i++) {
+    try {
+        Remove-Item -LiteralPath $androidDir -Recurse -Force -ErrorAction Stop
+        Write-Host "[OK] Dossier android supprime. Lancez: npm run prebuild:android:clean" -ForegroundColor Green
+        exit 0
+    } catch {
+        if ($i -lt $maxAttempts) {
+            Write-Host "  Tentative $i/$maxAttempts echouee, nouvelle attente 3 s..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 3
+        } else {
+            Write-Host "[ERREUR] Impossible de supprimer android (fichier verrouille)." -ForegroundColor Red
+            Write-Host "  Fermez Android Studio, tous les terminaux, puis:" -ForegroundColor Yellow
+            Write-Host "  1. Supprimez le dossier 'android' a la main dans l'Explorateur Windows" -ForegroundColor White
+            Write-Host "  2. npm run prebuild:android:clean" -ForegroundColor White
+            exit 1
+        }
     }
 }
-Write-Host "[OK] Vous pouvez relancer: npm run prebuild:android" -ForegroundColor Green
+exit 1

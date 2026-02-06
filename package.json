@@ -11,6 +11,7 @@
     "prebuild:android": "expo prebuild --platform android",
     "prebuild:android:clean": "expo prebuild --platform android --clean",
     "android:unlock": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/unlock-android.ps1",
+    "prebuild:android:fresh": "npm run android:unlock && npm run prebuild:android:clean",
     "build:android": "powershell -ExecutionPolicy Bypass -File build-android.ps1 release",
     "build:android:debug": "powershell -ExecutionPolicy Bypass -File build-android.ps1 debug",
     "build:android:eas": "eas build --platform android --profile preview",
