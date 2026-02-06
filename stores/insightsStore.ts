@@ -149,7 +149,6 @@ export function computeFinancialInsights(): FinancialInsightsData {
   const subs = useSubscriptionStore.getState().subscriptions.filter((s) => s.isActive);
   const avgDaily = dailyAverageSpending;
   const salaryAmount = useConfigStore.getState().profile.defaultSalaryAmount ?? 0;
-  const salaryDay = useConfigStore.getState().profile.salaryDay;
 
   const projectBalance = (daysAhead: number): number => {
     let balance = totalBalance;
