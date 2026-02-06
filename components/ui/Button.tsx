@@ -1,108 +1,237 @@
 // ============================================
-// ONYX - Button Component
-// Bouton stylisé avec variantes
+// ONYX - Button Component (Premium)
+// Variantes, tailles, haptic, scale animation, loading
 // ============================================
 
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, TouchableOpacityProps } from 'react-native';
+import {
+  Pressable,
+  Text,
+  ActivityIndicator,
+  View,
+  StyleSheet,
+  type PressableProps,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
+import { useTheme } from '@/hooks/useTheme';
+import { hapticLight } from '@/utils/haptics';
 import { useSettingsStore } from '@/stores';
 
-interface ButtonProps extends TouchableOpacityProps {
-  title: string;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
+
+export interface ButtonProps extends Omit<PressableProps, 'children'> {
+  title?: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   loading?: boolean;
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
+  /** @deprecated Utiliser iconLeft */
   icon?: React.ReactNode;
+  /** Si true, seul l'icône est affichée (title ignoré) */
+  iconOnly?: boolean;
   fullWidth?: boolean;
+  children?: React.ReactNode;
 }
+
+const sizeConfig = {
+  sm: { py: 10, px: 16, fontSize: 14, gap: 6 },
+  md: { py: 12, px: 24, gap: 8 },
+  lg: { py: 16, px: 32, fontSize: 18, gap: 10 },
+  xl: { py: 20, px: 40, fontSize: 18, gap: 10 },
+};
 
 export function Button({
   title,
   variant = 'primary',
   size = 'md',
   loading = false,
+  iconLeft,
+  iconRight,
   icon,
+  iconOnly = false,
   fullWidth = false,
   disabled,
   onPress,
-  className = '',
+  style,
+  children,
   ...props
 }: ButtonProps) {
-  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const leftIcon = iconLeft ?? icon;
+  const { theme, isDark } = useTheme();
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
+  const { colors, radius } = theme;
 
   const handlePress = (e: any) => {
-    if (hapticEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    if (hapticEnabled) hapticLight();
     onPress?.(e);
   };
 
-  const sizeClasses = {
-    sm: 'py-2 px-4',
-    md: 'py-3 px-6',
-    lg: 'py-4 px-8',
-  };
+  const config = sizeConfig[size];
+  const fontSize = config.fontSize ?? 16;
+  const py = config.py;
+  const px = config.px;
+  const gap = config.gap ?? 8;
 
-  const textSizes = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-  };
-
-  const variantStyles = {
+  const variantConfig = {
     primary: {
-      gradient: ['#6366F1', '#8B5CF6'] as [string, string],
-      textColor: 'text-white',
-      opacity: disabled ? 0.5 : 1,
+      gradient: colors.gradients.primary,
+      textColor: '#FFFFFF',
+      borderWidth: 0,
+      borderColor: 'transparent',
+      useGradient: true,
     },
     secondary: {
-      gradient: ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'] as [string, string],
-      textColor: 'text-white',
-      opacity: disabled ? 0.5 : 1,
+      gradient: colors.gradients.card,
+      textColor: colors.text.primary,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+      useGradient: false,
     },
     ghost: {
       gradient: ['transparent', 'transparent'] as [string, string],
-      textColor: 'text-onyx-600',
-      opacity: disabled ? 0.5 : 1,
+      textColor: colors.text.primary,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      useGradient: false,
     },
     danger: {
-      gradient: ['#EF4444', '#DC2626'] as [string, string],
-      textColor: 'text-white',
-      opacity: disabled ? 0.5 : 1,
+      gradient: colors.gradients.danger,
+      textColor: '#FFFFFF',
+      borderWidth: 0,
+      borderColor: 'transparent',
+      useGradient: true,
+    },
+    success: {
+      gradient: colors.gradients.success,
+      textColor: '#FFFFFF',
+      borderWidth: 0,
+      borderColor: 'transparent',
+      useGradient: true,
     },
   };
 
-  const { gradient, textColor, opacity } = variantStyles[variant];
+  const v = variantConfig[variant];
+  const borderColor =
+    variant === 'secondary'
+      ? isDark
+        ? 'rgba(255,255,255,0.2)'
+        : 'rgba(99,102,241,0.5)'
+      : v.borderColor;
+
+  const content = (
+    <>
+      {loading ? (
+        <ActivityIndicator
+          size="small"
+          color={v.textColor}
+          style={styles.loader}
+        />
+      ) : (
+        <>
+          {leftIcon && <View style={styles.icon}>{leftIcon}</View>}
+          {(title != null && title !== '' && !iconOnly) || children ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                {
+                  fontSize,
+                  color: v.textColor,
+                  marginLeft: leftIcon ? gap : 0,
+                  marginRight: iconRight ? gap : 0,
+                },
+              ]}
+            >
+              {children ?? title}
+            </Text>
+          ) : null}
+          {iconRight && <View style={styles.icon}>{iconRight}</View>}
+        </>
+      )}
+    </>
+  );
+
+  const inner = v.useGradient ? (
+    <LinearGradient
+      colors={v.gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.inner,
+        {
+          paddingVertical: py,
+          paddingHorizontal: iconOnly ? py : px,
+          borderRadius: radius.md,
+          borderWidth: v.borderWidth,
+          borderColor,
+        },
+      ]}
+    >
+      {content}
+    </LinearGradient>
+  ) : (
+    <View
+      style={[
+        styles.inner,
+        {
+          paddingVertical: py,
+          paddingHorizontal: iconOnly ? py : px,
+          borderRadius: radius.md,
+          backgroundColor: variant === 'ghost' ? 'transparent' : theme.colors.background.tertiary,
+          borderWidth: v.borderWidth,
+          borderColor,
+        },
+      ]}
+    >
+      {content}
+    </View>
+  );
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-      className={`rounded-2xl overflow-hidden ${fullWidth ? 'w-full' : ''} ${className}`}
-      style={{ opacity }}
+      style={({ pressed }) => [
+        styles.outer,
+        fullWidth && styles.fullWidth,
+        {
+          opacity: disabled ? 0.5 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        },
+        style as any,
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      accessibilityLabel={title ?? (iconOnly ? 'Bouton' : undefined)}
       {...props}
     >
-      <LinearGradient
-        colors={gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        className={`flex-row items-center justify-center ${sizeClasses[size]}`}
-        style={variant === 'secondary' ? { borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' } : {}}
-      >
-        {loading ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <>
-            {icon && <>{icon}</>}
-            <Text className={`font-semibold ${textColor} ${textSizes[size]} ${icon ? 'ml-2' : ''}`}>
-              {title}
-            </Text>
-          </>
-        )}
-      </LinearGradient>
-    </TouchableOpacity>
+      {inner}
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  outer: {
+    alignSelf: 'flex-start',
+  },
+  fullWidth: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    margin: 0,
+  },
+  label: {
+    fontWeight: '600',
+  },
+  loader: {
+    marginVertical: 2,
+  },
+});

@@ -9,6 +9,7 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
+import { useTheme } from '@/hooks/useTheme';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { storageHelper } from '@/utils/storage';
@@ -22,9 +23,11 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [storesHydrated, setStoresHydrated] = useState(false);
-  
+  const { theme } = useTheme();
   const { isSetup, isAuthenticated } = useAuthStore();
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
+  const bgColor = theme.colors.background.primary;
+  const isDark = theme.colors.background.primary === '#0A0A0F';
 
   // Charger les fonts
   const [fontsLoaded] = useFonts({
@@ -127,8 +130,8 @@ export default function RootLayout() {
   if (!isSetup) {
     return (
       <ErrorBoundary>
-        <View className="flex-1 bg-onyx">
-          <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+        <View className="flex-1" style={{ backgroundColor: bgColor }}>
+          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
           <SetupPinScreen onComplete={() => {}} />
         </View>
       </ErrorBoundary>
@@ -139,8 +142,8 @@ export default function RootLayout() {
   if (!isAuthenticated) {
     return (
       <ErrorBoundary>
-        <View className="flex-1 bg-onyx">
-          <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+        <View className="flex-1" style={{ backgroundColor: bgColor }}>
+          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
           <LockScreen onUnlock={() => {}} />
         </View>
       </ErrorBoundary>
@@ -150,12 +153,12 @@ export default function RootLayout() {
   // Authentifié - Navigation principale
   return (
     <ErrorBoundary>
-      <View className="flex-1 bg-onyx">
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+      <View className="flex-1" style={{ backgroundColor: bgColor }}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#0A0A0B' },
+            contentStyle: { backgroundColor: bgColor },
             animation: 'fade',
           }}
         >
