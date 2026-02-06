@@ -205,6 +205,8 @@ export default function RootLayout() {
             animation: 'slide_from_bottom',
           }} 
         />
+        <Stack.Screen name="period-comparator" />
+        <Stack.Screen name="scenarios" />
       </Stack>
       </View>
     </ErrorBoundary>
