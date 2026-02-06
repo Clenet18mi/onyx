@@ -189,6 +189,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     {
       name: 'onyx-subscriptions',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

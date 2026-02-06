@@ -60,6 +60,7 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'onyx-settings',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

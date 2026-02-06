@@ -7,17 +7,53 @@
 import { MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 
-// Instance MMKV unique pour toute l'application
-// Protégé avec try-catch pour éviter les crashes au démarrage
-let storage: MMKV;
-try {
-  storage = new MMKV({
-    id: 'onyx-storage',
+// Instance MMKV unique — initialisation paresseuse pour éviter le crash
+// "MMKV can only be used when JSI is possible" (au chargement du module JSI n'est pas encore prêt)
+let storage: MMKV | null = null;
+
+function getStorage(): MMKV {
+  if (storage != null) return storage;
+  try {
+    storage = new MMKV({ id: 'onyx-storage' });
+  } catch (error) {
+    console.warn('[ONYX] MMKV init with id failed, using default:', error);
+    try {
+      storage = new MMKV();
+    } catch (e) {
+      console.error('[ONYX] MMKV init failed:', e);
+      throw e;
+    }
+  }
+  return storage;
+}
+
+const RETRY_DELAY_MS = 150;
+const RETRY_MAX = 40; // ~6 secondes max
+
+/**
+ * Initialise MMKV en réessayant jusqu'à ce que JSI soit prêt.
+ * À appeler au démarrage avant toute lecture/écriture.
+ */
+export function ensureStorageReady(): Promise<void> {
+  if (storage != null) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const tryInit = () => {
+      attempts++;
+      try {
+        getStorage();
+        resolve();
+      } catch (e) {
+        if (attempts >= RETRY_MAX) {
+          console.error('[ONYX] MMKV init failed after retries:', e);
+          reject(e);
+          return;
+        }
+        setTimeout(tryInit, RETRY_DELAY_MS);
+      }
+    };
+    tryInit();
   });
-} catch (error) {
-  console.error('[ONYX] Failed to initialize MMKV:', error);
-  // Fallback: créer une instance par défaut
-  storage = new MMKV();
 }
 
 // Interface du stockage (compatibilité)
@@ -42,43 +78,43 @@ export const storageHelper: IStorage = {
   },
 
   getString(key: string) {
-    return storage.getString(key);
+    return getStorage().getString(key);
   },
 
   set(key: string, value: string | number) {
     if (typeof value === 'number') {
-      storage.set(key, value);
+      getStorage().set(key, value);
     } else {
-      storage.set(key, value);
+      getStorage().set(key, value);
     }
   },
 
   getNumber(key: string) {
-    return storage.getNumber(key);
+    return getStorage().getNumber(key);
   },
 
   setNumber(key: string, value: number) {
-    storage.set(key, value);
+    getStorage().set(key, value);
   },
 
   getBoolean(key: string) {
-    return storage.getBoolean(key);
+    return getStorage().getBoolean(key);
   },
 
   setBoolean(key: string, value: boolean) {
-    storage.set(key, value);
+    getStorage().set(key, value);
   },
 
   delete(key: string) {
-    storage.delete(key);
+    getStorage().delete(key);
   },
 
   getAllKeys() {
-    return storage.getAllKeys();
+    return getStorage().getAllKeys();
   },
 
   clearAll() {
-    storage.clearAll();
+    getStorage().clearAll();
   },
 };
 
@@ -105,7 +141,7 @@ export function persistNow(): void {
 export const zustandStorage: StateStorage = {
   getItem: (name: string): string | null => {
     try {
-      const value = storage.getString(name);
+      const value = getStorage().getString(name);
       return value ?? null;
     } catch (error) {
       console.error(`[ONYX] Error getting item ${name}:`, error);
@@ -114,14 +150,14 @@ export const zustandStorage: StateStorage = {
   },
   setItem: (name: string, value: string): void => {
     try {
-      storage.set(name, value);
+      getStorage().set(name, value);
     } catch (error) {
       console.error(`[ONYX] Error setting item ${name}:`, error);
     }
   },
   removeItem: (name: string): void => {
     try {
-      storage.delete(name);
+      getStorage().delete(name);
     } catch (error) {
       console.error(`[ONYX] Error removing item ${name}:`, error);
     }
@@ -133,12 +169,12 @@ export const zustandStorage: StateStorage = {
 // ============================================
 
 export const mmkvHelpers = {
-  getString: (key: string) => storage.getString(key),
-  setString: (key: string, value: string) => storage.set(key, value),
-  getNumber: (key: string) => storage.getNumber(key),
-  setNumber: (key: string, value: number) => storage.setNumber(key, value),
-  getBoolean: (key: string) => storage.getBoolean(key),
-  setBoolean: (key: string, value: boolean) => storage.setBoolean(key, value),
-  delete: (key: string) => storage.delete(key),
-  clearAll: () => storage.clearAll(),
+  getString: (key: string) => getStorage().getString(key),
+  setString: (key: string, value: string) => getStorage().set(key, value),
+  getNumber: (key: string) => getStorage().getNumber(key),
+  setNumber: (key: string, value: number) => getStorage().setNumber(key, value),
+  getBoolean: (key: string) => getStorage().getBoolean(key),
+  setBoolean: (key: string, value: boolean) => getStorage().setBoolean(key, value),
+  delete: (key: string) => getStorage().delete(key),
+  clearAll: () => getStorage().clearAll(),
 };

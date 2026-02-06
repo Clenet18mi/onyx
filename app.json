@@ -64,7 +64,7 @@
                 "lib/arm64-v8a/libc++_shared.so"
               ]
             },
-            "extraProguardRules": "# React Native\n-keep class com.facebook.react.** { *; }\n-keep class com.facebook.hermes.** { *; }\n# Expo\n-keep class expo.** { *; }\n# MMKV\n-keep class com.tencent.mmkv.** { *; }\n-optimizationpasses 5\n-dontusemixedcaseclassnames\n-dontskipnonpubliclibraryclasses\n-assumenosideeffects class android.util.Log { public static *** d(...); public static *** v(...); public static *** i(...); }"
+            "extraProguardRules": "# React Native\\n-keep class com.facebook.react.** { *; }\\n-keep class com.facebook.hermes.** { *; }\\n-keep class com.facebook.jni.** { *; }\\n# Expo\\n-keep class expo.** { *; }\\n# MMKV - Tencent + bridge react-native-mmkv\\n-keep class com.tencent.mmkv.** { *; }\\n-keepclasseswithmembernames class * { native <methods>; }\\n-keep class com.reactnativemmkv.** { *; }\\n# Reanimated\\n-keep class com.swmansion.reanimated.** { *; }\\n# Gesture Handler\\n-keep class com.swmansion.gesturehandler.** { *; }\\n# Zustand / serialization\\n-keepattributes *Annotation*\\n-keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }\\n-dontwarn com.facebook.react.**\\n-dontwarn com.facebook.hermes.**"
           }
         }
       ]

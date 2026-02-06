@@ -127,6 +127,7 @@ export const useAccountStore = create<AccountState>()(
     {
       name: 'onyx-accounts',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

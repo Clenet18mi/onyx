@@ -237,6 +237,7 @@ export const useTransactionStore = create<TransactionState>()(
     {
       name: 'onyx-transactions',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

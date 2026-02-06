@@ -11,9 +11,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore, useSubscriptionStore } from '@/stores';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { storageHelper } from '@/utils/storage';
+import { storageHelper, ensureStorageReady } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
-import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
+import { startPersistOnChange, areAllStoresHydrated, rehydrateAllStores } from '@/utils/persistStores';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -35,14 +35,27 @@ export default function RootLayout() {
     async function prepare() {
       try {
         console.log('[ONYX] Initializing app...');
-        
-        // MMKV est immédiatement disponible, pas besoin d'initialisation asynchrone
+
+        // Attendre que MMKV soit prêt (JSI peut mettre du temps au démarrage)
+        try {
+          await ensureStorageReady();
+          console.log('[ONYX] Storage (MMKV) ready');
+        } catch (storageError) {
+          console.error('[ONYX] Storage not available:', storageError);
+        }
+
+        try {
+          await rehydrateAllStores();
+          console.log('[ONYX] Stores rehydrated from storage');
+        } catch (rehydrateError) {
+          console.error('[ONYX] Rehydration failed:', rehydrateError);
+        }
+
         try {
           await storageHelper.initialize();
           console.log('[ONYX] Storage initialized');
         } catch (storageError) {
           console.error('[ONYX] Storage initialization failed:', storageError);
-          // Continuer même si le storage échoue
         }
         
         // Exécuter les migrations avec gestion d'erreur

@@ -382,6 +382,7 @@ export const useConfigStore = create<ConfigState>()(
     {
       name: 'onyx-config',
       storage: createJSONStorage(() => zustandStorage),
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;
