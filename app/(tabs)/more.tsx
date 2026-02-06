@@ -9,9 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore } from '@/stores';
+import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { exportToPDF, exportToCSV } from '@/utils/pdfExport';
+import { exportToPDF, exportToCSV, exportToJSON } from '@/utils/pdfExport';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -54,6 +54,8 @@ export default function MoreScreen() {
   const { hapticEnabled, toggleHaptic } = useSettingsStore();
   
   const monthlyTotal = getTotalMonthlySubscriptions();
+  const { streak, levelData, updateStreak } = useGamificationStore();
+  React.useEffect(() => { updateStreak(); }, [transactions.length, updateStreak]);
 
   const resetForm = () => {
     setName('');
@@ -157,6 +159,19 @@ export default function MoreScreen() {
       await exportToCSV(transactions, accounts);
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d\'exporter les données');
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+      setExportModalVisible(false);
+    }
+  };
+
+  const handleExportJSON = async () => {
+    setIsExporting(true);
+    try {
+      await exportToJSON(transactions, accounts);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible d\'exporter en JSON');
       console.error(error);
     } finally {
       setIsExporting(false);
@@ -286,6 +301,52 @@ export default function MoreScreen() {
             )}
           </View>
 
+          {/* Raccourcis / Outils */}
+          <View className="mb-6">
+            <Text className="text-white text-lg font-semibold mb-4">Outils</Text>
+            <GlassCard noPadding>
+              <TouchableOpacity
+                onPress={() => router.push('/period-comparator')}
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
+              >
+                <View className="flex-row items-center">
+                  <Icons.GitCompare size={20} color="#6366F1" />
+                  <View className="ml-3">
+                    <Text className="text-white">Comparer périodes</Text>
+                    <Text className="text-onyx-500 text-sm">Mois A vs mois B</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/scenarios')}
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
+              >
+                <View className="flex-row items-center">
+                  <Icons.LineChart size={20} color="#10B981" />
+                  <View className="ml-3">
+                    <Text className="text-white">Scénarios</Text>
+                    <Text className="text-onyx-500 text-sm">Et si… projection de solde</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/transaction/add')}
+                className="flex-row items-center justify-between p-4"
+              >
+                <View className="flex-row items-center">
+                  <Icons.PlusCircle size={20} color="#F59E0B" />
+                  <View className="ml-3">
+                    <Text className="text-white">Nouvelle transaction</Text>
+                    <Text className="text-onyx-500 text-sm">Dépense ou revenu</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+            </GlassCard>
+          </View>
+
           {/* Export Section */}
           <View className="mb-6">
             <Text className="text-white text-lg font-semibold mb-4">Exporter</Text>
@@ -306,7 +367,7 @@ export default function MoreScreen() {
               
               <TouchableOpacity
                 onPress={handleExportCSV}
-                className="flex-row items-center justify-between p-4"
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
               >
                 <View className="flex-row items-center">
                   <Icons.Table size={20} color="#10B981" />
@@ -317,6 +378,38 @@ export default function MoreScreen() {
                 </View>
                 <Icons.ChevronRight size={20} color="#52525B" />
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleExportJSON}
+                className="flex-row items-center justify-between p-4"
+              >
+                <View className="flex-row items-center">
+                  <Icons.Braces size={20} color="#F59E0B" />
+                  <View className="ml-3">
+                    <Text className="text-white">Export JSON</Text>
+                    <Text className="text-onyx-500 text-sm">Données structurées</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+            </GlassCard>
+          </View>
+
+          {/* Réalisations (gamification) */}
+          <View className="mb-6">
+            <Text className="text-white text-lg font-semibold mb-4">Réalisations</Text>
+            <GlassCard className="mb-4">
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <Text className="text-onyx-500 text-sm">Série</Text>
+                  <Text className="text-white text-xl font-bold">🔥 {streak.currentStreak} jour{streak.currentStreak !== 1 ? 's' : ''}</Text>
+                  <Text className="text-onyx-500 text-xs">Record: {streak.longestStreak} jours</Text>
+                </View>
+                <View className="items-end">
+                  <Text className="text-onyx-500 text-sm">Niveau</Text>
+                  <Text className="text-white text-xl font-bold">Niv. {levelData.level}</Text>
+                  <Text className="text-onyx-500 text-xs">{levelData.currentXp} / {levelData.xpForNextLevel} XP</Text>
+                </View>
+              </View>
             </GlassCard>
           </View>
 

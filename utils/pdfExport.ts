@@ -430,3 +430,54 @@ export async function exportToCSV(
     });
   }
 }
+
+export interface ExportFilterOptions {
+  startDate?: Date;
+  endDate?: Date;
+  accountIds?: string[];
+}
+
+export async function exportToJSON(
+  transactions: Transaction[],
+  accounts: Account[],
+  options?: ExportFilterOptions
+): Promise<void> {
+  let filtered = transactions;
+  if (options?.startDate || options?.endDate) {
+    filtered = transactions.filter((tx) => {
+      const d = parseISO(tx.date);
+      if (options.startDate && d < options.startDate) return false;
+      if (options.endDate && d > options.endDate) return false;
+      return true;
+    });
+  }
+  if (options?.accountIds?.length) {
+    filtered = filtered.filter((tx) => options.accountIds!.includes(tx.accountId));
+  }
+  const data = {
+    exportedAt: new Date().toISOString(),
+    accounts: accounts.map((a) => ({ id: a.id, name: a.name, balance: a.balance, color: a.color })),
+    transactions: filtered.map((tx) => ({
+      id: tx.id,
+      accountId: tx.accountId,
+      type: tx.type,
+      category: tx.category,
+      amount: tx.amount,
+      description: tx.description,
+      date: tx.date,
+      createdAt: tx.createdAt,
+    })),
+  };
+  const json = JSON.stringify(data, null, 2);
+  const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.json`;
+  const filePath = `${FileSystem.documentDirectory}${fileName}`;
+  await FileSystem.writeAsStringAsync(filePath, json, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(filePath, {
+      mimeType: 'application/json',
+      dialogTitle: 'Exporter les données ONYX',
+    });
+  }
+}
