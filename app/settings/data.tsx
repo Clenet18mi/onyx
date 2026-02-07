@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -87,11 +86,7 @@ export default function DataManagementScreen() {
       if (!dir) throw new Error('Aucun répertoire cache disponible');
       const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
       await legacy.writeAsStringAsync(filePath, jsonData, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(filePath, { mimeType: 'application/json', dialogTitle: 'Exporter les données ONYX' });
-      } else {
-        Alert.alert('Info', 'Fichier enregistré. Le partage n\'est pas disponible sur cet appareil.');
-      }
+      Alert.alert('Export réussi', 'Le fichier a été enregistré.');
     } catch (error) {
       console.error('[ONYX] export error:', error);
       Alert.alert('Erreur', 'Impossible d\'exporter les données. Réessayez.');
