@@ -33,7 +33,15 @@ export async function ensureReminderChannel(): Promise<void> {
   }
 }
 
-/** Demande les permissions de notification. À appeler avant de planifier. */
+/** Retourne si les notifications sont autorisées. */
+export async function getReminderPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status === 'granted') return 'granted';
+  if (status === 'denied') return 'denied';
+  return 'undetermined';
+}
+
+/** Demande les permissions de notification. À appeler avant de planifier (idéalement après un geste utilisateur). */
 export async function requestReminderPermissions(): Promise<boolean> {
   await ensureReminderChannel();
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -50,6 +58,9 @@ export async function scheduleReminderNotification(
 ): Promise<void> {
   const enabled = useSettingsStore.getState().notificationsEnabled;
   if (!enabled) return;
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') return;
 
   const date = new Date(scheduledAt);
   if (date.getTime() <= Date.now()) return;
