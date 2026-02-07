@@ -27,6 +27,8 @@ interface GoalState {
   getActiveGoals: () => SavingsGoal[];
   getCompletedGoals: () => SavingsGoal[];
   getGoalProgress: (goalId: string) => { current: number; target: number; percentage: number; remaining: number };
+  /** Remplace tous les objectifs (import sauvegarde JSON) */
+  setGoalsForImport: (goals: SavingsGoal[]) => void;
 }
 
 export const useGoalStore = create<GoalState>()(
@@ -218,6 +220,10 @@ export const useGoalStore = create<GoalState>()(
           percentage: Math.min(percentage, 100),
           remaining,
         };
+      },
+
+      setGoalsForImport: (goals) => {
+        set({ goals });
       },
     }),
     {

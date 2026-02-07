@@ -19,6 +19,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.onyx.finance",
       "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "ONYX a besoin d'accéder à vos fichiers pour exporter et importer vos données.",
+        "NSPhotoLibraryAddUsageDescription": "ONYX a besoin d'accéder à vos fichiers pour exporter et importer vos données.",
         "NSFaceIDUsageDescription": "ONYX utilise Face ID pour sécuriser l'accès à vos données financières."
       }
     },
@@ -33,7 +35,9 @@
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {

@@ -24,6 +24,8 @@ interface AccountState {
   getActiveAccounts: () => Account[];
   getTotalBalance: () => number;
   getBalanceByType: (type: AccountType) => number;
+  /** Remplace tous les comptes (import sauvegarde JSON) */
+  setAccountsForImport: (accounts: Account[]) => void;
 }
 
 export const useAccountStore = create<AccountState>()(
@@ -138,6 +140,10 @@ export const useAccountStore = create<AccountState>()(
           .accounts
           .filter((account) => account.type === type && !account.isArchived)
           .reduce((total, account) => total + account.balance, 0);
+      },
+
+      setAccountsForImport: (accounts) => {
+        set({ accounts });
       },
     }),
     {

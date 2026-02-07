@@ -4,7 +4,7 @@
 // ============================================
 
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
@@ -378,15 +378,23 @@ export async function exportToPDF(
   // Sauvegarder le fichier HTML (qui peut être ouvert comme PDF)
   const monthStr = format(selectedMonth, 'yyyy-MM', { locale: fr });
   const fileName = `ONYX_Releve_${monthStr}.html`;
-  const filePath = `${FileSystem.documentDirectory}${fileName}`;
+  const dir = FileSystemLegacy.documentDirectory;
+  if (!dir) throw new Error('Répertoire documents indisponible');
+  const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
   
-  await FileSystem.writeAsStringAsync(filePath, html, {
-    encoding: FileSystem.EncodingType.UTF8,
+  await FileSystemLegacy.writeAsStringAsync(filePath, html, {
+    encoding: FileSystemLegacy.EncodingType.UTF8,
   });
   
-  // Partager
+  let shareUri = filePath;
+  if (Platform.OS === 'android' && FileSystemLegacy.getContentUriAsync) {
+    try {
+      shareUri = await FileSystemLegacy.getContentUriAsync(filePath);
+    } catch (_) {}
+  }
+  
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(filePath, {
+    await Sharing.shareAsync(shareUri, {
       mimeType: 'text/html',
       dialogTitle: `Relevé ONYX - ${format(selectedMonth, 'MMMM yyyy', { locale: fr })}`,
       UTI: 'public.html',
@@ -418,10 +426,18 @@ export async function exportToCSV(
   
   const csv = [headers.join(';'), ...rows].join('\n');
   const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-  const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
-  await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
+  const dir = FileSystemLegacy.cacheDirectory ?? FileSystemLegacy.documentDirectory;
+  if (!dir) throw new Error('Répertoire indisponible');
+  const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
+  await FileSystemLegacy.writeAsStringAsync(filePath, csv, { encoding: FileSystemLegacy.EncodingType.UTF8 });
+  let shareUri = filePath;
+  if (Platform.OS === 'android' && FileSystemLegacy.getContentUriAsync) {
+    try {
+      shareUri = await FileSystemLegacy.getContentUriAsync(filePath);
+    } catch (_) {}
+  }
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(filePath, { mimeType: 'text/csv', dialogTitle: 'Exporter les données ONYX' });
+    await Sharing.shareAsync(shareUri, { mimeType: 'text/csv', dialogTitle: 'Exporter les données ONYX' });
   }
 }
 
@@ -464,16 +480,15 @@ export async function exportToJSON(
   };
   const json = JSON.stringify(data, null, 2);
   const fileName = `ONYX_Export_${format(new Date(), 'yyyy-MM-dd')}.json`;
-  const dir = FileSystem.documentDirectory || FileSystem.cacheDirectory || '';
+  const dir = FileSystemLegacy.documentDirectory || FileSystemLegacy.cacheDirectory || '';
   if (!dir) throw new Error('Aucun répertoire de stockage disponible');
   const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
-  await FileSystem.writeAsStringAsync(filePath, json, { encoding: FileSystem.EncodingType.UTF8 });
+  await FileSystemLegacy.writeAsStringAsync(filePath, json, { encoding: FileSystemLegacy.EncodingType.UTF8 });
 
   let shareUri = filePath;
-  if (Platform.OS === 'android') {
+  if (Platform.OS === 'android' && FileSystemLegacy.getContentUriAsync) {
     try {
-      const { getContentUriAsync } = await import('expo-file-system/legacy');
-      shareUri = await getContentUriAsync(filePath);
+      shareUri = await FileSystemLegacy.getContentUriAsync(filePath);
     } catch (_) {}
   }
 
@@ -503,7 +518,7 @@ export async function importFromJSON(): Promise<ImportResult> {
     return { success: false, accountsAdded: 0, transactionsAdded: 0 };
   }
   const uri = pick.assets[0].uri;
-  const raw = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
+  const raw = await FileSystemLegacy.readAsStringAsync(uri, { encoding: FileSystemLegacy.EncodingType.UTF8 });
   let data: { accounts?: { id: string; name: string; balance: number; color: string }[]; transactions?: { id: string; accountId: string; type: string; category: string; amount: number; description?: string; date: string; createdAt: string }[] };
   try {
     data = JSON.parse(raw);

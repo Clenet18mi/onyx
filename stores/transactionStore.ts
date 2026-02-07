@@ -34,6 +34,8 @@ interface TransactionState {
   getTotalExpenses: (startDate?: string, endDate?: string) => number;
   getCashflow: (startDate?: string, endDate?: string) => { income: number; expenses: number; net: number };
   getSpendingByCategory: (startDate?: string, endDate?: string) => Record<TransactionCategory, number>;
+  /** Remplace toutes les transactions (import sauvegarde JSON, sans mise à jour des soldes) */
+  setTransactionsForImport: (transactions: Transaction[]) => void;
 }
 
 export const useTransactionStore = create<TransactionState>()(
@@ -246,6 +248,10 @@ export const useTransactionStore = create<TransactionState>()(
           acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
           return acc;
         }, {} as Record<TransactionCategory, number>);
+      },
+
+      setTransactionsForImport: (transactions) => {
+        set({ transactions });
       },
     }),
     {

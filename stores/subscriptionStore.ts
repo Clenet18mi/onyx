@@ -27,6 +27,8 @@ interface SubscriptionState {
   getActiveSubscriptions: () => Subscription[];
   getTotalMonthlySubscriptions: () => number;
   getUpcomingSubscriptions: (days: number) => Subscription[];
+  /** Remplace tous les abonnements (import sauvegarde JSON) */
+  setSubscriptionsForImport: (subscriptions: Subscription[]) => void;
 }
 
 // Calculer la prochaine date de facturation
@@ -179,6 +181,10 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           .sort((a, b) => 
             parseISO(a.nextBillingDate).getTime() - parseISO(b.nextBillingDate).getTime()
           );
+      },
+
+      setSubscriptionsForImport: (subscriptions) => {
+        set({ subscriptions });
       },
     }),
     {

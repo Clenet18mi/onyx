@@ -25,6 +25,8 @@ interface BudgetState {
   getBudgetByCategory: (category: TransactionCategory) => Budget | undefined;
   getBudgetProgress: (budgetId: string) => { spent: number; limit: number; percentage: number; remaining: number };
   getAllBudgetsProgress: () => Array<Budget & { spent: number; percentage: number; remaining: number }>;
+  /** Remplace tous les budgets (import sauvegarde JSON) */
+  setBudgetsForImport: (budgets: Budget[]) => void;
 }
 
 export const useBudgetStore = create<BudgetState>()(
@@ -140,6 +142,10 @@ export const useBudgetStore = create<BudgetState>()(
             remaining: progress.remaining,
           };
         });
+      },
+
+      setBudgetsForImport: (budgets) => {
+        set({ budgets });
       },
     }),
     {

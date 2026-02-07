@@ -11,7 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { exportToPDF, exportToCSV, exportToJSON, importFromJSON } from '@/utils/pdfExport';
+import { exportToPDF, exportToCSV } from '@/utils/pdfExport';
+import { exportDataAsJSON, importDataFromJSON } from '@/utils/dataExport';
+import * as DocumentPicker from 'expo-document-picker';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -170,11 +172,10 @@ export default function MoreScreen() {
   const handleExportJSON = async () => {
     setIsExporting(true);
     try {
-      await exportToJSON(transactions, accounts);
+      await exportDataAsJSON();
       setExportModalVisible(false);
     } catch (error) {
-      console.error(error);
-      Alert.alert('Erreur', 'Impossible d\'exporter en JSON. Réessayez.');
+      console.error('Export JSON failed:', error);
     } finally {
       setIsExporting(false);
     }
@@ -183,15 +184,17 @@ export default function MoreScreen() {
   const handleImportJSON = async () => {
     setIsImporting(true);
     try {
-      const result = await importFromJSON();
-      if (result.success) {
-        Alert.alert('Import réussi', `${result.accountsAdded} compte(s) et ${result.transactionsAdded} transaction(s) ajoutés.`);
-      } else if (result.error) {
-        Alert.alert('Erreur', result.error);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/json', 'application/x-ndjson'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) {
+        return;
       }
+      await importDataFromJSON(result.assets[0].uri);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d\'importer le fichier');
-      console.error(error);
+      console.error('Import JSON failed:', error);
+      Alert.alert('Erreur', 'Impossible d\'importer le fichier.');
     } finally {
       setIsImporting(false);
     }
@@ -365,7 +368,41 @@ export default function MoreScreen() {
             </GlassCard>
           </View>
 
-          {/* Export Section */}
+          {/* Sauvegarde / Restauration (avant mise à jour ou après réinstall) */}
+          <View className="mb-6">
+            <Text className="text-white text-lg font-semibold mb-4">Sauvegarde &amp; restauration</Text>
+            <GlassCard noPadding>
+              <TouchableOpacity
+                onPress={handleExportJSON}
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
+              >
+                <View className="flex-row items-center">
+                  <Icons.Download size={20} color="#10B981" />
+                  <View className="ml-3">
+                    <Text className="text-white">Sauvegarder mes données</Text>
+                    <Text className="text-onyx-500 text-sm">Avant mise à jour ou réinstallation</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleImportJSON}
+                disabled={isImporting}
+                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
+              >
+                <View className="flex-row items-center">
+                  <Icons.Upload size={20} color="#6366F1" />
+                  <View className="ml-3">
+                    <Text className="text-white">Restaurer une sauvegarde</Text>
+                    <Text className="text-onyx-500 text-sm">{isImporting ? 'Import en cours…' : 'Après réinstallation de l\'app'}</Text>
+                  </View>
+                </View>
+                <Icons.ChevronRight size={20} color="#52525B" />
+              </TouchableOpacity>
+            </GlassCard>
+          </View>
+
+          {/* Export Section (PDF, CSV) */}
           <View className="mb-6">
             <Text className="text-white text-lg font-semibold mb-4">Exporter</Text>
             <GlassCard noPadding>
@@ -385,40 +422,13 @@ export default function MoreScreen() {
               
               <TouchableOpacity
                 onPress={handleExportCSV}
-                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
+                className="flex-row items-center justify-between p-4"
               >
                 <View className="flex-row items-center">
                   <Icons.Table size={20} color="#10B981" />
                   <View className="ml-3">
                     <Text className="text-white">Export CSV</Text>
                     <Text className="text-onyx-500 text-sm">Toutes les données</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleExportJSON}
-                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
-              >
-                <View className="flex-row items-center">
-                  <Icons.Braces size={20} color="#F59E0B" />
-                  <View className="ml-3">
-                    <Text className="text-white">Export JSON</Text>
-                    <Text className="text-onyx-500 text-sm">Données structurées</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleImportJSON}
-                disabled={isImporting}
-                className="flex-row items-center justify-between p-4"
-              >
-                <View className="flex-row items-center">
-                  <Icons.Upload size={20} color="#6366F1" />
-                  <View className="ml-3">
-                    <Text className="text-white">Import JSON</Text>
-                    <Text className="text-onyx-500 text-sm">{isImporting ? 'Import en cours…' : 'Fusionner un export ONYX'}</Text>
                   </View>
                 </View>
                 <Icons.ChevronRight size={20} color="#52525B" />
