@@ -196,15 +196,6 @@ export default function DashboardScreen() {
               )}
             </View>
           )}
-          <TouchableOpacity
-            onPress={() => router.push('/planned-transaction/add')}
-            className="mb-6 py-4 rounded-xl flex-row items-center justify-center"
-            style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.5)', borderStyle: 'dashed' }}
-          >
-            <CalendarClock size={20} color="#6366F1" />
-            <Text className="text-indigo-400 font-semibold ml-2">Prévoir une transaction</Text>
-          </TouchableOpacity>
-
           {/* Analyse par commerçant */}
           <MerchantAnalysis />
           

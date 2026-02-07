@@ -4,20 +4,22 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useAccountStore, useTransactionStore, useSettingsStore } from '@/stores';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore } from '@/stores';
 import { CATEGORIES, TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { DuplicateAlertModal, ReceiptScanner, VoiceNote } from '@/components/transactions';
-import { Modal } from 'react-native';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
@@ -32,11 +34,20 @@ export default function AddTransactionScreen() {
   const accounts = useAccountStore((state) => state.getActiveAccounts());
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const transactions = useTransactionStore((state) => state.transactions);
+  const addPlannedTransaction = usePlannedTransactionStore((state) => state.addPlannedTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
   const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
   const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
 
+  const [isPlanned, setIsPlanned] = useState(false);
+  const [plannedDate, setPlannedDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
   const [pendingDuplicateMatches, setPendingDuplicateMatches] = useState<ReturnType<typeof findSimilarTransactions>>([]);
   const [photoUris, setPhotoUris] = useState<string[]>([]);
@@ -72,16 +83,27 @@ export default function AddTransactionScreen() {
     if (hapticEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-    addTransaction({
-      accountId,
-      type,
-      category,
-      amount: parseFloat(amount),
-      description: description.trim() || undefined,
-      date: new Date().toISOString(),
-      ...(photoUris.length > 0 && { photoUris: [...photoUris] }),
-      ...(voiceNoteUri && { voiceNoteUri: voiceNoteUri }),
-    });
+    if (isPlanned && type !== 'transfer') {
+      addPlannedTransaction({
+        type: type === 'income' ? 'income' : 'expense',
+        amount: parseFloat(amount),
+        category,
+        accountId,
+        plannedDate: plannedDate.toISOString(),
+        description: description.trim() || 'Sans description',
+      });
+    } else {
+      addTransaction({
+        accountId,
+        type,
+        category,
+        amount: parseFloat(amount),
+        description: description.trim() || undefined,
+        date: new Date().toISOString(),
+        ...(photoUris.length > 0 && { photoUris: [...photoUris] }),
+        ...(voiceNoteUri && { voiceNoteUri: voiceNoteUri }),
+      });
+    }
     setDuplicateModalVisible(false);
     setPendingDuplicateMatches([]);
     router.back();
@@ -94,6 +116,10 @@ export default function AddTransactionScreen() {
     }
     if (!accountId) {
       Alert.alert('Erreur', 'Veuillez sélectionner un compte');
+      return;
+    }
+    if (isPlanned && type !== 'transfer') {
+      doSave();
       return;
     }
 
@@ -172,6 +198,69 @@ export default function AddTransactionScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Ajouter maintenant / Prévoir (masqué pour virement) */}
+          {type !== 'transfer' && (
+            <View className="px-6 mb-6">
+              <Text className="text-onyx-500 text-sm mb-2">Quand ?</Text>
+              <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                <TouchableOpacity
+                  onPress={() => setIsPlanned(false)}
+                  className={`flex-1 py-3 rounded-xl ${!isPlanned ? 'bg-accent-primary' : ''}`}
+                >
+                  <Text className={`text-center font-semibold ${!isPlanned ? 'text-white' : 'text-onyx-500'}`}>
+                    Ajouter maintenant
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setIsPlanned(true)}
+                  className={`flex-1 py-3 rounded-xl ${isPlanned ? 'bg-accent-primary' : ''}`}
+                >
+                  <Text className={`text-center font-semibold ${isPlanned ? 'text-white' : 'text-onyx-500'}`}>
+                    Prévoir pour plus tard
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {isPlanned && (
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  className="mt-3 flex-row items-center justify-between bg-onyx-100 px-4 py-3 rounded-xl"
+                >
+                  <Text className="text-onyx-500 text-sm">Date prévue</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-white font-medium">
+                      {format(plannedDate, "EEEE d MMMM yyyy", { locale: fr })}
+                    </Text>
+                    <Icons.ChevronRight size={18} color="#71717A" style={{ marginLeft: 8 }} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              {showDatePicker && (
+                <View className="mt-2">
+                  <DateTimePicker
+                    value={plannedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(_, d) => {
+                      setShowDatePicker(false);
+                      if (d) setPlannedDate(d);
+                    }}
+                    minimumDate={new Date()}
+                    locale="fr-FR"
+                    {...(Platform.OS === 'ios' && { style: { height: 180 } })}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      className="mt-2 py-2"
+                    >
+                      <Text className="text-accent-primary text-center font-medium">Valider la date</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Montant : tap pour ouvrir le clavier du téléphone */}
           <View className="px-6 mb-8 items-center">
