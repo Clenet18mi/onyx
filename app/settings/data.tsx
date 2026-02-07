@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -80,13 +80,40 @@ export default function DataManagementScreen() {
     setLoading(true);
     try {
       const jsonData = await exportAllData();
-      const fileName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
+      const baseName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}`;
+      const fileName = `${baseName}.json`;
       const legacy = await import('expo-file-system/legacy');
+      const { StorageAccessFramework } = legacy;
+
+      if (Platform.OS === 'android' && StorageAccessFramework?.requestDirectoryPermissionsAsync) {
+        try {
+          const downloadUri = StorageAccessFramework.getUriForDirectoryInRoot('Download');
+          const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync(downloadUri);
+          if (permissions.granted && permissions.directoryUri) {
+            const fileUri = await StorageAccessFramework.createFileAsync(
+              permissions.directoryUri,
+              baseName,
+              'application/json'
+            );
+            await StorageAccessFramework.writeAsStringAsync(fileUri, jsonData, {
+              encoding: legacy.EncodingType?.UTF8 ?? 'utf8',
+            });
+            Alert.alert('Export réussi', 'Le fichier a été enregistré dans Téléchargements.');
+            return;
+          }
+        } catch (e) {
+          console.warn('[ONYX] export SAF fallback', e);
+        }
+      }
+
       const dir = legacy.cacheDirectory ?? legacy.documentDirectory ?? '';
       if (!dir) throw new Error('Aucun répertoire cache disponible');
       const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
       await legacy.writeAsStringAsync(filePath, jsonData, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
-      Alert.alert('Export réussi', 'Le fichier a été enregistré.');
+      Alert.alert(
+        'Export réussi',
+        Platform.OS === 'android' ? 'Le fichier a été enregistré (stockage de l’app).' : 'Le fichier a été enregistré.'
+      );
     } catch (error) {
       console.error('[ONYX] export error:', error);
       Alert.alert('Erreur', 'Impossible d\'exporter les données. Réessayez.');

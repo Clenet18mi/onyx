@@ -3,7 +3,7 @@
 // Utilise la nouvelle API FileSystem (SDK 54) + legacy uniquement pour partage Android
 // ============================================
 
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { Paths, File } from 'expo-file-system';
 import { useAccountStore } from '@/stores/accountStore';
 import { useTransactionStore } from '@/stores/transactionStore';
@@ -455,9 +455,32 @@ export async function exportDataAsJSON(): Promise<void> {
     step.current = 'création du fichier';
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `onyx-backup-${timestamp}.ndjson`;
-    let fileUri: string;
-
+    const baseName = `onyx-backup-${timestamp}`;
     const legacy = await import('expo-file-system/legacy');
+    const { StorageAccessFramework } = legacy;
+
+    if (Platform.OS === 'android' && StorageAccessFramework?.requestDirectoryPermissionsAsync) {
+      try {
+        const downloadUri = StorageAccessFramework.getUriForDirectoryInRoot('Download');
+        const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync(downloadUri);
+        if (permissions.granted && permissions.directoryUri) {
+          const fileUri = await StorageAccessFramework.createFileAsync(
+            permissions.directoryUri,
+            baseName,
+            'application/x-ndjson'
+          );
+          await StorageAccessFramework.writeAsStringAsync(fileUri, content, {
+            encoding: legacy.EncodingType?.UTF8 ?? 'utf8',
+          });
+          Alert.alert('Export réussi', 'Le fichier a été enregistré dans Téléchargements.');
+          return;
+        }
+      } catch (e) {
+        console.warn('[exportDataAsJSON] SAF fallback', e);
+      }
+    }
+
+    let fileUri: string;
     const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
     if (dir) {
       fileUri = dir.endsWith('/') ? `${dir}${filename}` : `${dir}/${filename}`;
@@ -480,7 +503,7 @@ export async function exportDataAsJSON(): Promise<void> {
     step.current = 'finalisation';
     Alert.alert(
       'Export réussi',
-      'Le fichier a été enregistré.',
+      Platform.OS === 'android' ? 'Le fichier a été enregistré (stockage de l’app).' : 'Le fichier a été enregistré.',
       [{ text: 'OK' }]
     );
   } catch (error) {
