@@ -22,4 +22,5 @@ export { Skeleton, SkeletonCard } from './Skeleton';
 export type { SkeletonProps } from './Skeleton';
 export { Toast } from './Toast';
 export type { ToastProps, ToastVariant } from './Toast';
+export { LoadingSpinner } from './LoadingSpinner';
 export { ErrorBoundary } from '../ErrorBoundary';
