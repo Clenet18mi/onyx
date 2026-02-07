@@ -16,7 +16,6 @@ import { formatCurrency } from '@/utils/format';
 import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { Calculator } from '@/components/ui/Calculator';
 import { DuplicateAlertModal, ReceiptScanner, VoiceNote } from '@/components/transactions';
 import { Modal } from 'react-native';
 
@@ -40,8 +39,8 @@ export default function AddTransactionScreen() {
 
   const [duplicateModalVisible, setDuplicateModalVisible] = useState(false);
   const [pendingDuplicateMatches, setPendingDuplicateMatches] = useState<ReturnType<typeof findSimilarTransactions>>([]);
-  const [calculatorVisible, setCalculatorVisible] = useState(false);
   const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const amountInputRef = React.useRef<TextInput>(null);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [voiceNoteModalVisible, setVoiceNoteModalVisible] = useState(false);
@@ -123,23 +122,12 @@ export default function AddTransactionScreen() {
     doSave();
   };
 
-  const handleNumberPad = (value: string) => {
-    if (hapticEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    
-    if (value === 'delete') {
-      setAmount((prev) => prev.slice(0, -1));
-    } else if (value === '.') {
-      if (!amount.includes('.')) {
-        setAmount((prev) => prev + '.');
-      }
-    } else {
-      // Limiter à 2 décimales
-      const parts = amount.split('.');
-      if (parts[1]?.length >= 2) return;
-      setAmount((prev) => prev + value);
-    }
+  const handleAmountChange = (text: string) => {
+    const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) return;
+    if (parts[1] != null && parts[1].length > 2) return;
+    setAmount(cleaned);
   };
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
@@ -185,30 +173,38 @@ export default function AddTransactionScreen() {
             </View>
           </View>
 
-          {/* Amount Display */}
+          {/* Montant : tap pour ouvrir le clavier du téléphone */}
           <View className="px-6 mb-8 items-center">
-            <View className="flex-row items-center justify-center">
-              <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
-              <TouchableOpacity
-                onPress={() => setCalculatorVisible(true)}
-                className="ml-2 w-8 h-8 rounded-lg items-center justify-center"
-                style={{ backgroundColor: 'rgba(99,102,241,0.3)' }}
-              >
-                <Icons.Calculator size={18} color="#6366F1" />
-              </TouchableOpacity>
-            </View>
-            <Text 
-              className="text-5xl font-bold"
-              style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
+            <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => amountInputRef.current?.focus()}
+              className="flex-row items-center justify-center min-h-[72px]"
             >
-              {type === 'income' ? '+' : '-'}{amount || '0'} €
-            </Text>
-            <Calculator
-              visible={calculatorVisible}
-              onClose={() => setCalculatorVisible(false)}
-              onConfirm={(val) => { setAmount(String(val)); setCalculatorVisible(false); }}
-              initialValue={amount}
-            />
+              <Text
+                className="text-4xl font-bold mr-1"
+                style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
+              >
+                {type === 'income' ? '+' : '-'}
+              </Text>
+              <TextInput
+                ref={amountInputRef}
+                value={amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="decimal-pad"
+                className="text-4xl font-bold text-center px-2 py-1"
+                style={{ color: type === 'income' ? '#10B981' : '#EF4444', minWidth: 100 }}
+                selectTextOnFocus
+              />
+              <Text
+                className="text-4xl font-bold ml-1"
+                style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
+              >
+                {' '}€
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Account Selector */}
@@ -330,26 +326,6 @@ export default function AddTransactionScreen() {
               </View>
             </View>
           </Modal>
-
-          {/* Number Pad */}
-          <View className="px-6 mb-6">
-            <View className="flex-row flex-wrap justify-center" style={{ gap: 12 }}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'delete'].map((value) => (
-                <TouchableOpacity
-                  key={value}
-                  onPress={() => handleNumberPad(value)}
-                  className="w-20 h-16 rounded-2xl items-center justify-center"
-                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-                >
-                  {value === 'delete' ? (
-                    <Icons.Delete size={24} color="#71717A" />
-                  ) : (
-                    <Text className="text-white text-2xl font-semibold">{value}</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
 
           {/* Duplicate alert modal */}
           <DuplicateAlertModal

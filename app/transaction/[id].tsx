@@ -14,7 +14,6 @@ import { CATEGORIES, TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { Calculator } from '@/components/ui/Calculator';
 
 export default function EditTransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,7 +30,7 @@ export default function EditTransactionScreen() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TransactionCategory>('other');
   const [accountId, setAccountId] = useState('');
-  const [calculatorVisible, setCalculatorVisible] = useState(false);
+  const amountInputRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
     if (tx) {
@@ -79,11 +78,12 @@ export default function EditTransactionScreen() {
     ]);
   };
 
-  const handleNumberPad = (v: string) => {
-    if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (v === 'delete') setAmount((a) => a.slice(0, -1));
-    else if (v === '.') setAmount((a) => (a.includes('.') ? a : a + '.'));
-    else setAmount((a) => (a.split('.')[1]?.length >= 2 ? a : a + v));
+  const handleAmountChange = (text: string) => {
+    const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) return;
+    if (parts[1] != null && parts[1].length > 2) return;
+    setAmount(cleaned);
   };
 
   if (!tx) {
@@ -126,16 +126,22 @@ export default function EditTransactionScreen() {
             </View>
           </View>
           <View className="px-6 mb-8 items-center">
-            <View className="flex-row items-center">
-              <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
-              <TouchableOpacity onPress={() => setCalculatorVisible(true)} className="ml-2 w-8 h-8 rounded-lg items-center justify-center" style={{ backgroundColor: 'rgba(99,102,241,0.3)' }}>
-                <Icons.Calculator size={18} color="#6366F1" />
-              </TouchableOpacity>
-            </View>
-            <Text className="text-5xl font-bold" style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}>
-              {type === 'income' ? '+' : '-'}{amount || '0'} €
-            </Text>
-            <Calculator visible={calculatorVisible} onClose={() => setCalculatorVisible(false)} onConfirm={(v) => { setAmount(String(v)); setCalculatorVisible(false); }} initialValue={amount} />
+            <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
+            <TouchableOpacity activeOpacity={1} onPress={() => amountInputRef.current?.focus()} className="flex-row items-center justify-center min-h-[72px]">
+              <Text className="text-4xl font-bold mr-1" style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}>{type === 'income' ? '+' : '-'}</Text>
+              <TextInput
+                ref={amountInputRef}
+                value={amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="decimal-pad"
+                className="text-4xl font-bold text-center px-2 py-1"
+                style={{ color: type === 'income' ? '#10B981' : '#EF4444', minWidth: 100 }}
+                selectTextOnFocus
+              />
+              <Text className="text-4xl font-bold ml-1" style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}> €</Text>
+            </TouchableOpacity>
           </View>
           <View className="px-6 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
@@ -182,15 +188,6 @@ export default function EditTransactionScreen() {
           <View className="px-6 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Description</Text>
             <TextInput value={description} onChangeText={setDescription} placeholder="Description" placeholderTextColor="#52525B" className="bg-onyx-100 text-white px-4 py-3 rounded-xl text-base" />
-          </View>
-          <View className="px-6 mb-6">
-            <View className="flex-row flex-wrap justify-center" style={{ gap: 12 }}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'delete'].map((v) => (
-                <TouchableOpacity key={v} onPress={() => handleNumberPad(v)} className="w-20 h-16 rounded-2xl items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
-                  {v === 'delete' ? <Icons.Delete size={24} color="#71717A" /> : <Text className="text-white text-2xl font-semibold">{v}</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
           <View className="px-6 mb-8">
             <Button title="Enregistrer" variant="primary" size="lg" fullWidth onPress={handleSave} icon={<Icons.Check size={20} color="white" />} />
