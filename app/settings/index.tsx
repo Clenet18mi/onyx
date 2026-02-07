@@ -12,6 +12,14 @@ import * as Icons from 'lucide-react-native';
 import { useAuthStore, useSettingsStore, useConfigStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { storage } from '@/utils/storage';
+import Constants from 'expo-constants';
+
+const changelogMeta = require('@/constants/changelog.json') as { appVersion: string; buildNumber: string };
+function getAppVersion(): string {
+  const v = Constants.expoConfig?.version ?? changelogMeta?.appVersion ?? '1.0.0';
+  const build = changelogMeta?.buildNumber;
+  return build ? `${v} (${build})` : v;
+}
 
 interface SettingsItemProps {
   icon: React.ReactNode;
@@ -275,6 +283,12 @@ export default function SettingsScreen() {
                 onPress={() => router.push('/settings/data')}
               />
               <SettingsItem
+                icon={<Icons.GitBranch size={20} color="#8B5CF6" />}
+                label="Journal des versions"
+                sublabel="Historique des mises à jour"
+                onPress={() => router.push('/settings/changelog')}
+              />
+              <SettingsItem
                 icon={<Icons.Trash2 size={20} color="#EF4444" />}
                 label="Réinitialiser toutes les données"
                 onPress={handleResetAll}
@@ -290,7 +304,7 @@ export default function SettingsScreen() {
               <View className="p-4">
                 <View className="flex-row justify-between mb-2">
                   <Text className="text-onyx-500">Version</Text>
-                  <Text className="text-white">1.0.0</Text>
+                  <Text className="text-white">{getAppVersion()}</Text>
                 </View>
                 <View className="flex-row justify-between">
                   <Text className="text-onyx-500">Stockage</Text>
