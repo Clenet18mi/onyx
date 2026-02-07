@@ -49,7 +49,6 @@ export function SetupPinScreen({ onComplete }: SetupPinScreenProps) {
         if (hapticEnabled) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-        // Passer à l'étape biométrie ou terminer
         if (biometricAvailable) {
           setStep('biometric');
         } else {
@@ -59,7 +58,7 @@ export function SetupPinScreen({ onComplete }: SetupPinScreenProps) {
         setError(true);
       }
     }
-  }, [confirmPin]);
+  }, [confirmPin, step, pinLength, pin, biometricAvailable]);
 
   // Passer à la confirmation quand le PIN est complet
   useEffect(() => {
@@ -92,8 +91,8 @@ export function SetupPinScreen({ onComplete }: SetupPinScreenProps) {
     setConfirmPin('');
   };
 
-  const finishSetup = (withBiometric: boolean) => {
-    setupPin(pin, pinLength);
+  const finishSetup = async (withBiometric: boolean) => {
+    await setupPin(pin, pinLength);
     enableBiometric(withBiometric);
     onComplete();
   };

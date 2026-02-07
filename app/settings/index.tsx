@@ -45,7 +45,7 @@ function SettingsItem({ icon, label, sublabel, onPress, rightElement, danger }: 
 export default function SettingsScreen() {
   const router = useRouter();
   
-  const { lock, biometricEnabled, enableBiometric, resetAuth } = useAuthStore();
+  const { lock, biometricEnabled, enableBiometric, resetAuth, wipeAllData } = useAuthStore();
   const {
     hapticEnabled,
     toggleHaptic,
@@ -76,8 +76,7 @@ export default function SettingsScreen() {
                   text: 'Confirmer',
                   style: 'destructive',
                   onPress: async () => {
-                    await storage.clearAll();
-                    resetAuth();
+                    await wipeAllData();
                   },
                 },
               ]
@@ -156,7 +155,7 @@ export default function SettingsScreen() {
               <SettingsItem
                 icon={<Icons.Lock size={20} color="#71717A" />}
                 label="Changer le code PIN"
-                onPress={() => Alert.alert('Bientôt', 'Cette fonctionnalité arrive bientôt !')}
+                onPress={() => router.push('/settings/security')}
               />
               <SettingsItem
                 icon={<Icons.Fingerprint size={20} color="#71717A" />}
