@@ -2,7 +2,7 @@
 // ONYX - Rappels personnalisés
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ReminderRecurrence } from '@/types/reminder';
+import {
+  requestReminderPermissions,
+  scheduleReminderNotification,
+  cancelReminderNotification,
+} from '@/utils/reminderNotifications';
 
 const RECURRENCE_OPTIONS: { value: ReminderRecurrence; label: string }[] = [
   { value: 'once', label: 'Une fois' },
@@ -35,6 +40,10 @@ export default function RemindersScreen() {
   const [dateStr, setDateStr] = useState('');
   const [timeStr, setTimeStr] = useState('09:00');
   const [recurrence, setRecurrence] = useState<ReminderRecurrence>('once');
+
+  useEffect(() => {
+    requestReminderPermissions().catch(() => {});
+  }, []);
 
   const openAdd = () => {
     const d = new Date();
@@ -59,15 +68,28 @@ export default function RemindersScreen() {
     } else {
       scheduledAt = new Date().toISOString();
     }
-    addReminder({ title: title.trim(), scheduledAt, recurrence, completed: false });
+    const id = addReminder({ title: title.trim(), scheduledAt, recurrence, completed: false });
+    scheduleReminderNotification(id, title.trim(), scheduledAt).catch(() => {});
     setModalVisible(false);
   };
 
   const handleDelete = (id: string) => {
     Alert.alert('Supprimer', 'Supprimer ce rappel ?', [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteReminder(id) },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => {
+          cancelReminderNotification(id).catch(() => {});
+          deleteReminder(id);
+        },
+      },
     ]);
+  };
+
+  const handleComplete = (id: string) => {
+    cancelReminderNotification(id).catch(() => {});
+    completeReminder(id);
   };
 
   return (
@@ -99,7 +121,7 @@ export default function RemindersScreen() {
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <TouchableOpacity onPress={() => completeReminder(r.id)}>
+                      <TouchableOpacity onPress={() => handleComplete(r.id)}>
                         <Icons.Check size={22} color="#10B981" />
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => handleDelete(r.id)}>
