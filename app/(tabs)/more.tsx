@@ -1,6 +1,6 @@
 // ============================================
 // ONYX - More Screen
-// Menu avec abonnements, export PDF, paramètres
+// Menu : abonnements, outils, paramètres (export/import dans Gestion des données)
 // ============================================
 
 import React, { useState } from 'react';
@@ -11,14 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { exportToPDF, exportToCSV } from '@/utils/pdfExport';
-import { exportDataAsJSON, importDataFromJSON } from '@/utils/dataExport';
-import * as DocumentPicker from 'expo-document-picker';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { addMonths, subMonths, format, startOfMonth } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 const SUBSCRIPTION_ICONS = [
   'Tv', 'Music', 'Film', 'Gamepad2', 'Cloud', 'Newspaper',
@@ -28,11 +23,7 @@ const SUBSCRIPTION_ICONS = [
 export default function MoreScreen() {
   const router = useRouter();
   const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
-  const [exportModalVisible, setExportModalVisible] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
   
   // Form state
   const [name, setName] = useState('');
@@ -143,63 +134,6 @@ export default function MoreScreen() {
     }
   };
 
-  const handleExportPDF = async () => {
-    setIsExporting(true);
-    try {
-      await exportToPDF(transactions, accounts, selectedMonth);
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de générer le relevé');
-      console.error(error);
-    } finally {
-      setIsExporting(false);
-      setExportModalVisible(false);
-    }
-  };
-
-  const handleExportCSV = async () => {
-    setIsExporting(true);
-    try {
-      await exportToCSV(transactions, accounts);
-      setExportModalVisible(false);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Erreur', 'Impossible d\'exporter en CSV. Réessayez.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportJSON = async () => {
-    setIsExporting(true);
-    try {
-      await exportDataAsJSON();
-      setExportModalVisible(false);
-    } catch (error) {
-      console.error('Export JSON failed:', error);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleImportJSON = async () => {
-    setIsImporting(true);
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/json', 'application/x-ndjson'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets?.[0]) {
-        return;
-      }
-      await importDataFromJSON(result.assets[0].uri);
-    } catch (error) {
-      console.error('Import JSON failed:', error);
-      Alert.alert('Erreur', 'Impossible d\'importer le fichier.');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
   const handleLock = () => {
     Alert.alert(
       'Verrouiller ONYX',
@@ -215,9 +149,6 @@ export default function MoreScreen() {
     const IconComponent = (Icons as any)[iconName];
     return IconComponent || Icons.CreditCard;
   };
-
-  const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: fr });
-  const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
   return (
     <LinearGradient
@@ -361,74 +292,6 @@ export default function MoreScreen() {
                   <View className="ml-3">
                     <Text className="text-white">Nouvelle transaction</Text>
                     <Text className="text-onyx-500 text-sm">Dépense ou revenu</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-            </GlassCard>
-          </View>
-
-          {/* Sauvegarde / Restauration (avant mise à jour ou après réinstall) */}
-          <View className="mb-6">
-            <Text className="text-white text-lg font-semibold mb-4">Sauvegarde &amp; restauration</Text>
-            <GlassCard noPadding>
-              <TouchableOpacity
-                onPress={handleExportJSON}
-                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
-              >
-                <View className="flex-row items-center">
-                  <Icons.Download size={20} color="#10B981" />
-                  <View className="ml-3">
-                    <Text className="text-white">Sauvegarder mes données</Text>
-                    <Text className="text-onyx-500 text-sm">Avant mise à jour ou réinstallation</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleImportJSON}
-                disabled={isImporting}
-                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
-              >
-                <View className="flex-row items-center">
-                  <Icons.Upload size={20} color="#6366F1" />
-                  <View className="ml-3">
-                    <Text className="text-white">Restaurer une sauvegarde</Text>
-                    <Text className="text-onyx-500 text-sm">{isImporting ? 'Import en cours…' : 'Après réinstallation de l\'app'}</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-            </GlassCard>
-          </View>
-
-          {/* Export Section (PDF, CSV) */}
-          <View className="mb-6">
-            <Text className="text-white text-lg font-semibold mb-4">Exporter</Text>
-            <GlassCard noPadding>
-              <TouchableOpacity
-                onPress={() => setExportModalVisible(true)}
-                className="flex-row items-center justify-between p-4 border-b border-onyx-200/10"
-              >
-                <View className="flex-row items-center">
-                  <Icons.FileText size={20} color="#6366F1" />
-                  <View className="ml-3">
-                    <Text className="text-white">Relevé PDF</Text>
-                    <Text className="text-onyx-500 text-sm">Beau relevé mensuel</Text>
-                  </View>
-                </View>
-                <Icons.ChevronRight size={20} color="#52525B" />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={handleExportCSV}
-                className="flex-row items-center justify-between p-4"
-              >
-                <View className="flex-row items-center">
-                  <Icons.Table size={20} color="#10B981" />
-                  <View className="ml-3">
-                    <Text className="text-white">Export CSV</Text>
-                    <Text className="text-onyx-500 text-sm">Toutes les données</Text>
                   </View>
                 </View>
                 <Icons.ChevronRight size={20} color="#52525B" />
@@ -697,101 +560,6 @@ export default function MoreScreen() {
           </View>
         </Modal>
 
-        {/* Modal Export PDF */}
-        <Modal
-          visible={exportModalVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setExportModalVisible(false)}
-        >
-          <View className="flex-1 bg-onyx">
-            <SafeAreaView className="flex-1">
-              <View className="flex-row justify-between items-center px-6 py-4 border-b border-onyx-200/10">
-                <TouchableOpacity onPress={() => setExportModalVisible(false)}>
-                  <Text className="text-onyx-500 text-base">Annuler</Text>
-                </TouchableOpacity>
-                <Text className="text-white text-lg font-semibold">Relevé PDF</Text>
-                <View style={{ width: 60 }} />
-              </View>
-
-              <View className="flex-1 px-6 py-6">
-                <GlassCard variant="light" className="items-center py-8 mb-6">
-                  <Icons.FileText size={64} color="#6366F1" />
-                  <Text className="text-white text-xl font-bold mt-4">Relevé Mensuel</Text>
-                  <Text className="text-onyx-500 text-center mt-2">
-                    Générez un beau relevé PDF avec toutes vos transactions du mois sélectionné
-                  </Text>
-                </GlassCard>
-
-                {/* Sélecteur de mois */}
-                <View className="mb-6">
-                  <Text className="text-onyx-500 text-sm mb-3">Sélectionner le mois</Text>
-                  <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                      onPress={() => setSelectedMonth(subMonths(selectedMonth, 1))}
-                      className="w-12 h-12 rounded-xl items-center justify-center"
-                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                    >
-                      <Icons.ChevronLeft size={24} color="#fff" />
-                    </TouchableOpacity>
-                    
-                    <View className="flex-1 mx-4">
-                      <Text className="text-white text-xl font-bold text-center">
-                        {monthLabelCapitalized}
-                      </Text>
-                    </View>
-                    
-                    <TouchableOpacity
-                      onPress={() => {
-                        const nextMonth = addMonths(selectedMonth, 1);
-                        if (nextMonth <= new Date()) {
-                          setSelectedMonth(nextMonth);
-                        }
-                      }}
-                      className="w-12 h-12 rounded-xl items-center justify-center"
-                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                    >
-                      <Icons.ChevronRight size={24} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Aperçu */}
-                <GlassCard className="mb-6">
-                  <Text className="text-onyx-500 text-sm mb-2">Le relevé inclura:</Text>
-                  <View style={{ gap: 8 }}>
-                    <View className="flex-row items-center">
-                      <Icons.Check size={16} color="#10B981" />
-                      <Text className="text-white ml-2">Résumé revenus / dépenses</Text>
-                    </View>
-                    <View className="flex-row items-center">
-                      <Icons.Check size={16} color="#10B981" />
-                      <Text className="text-white ml-2">Répartition par catégorie</Text>
-                    </View>
-                    <View className="flex-row items-center">
-                      <Icons.Check size={16} color="#10B981" />
-                      <Text className="text-white ml-2">Toutes les transactions détaillées</Text>
-                    </View>
-                    <View className="flex-row items-center">
-                      <Icons.Check size={16} color="#10B981" />
-                      <Text className="text-white ml-2">Design élégant et professionnel</Text>
-                    </View>
-                  </View>
-                </GlassCard>
-
-                <Button
-                  title={isExporting ? 'Génération en cours...' : 'Générer le relevé PDF'}
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  loading={isExporting}
-                  onPress={handleExportPDF}
-                  icon={<Icons.Download size={20} color="white" />}
-                />
-              </View>
-            </SafeAreaView>
-          </View>
-        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
