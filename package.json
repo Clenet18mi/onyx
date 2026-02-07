@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "changelog": "node scripts/generate-changelog.js",
+    "icon:black": "node scripts/icon-black-bg.js",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -68,6 +69,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.10",
     "cross-env": "^7.0.3",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3"
   },

@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 import type { ReminderRecurrence } from '@/types/reminder';
 import {
   requestReminderPermissions,
+  getReminderPermissionStatus,
   scheduleReminderNotification,
   cancelReminderNotification,
 } from '@/utils/reminderNotifications';
@@ -40,9 +41,15 @@ export default function RemindersScreen() {
   const [dateStr, setDateStr] = useState('');
   const [timeStr, setTimeStr] = useState('09:00');
   const [recurrence, setRecurrence] = useState<ReminderRecurrence>('once');
+  const [notificationDenied, setNotificationDenied] = useState(false);
 
   useEffect(() => {
-    requestReminderPermissions().catch(() => {});
+    getReminderPermissionStatus().then((status) => {
+      setNotificationDenied(status === 'denied');
+    });
+    requestReminderPermissions().then((granted) => {
+      setNotificationDenied(!granted);
+    });
   }, []);
 
   const openAdd = () => {
@@ -54,7 +61,7 @@ export default function RemindersScreen() {
     setModalVisible(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Erreur', 'Titre requis');
       return;
@@ -68,8 +75,25 @@ export default function RemindersScreen() {
     } else {
       scheduledAt = new Date().toISOString();
     }
+
+    const granted = await requestReminderPermissions();
+    setNotificationDenied(!granted);
+
     const id = addReminder({ title: title.trim(), scheduledAt, recurrence, completed: false });
-    scheduleReminderNotification(id, title.trim(), scheduledAt).catch(() => {});
+    if (granted) {
+      await scheduleReminderNotification(id, title.trim(), scheduledAt).catch((e) =>
+        console.warn('[Rappels] schedule notification', e)
+      );
+    } else {
+      Alert.alert(
+        'Notifications désactivées',
+        'Pour recevoir les rappels à l\'heure, activez les notifications dans les paramètres.',
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Ouvrir les paramètres', onPress: () => Linking.openSettings() },
+        ]
+      );
+    }
     setModalVisible(false);
   };
 
@@ -101,6 +125,26 @@ export default function RemindersScreen() {
           </TouchableOpacity>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>Rappels</Text>
         </View>
+        {notificationDenied && (
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            style={{
+              marginHorizontal: 24,
+              marginBottom: 12,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Icons.BellOff size={20} color="#EF4444" style={{ marginRight: 10 }} />
+            <Text style={{ color: '#FCA5A5', fontSize: 14, flex: 1 }}>
+              Notifications désactivées. Touchez pour les activer.
+            </Text>
+            <Icons.ChevronRight size={18} color="#EF4444" />
+          </TouchableOpacity>
+        )}
         <ScrollView style={{ flex: 1, paddingHorizontal: 24 }}>
           {upcoming.length === 0 ? (
             <View style={{ padding: 32, alignItems: 'center' }}>
