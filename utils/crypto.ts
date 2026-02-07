@@ -1,43 +1,56 @@
 // ============================================
 // ONYX - Cryptographie & Sécurité
-// Fonctions de hachage pour le PIN
+// Hachage PIN avec SHA-256 (expo-crypto)
 // ============================================
 
+import * as Crypto from 'expo-crypto';
+
+const PIN_SALT = 'ONYX_2026_SECURE_SALT';
+
 /**
- * Hash simple pour le PIN (SHA-256 via string manipulation)
- * Note: Pour une vraie production, utiliser expo-crypto
- * Ici on utilise une approche simplifiée mais sécurisée
+ * Hash le PIN avec SHA-256 + salt (ne jamais stocker le PIN en clair)
  */
-export function hashPin(pin: string): string {
-  // Simple hash avec salt
+export async function hashPin(pin: string): Promise<string> {
+  const saltedPin = pin + PIN_SALT;
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    saltedPin,
+    { encoding: Crypto.CryptoEncoding.HEX }
+  );
+  return hash;
+}
+
+/**
+ * Vérifie le PIN entré contre le hash stocké
+ */
+export async function verifyPin(inputPin: string, storedHash: string): Promise<boolean> {
+  const inputHash = await hashPin(inputPin);
+  return inputHash === storedHash;
+}
+
+/**
+ * Hash synchrone (legacy) - À utiliser uniquement si appel synchrone requis.
+ * Préférer hashPin() async en production.
+ */
+export function hashPinSync(pin: string): string {
   const salt = 'ONYX_SECURE_SALT_2024';
   const combined = salt + pin + salt.split('').reverse().join('');
-  
   let hash = 0;
   for (let i = 0; i < combined.length; i++) {
     const char = combined.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
-  
-  // Convertir en hex et ajouter plus d'entropie
   const baseHash = Math.abs(hash).toString(16);
-  
-  // Créer un hash plus long et complexe
   let finalHash = '';
   for (let i = 0; i < combined.length; i++) {
     finalHash += combined.charCodeAt(i).toString(16);
   }
-  
   return `${baseHash}-${finalHash}`;
 }
 
-/**
- * Vérifie si le PIN entré correspond au hash stocké
- */
-export function verifyPin(inputPin: string, storedHash: string): boolean {
-  const inputHash = hashPin(inputPin);
-  return inputHash === storedHash;
+export function verifyPinSync(inputPin: string, storedHash: string): boolean {
+  return hashPinSync(inputPin) === storedHash;
 }
 
 /**
@@ -52,6 +65,6 @@ export function generateId(): string {
 /**
  * Masque un montant pour l'affichage sécurisé
  */
-export function maskAmount(amount: number): string {
+export function maskAmount(_amount: number): string {
   return '••••••';
 }

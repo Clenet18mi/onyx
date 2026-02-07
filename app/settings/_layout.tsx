@@ -19,6 +19,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="account-types" />
       <Stack.Screen name="quick-expenses" />
       <Stack.Screen name="data" />
+      <Stack.Screen name="security" />
       <Stack.Screen name="automation-rules" />
       <Stack.Screen name="reminders" />
       <Stack.Screen name="wishlist" />

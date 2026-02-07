@@ -71,7 +71,8 @@
             "extraProguardRules": "# React Native\\n-keep class com.facebook.react.** { *; }\\n-keep class com.facebook.hermes.** { *; }\\n-keep class com.facebook.jni.** { *; }\\n# Expo\\n-keep class expo.** { *; }\\n# Reanimated\\n-keep class com.swmansion.reanimated.** { *; }\\n# Gesture Handler\\n-keep class com.swmansion.gesturehandler.** { *; }\\n# Zustand / serialization\\n-keepattributes *Annotation*\\n-keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }\\n-dontwarn com.facebook.react.**\\n-dontwarn com.facebook.hermes.**"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

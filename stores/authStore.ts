@@ -1,15 +1,20 @@
 // ============================================
 // ONYX - Auth Store
-// Gestion de l'authentification PIN/Biométrie
+// PIN haché SHA-256, limitation tentatives, option effacement données
 // ============================================
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '@/utils/storage';
-import { hashPin, verifyPin } from '@/utils/crypto';
+import { hashPin, verifyPin, verifyPinSync } from '@/utils/crypto';
+
+export interface ValidatePinResult {
+  success: boolean;
+  error?: string;
+  shouldWipe?: boolean;
+}
 
 interface AuthState {
-  // État
   isSetup: boolean;
   pinHash: string | null;
   pinLength: 4 | 6;
@@ -19,25 +24,33 @@ interface AuthState {
   failedAttempts: number;
   lockoutUntil: string | null;
   hasHydrated: boolean;
-  
-  // Actions
-  setupPin: (pin: string, length: 4 | 6) => void;
-  verifyAndUnlock: (pin: string) => boolean;
+  /** Échecs consécutifs (pour option effacement après N échecs) */
+  criticalFailures: number;
+  wipeDataOnMaxFailures: boolean;
+
+  setupPin: (pin: string, length: 4 | 6) => Promise<void>;
+  /** Vérifie le PIN et déverrouille. Retourne résultat détaillé. */
+  validatePin: (pin: string) => Promise<ValidatePinResult>;
+  /** Vérifie le PIN et déverrouille (retourne true/false pour compatibilité). */
+  verifyAndUnlock: (pin: string) => Promise<boolean>;
+  getLockoutRemainingSeconds: () => number;
   enableBiometric: (enabled: boolean) => void;
   unlockWithBiometric: () => void;
   lock: () => void;
-  changePin: (oldPin: string, newPin: string) => boolean;
+  changePin: (oldPin: string, newPin: string) => Promise<boolean>;
   resetAuth: () => void;
   isLockedOut: () => boolean;
+  setWipeDataOnMaxFailures: (enabled: boolean) => void;
+  wipeAllData: () => Promise<void>;
 }
 
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const LOCKOUT_DURATION_MS = 30 * 1000; // 30 secondes
+const MAX_CRITICAL_FAILURES = 10;
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // État initial
       isSetup: false,
       pinHash: null,
       pinLength: 4,
@@ -47,58 +60,101 @@ export const useAuthStore = create<AuthState>()(
       failedAttempts: 0,
       lockoutUntil: null,
       hasHydrated: false,
+      criticalFailures: 0,
+      wipeDataOnMaxFailures: false,
 
-      // Configurer le PIN initial
-      setupPin: (pin: string, length: 4 | 6) => {
-        const hash = hashPin(pin);
+      setupPin: async (pin: string, length: 4 | 6) => {
+        const h = await hashPin(pin);
         set({
           isSetup: true,
-          pinHash: hash,
+          pinHash: h,
           pinLength: length,
           isAuthenticated: true,
           lastUnlocked: new Date().toISOString(),
           failedAttempts: 0,
+          lockoutUntil: null,
+          criticalFailures: 0,
         });
       },
 
-      // Vérifier le PIN et déverrouiller
-      verifyAndUnlock: (pin: string): boolean => {
-        const { pinHash, isLockedOut } = get();
-        
-        // Vérifier si bloqué
-        if (isLockedOut()) {
-          return false;
+      validatePin: async (pin: string): Promise<ValidatePinResult> => {
+        const state = get();
+        if (state.isLockedOut()) {
+          const remaining = get().getLockoutRemainingSeconds();
+          return {
+            success: false,
+            error: `Trop de tentatives. Réessayez dans ${remaining}s`,
+          };
         }
-        
-        if (pinHash && verifyPin(pin, pinHash)) {
+        if (!state.pinHash) {
+          return { success: false, error: 'Aucun PIN configuré' };
+        }
+
+        let isValid = await verifyPin(pin, state.pinHash);
+        if (!isValid && state.pinHash && state.pinHash.includes('-')) {
+          isValid = verifyPinSync(pin, state.pinHash);
+          if (isValid) {
+            const newHash = await hashPin(pin);
+            set({ pinHash: newHash });
+          }
+        }
+        if (isValid) {
           set({
             isAuthenticated: true,
             lastUnlocked: new Date().toISOString(),
             failedAttempts: 0,
             lockoutUntil: null,
+            criticalFailures: 0,
           });
-          return true;
+          return { success: true };
         }
-        
-        // Échec - incrémenter les tentatives
-        const newFailedAttempts = get().failedAttempts + 1;
-        if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
+
+        const newAttempts = get().failedAttempts + 1;
+        const newCritical = get().criticalFailures + 1;
+        set({ failedAttempts: newAttempts, criticalFailures: newCritical });
+
+        if (get().wipeDataOnMaxFailures && newCritical >= MAX_CRITICAL_FAILURES) {
+          return {
+            success: false,
+            error: 'Trop de tentatives. Les données vont être effacées pour protection.',
+            shouldWipe: true,
+          };
+        }
+
+        if (newAttempts >= MAX_FAILED_ATTEMPTS) {
           set({
-            failedAttempts: newFailedAttempts,
             lockoutUntil: new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString(),
           });
-        } else {
-          set({ failedAttempts: newFailedAttempts });
+          return {
+            success: false,
+            error: `Trop de tentatives. Bloqué pendant ${LOCKOUT_DURATION_MS / 1000}s`,
+          };
         }
-        return false;
+
+        const remaining = MAX_FAILED_ATTEMPTS - newAttempts;
+        return {
+          success: false,
+          error: `Code incorrect. ${remaining} tentative(s) restante(s)`,
+        };
       },
 
-      // Activer/désactiver la biométrie
+      verifyAndUnlock: async (pin: string): Promise<boolean> => {
+        const result = await get().validatePin(pin);
+        return result.success;
+      },
+
+      getLockoutRemainingSeconds: (): number => {
+        const { lockoutUntil } = get();
+        if (!lockoutUntil) return 0;
+        const end = new Date(lockoutUntil).getTime();
+        const now = Date.now();
+        return Math.max(0, Math.ceil((end - now) / 1000));
+      },
+
       enableBiometric: (enabled: boolean) => {
         set({ biometricEnabled: enabled });
       },
 
-      // Déverrouiller avec biométrie
       unlockWithBiometric: () => {
         set({
           isAuthenticated: true,
@@ -107,26 +163,24 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      // Verrouiller l'app
       lock: () => {
         set({ isAuthenticated: false });
       },
 
-      // Changer le PIN
-      changePin: (oldPin: string, newPin: string): boolean => {
+      changePin: async (oldPin: string, newPin: string): Promise<boolean> => {
         const { pinHash } = get();
-        if (pinHash && verifyPin(oldPin, pinHash)) {
-          const newHash = hashPin(newPin);
-          set({
-            pinHash: newHash,
-            pinLength: newPin.length as 4 | 6,
-          });
-          return true;
-        }
-        return false;
+        if (!pinHash) return false;
+        let ok = await verifyPin(oldPin, pinHash);
+        if (!ok && pinHash.includes('-')) ok = verifyPinSync(oldPin, pinHash);
+        if (!ok) return false;
+        const newHash = await hashPin(newPin);
+        set({
+          pinHash: newHash,
+          pinLength: newPin.length as 4 | 6,
+        });
+        return true;
       },
 
-      // Réinitialiser complètement
       resetAuth: () => {
         set({
           isSetup: false,
@@ -137,33 +191,79 @@ export const useAuthStore = create<AuthState>()(
           lastUnlocked: null,
           failedAttempts: 0,
           lockoutUntil: null,
+          criticalFailures: 0,
         });
       },
 
-      // Vérifier si bloqué
       isLockedOut: (): boolean => {
         const { lockoutUntil } = get();
         if (!lockoutUntil) return false;
         return new Date(lockoutUntil) > new Date();
       },
+
+      setWipeDataOnMaxFailures: (enabled: boolean) => {
+        set({ wipeDataOnMaxFailures: enabled });
+      },
+
+      wipeAllData: async () => {
+        const { storage } = await import('@/utils/storage');
+        const { useAccountStore } = await import('@/stores/accountStore');
+        const { useTransactionStore } = await import('@/stores/transactionStore');
+        const { useBudgetStore } = await import('@/stores/budgetStore');
+        const { useGoalStore } = await import('@/stores/goalStore');
+        const { useSubscriptionStore } = await import('@/stores/subscriptionStore');
+        const { usePlannedTransactionStore } = await import('@/stores/plannedTransactionStore');
+        const { useConfigStore } = await import('@/stores/configStore');
+        const { useFilterStore } = await import('@/stores/filterStore');
+        const { useTemplateStore } = await import('@/stores/templateStore');
+        const { useWishlistStore } = await import('@/stores/wishlistStore');
+        const { useReminderStore } = await import('@/stores/reminderStore');
+
+        try {
+          useAccountStore.getState().setAccountsForImport?.([]);
+          useTransactionStore.getState().setTransactionsForImport?.([]);
+          useBudgetStore.getState().setBudgetsForImport?.([]);
+          useGoalStore.getState().setGoalsForImport?.([]);
+          useSubscriptionStore.getState().setSubscriptionsForImport?.([]);
+          usePlannedTransactionStore.getState().setPlannedTransactionsForImport?.([]);
+        } catch (_) {}
+        try {
+          useConfigStore.getState().reset?.();
+        } catch (_) {}
+        try {
+          useFilterStore.getState().reset?.();
+        } catch (_) {}
+        try {
+          useTemplateStore.getState().reset?.();
+        } catch (_) {}
+        try {
+          useWishlistStore.getState().reset?.();
+        } catch (_) {}
+        try {
+          useReminderStore.getState().reset?.();
+        } catch (_) {}
+
+        await storage.clearAll();
+        get().resetAuth();
+      },
     }),
     {
       name: 'onyx-auth',
       storage: createJSONStorage(() => zustandStorage),
-      // Ne pas persister isAuthenticated (toujours false au démarrage)
-      partialize: (state) => ({
-        isSetup: state.isSetup,
-        pinHash: state.pinHash,
-        pinLength: state.pinLength,
-        biometricEnabled: state.biometricEnabled,
-        lastUnlocked: state.lastUnlocked,
-        failedAttempts: state.failedAttempts,
-        lockoutUntil: state.lockoutUntil,
+      partialize: (s) => ({
+        isSetup: s.isSetup,
+        pinHash: s.pinHash,
+        pinLength: s.pinLength,
+        biometricEnabled: s.biometricEnabled,
+        lastUnlocked: s.lastUnlocked,
+        failedAttempts: s.failedAttempts,
+        lockoutUntil: s.lockoutUntil,
+        criticalFailures: s.criticalFailures,
+        wipeDataOnMaxFailures: s.wipeDataOnMaxFailures,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;
-          // Toujours démarrer non authentifié
           state.isAuthenticated = false;
         }
       },
