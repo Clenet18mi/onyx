@@ -81,21 +81,66 @@ npm install
 eas build:configure
 ```
 
+## 📜 Scripts npm / Commandes
+
+| Commande | Description |
+|----------|-------------|
+| `npm start` | Lance le serveur de développement Expo |
+| `npm run android` | Lance l'app sur Android (émulateur ou appareil connecté) |
+| `npm run ios` | Lance l'app sur iOS (Mac uniquement) |
+| `npm run web` | Lance l'app en mode web |
+| **Build Android (local)** | |
+| `npm run build:android` | Build APK release (PowerShell, projet natif `android/`) |
+| `npm run build:android:debug` | Build APK debug |
+| `npm run android:build` | Alias de `build:android` |
+| `npm run android:build:fast` | Build release rapide (cache Gradle, sans prebuild si déjà fait) |
+| **Prebuild & natif** | |
+| `npm run prebuild` | Génère le projet natif (expo prebuild --clean) |
+| `npm run prebuild:android` | Prebuild Android uniquement |
+| `npm run prebuild:android:clean` | Prebuild Android avec nettoyage |
+| `npm run android:unlock` | Déverrouille les fichiers Gradle (Windows) avant prebuild |
+| `npm run prebuild:android:fresh` | Unlock + prebuild Android propre |
+| **Build EAS (cloud)** | |
+| `npm run build:android:eas` | Build APK via EAS (profil preview) |
+| `npm run build:android:prod` | Build AAB production pour Play Store |
+| **Utilitaires** | |
+| `npm run changelog` | Génère `constants/changelog.json` depuis l'historique Git |
+| `npm run icon:black` | Applique un fond noir à l'icône (assets/icon.png, adaptive-icon.png) |
+| `npm run android:clean` | Nettoie le build Gradle (dossier `android/`) |
+| `npm run android:config` | Configure `local.properties` pour Android |
+| `npm run android:logcat` | Affiche les logs Android (crash, etc.) |
+
 ## 📱 Créer l'APK
 
 ### Build APK (Preview)
 
 ```bash
-# Lancer le build dans le cloud Expo
+# Via npm (recommandé)
+npm run build:android:eas
+
+# Ou directement EAS
 eas build --platform android --profile preview
 ```
 
 Le build prend environ **15-20 minutes**. Une fois terminé, tu recevras un lien pour télécharger l'APK.
 
+### Build Android en local (APK release)
+
+```bash
+# Générer le projet natif puis builder (Windows PowerShell)
+npm run prebuild:android
+npm run build:android
+
+# Ou en une fois (prebuild propre + build)
+npm run prebuild:android:fresh
+npm run build:android
+```
+
 ### Build Production (Play Store)
 
 ```bash
-# Build AAB pour le Play Store
+npm run build:android:prod
+# ou
 eas build --platform android --profile production
 ```
 
