@@ -3,7 +3,7 @@
 // Utilise la nouvelle API FileSystem (SDK 54) + legacy uniquement pour partage Android
 // ============================================
 
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import { Paths, File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useAccountStore } from '@/stores/accountStore';
@@ -387,19 +387,18 @@ function restorePlannedTransactions(rows: SerializedPlannedTransaction[]): Plann
 }
 
 /**
- * Sur Android, convertit un file:// en content:// pour le partage.
+ * Expo Sharing only accepts file:// URIs. If we have a content:// URI (e.g. from new File API),
+ * copy to cache with legacy API to get a file:// path.
  */
-async function getShareableUri(fileUri: string): Promise<string> {
-  if (Platform.OS !== 'android') return fileUri;
-  try {
-    const legacy = await import('expo-file-system/legacy');
-    if (typeof legacy.getContentUriAsync === 'function') {
-      return await legacy.getContentUriAsync(fileUri);
-    }
-  } catch (e) {
-    console.warn('[dataExport] getContentUriAsync non disponible:', e);
-  }
-  return fileUri;
+async function ensureFileUriForSharing(uri: string): Promise<string> {
+  if (uri.startsWith('file://')) return uri;
+  if (!uri.startsWith('content://')) return uri;
+  const legacy = await import('expo-file-system/legacy');
+  const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
+  if (!dir) return uri;
+  const dest = `${dir.endsWith('/') ? dir : dir + '/'}onyx-export-share-${Date.now()}.ndjson`;
+  await legacy.copyAsync({ from: uri, to: dest });
+  return dest;
 }
 
 /** Format NDJSON : une ligne = un objet JSON. Plus simple et robuste qu'un gros JSON. */
@@ -474,17 +473,20 @@ export async function exportDataAsJSON(): Promise<void> {
     const filename = `onyx-backup-${timestamp}.ndjson`;
     let fileUri: string;
 
-    try {
-      const file = new File(Paths.cache, filename);
-      file.create({ overwrite: true, intermediates: true });
-      file.write(content);
-      fileUri = file.uri;
-    } catch {
-      const legacy = await import('expo-file-system/legacy');
-      const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
-      if (!dir) throw new Error('Aucun répertoire disponible (cache/document)');
+    const legacy = await import('expo-file-system/legacy');
+    const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
+    if (dir) {
       fileUri = dir.endsWith('/') ? `${dir}${filename}` : `${dir}/${filename}`;
       await legacy.writeAsStringAsync(fileUri, content, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
+    } else {
+      try {
+        const file = new File(Paths.cache, filename);
+        file.create({ overwrite: true, intermediates: true });
+        file.write(content);
+        fileUri = file.uri;
+      } catch {
+        throw new Error('Aucun répertoire disponible (cache/document)');
+      }
     }
 
     if (!fileUri) {
@@ -492,7 +494,7 @@ export async function exportDataAsJSON(): Promise<void> {
     }
 
     step.current = 'partage';
-    const shareUri = await getShareableUri(fileUri);
+    const shareUri = await ensureFileUriForSharing(fileUri);
     const canShare = await Sharing.isAvailableAsync();
 
     if (canShare) {

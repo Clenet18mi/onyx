@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -83,9 +82,11 @@ export default function DataManagementScreen() {
     try {
       const jsonData = await exportAllData();
       const fileName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
-      const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
-      const filePath = `${dir}${fileName}`;
-      await FileSystem.writeAsStringAsync(filePath, jsonData, { encoding: FileSystem.EncodingType.UTF8 });
+      const legacy = await import('expo-file-system/legacy');
+      const dir = legacy.cacheDirectory ?? legacy.documentDirectory ?? '';
+      if (!dir) throw new Error('Aucun répertoire cache disponible');
+      const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
+      await legacy.writeAsStringAsync(filePath, jsonData, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(filePath, { mimeType: 'application/json', dialogTitle: 'Exporter les données ONYX' });
       } else {
@@ -119,7 +120,21 @@ export default function DataManagementScreen() {
 
               setLoading(true);
               const fileUri = result.assets[0].uri;
-              const jsonData = await FileSystem.readAsStringAsync(fileUri);
+              const legacy = await import('expo-file-system/legacy');
+              let jsonData: string;
+              try {
+                jsonData = await legacy.readAsStringAsync(fileUri, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
+              } catch {
+                const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
+                if (dir && (fileUri.startsWith('content://') || fileUri.startsWith('file://'))) {
+                  const tempPath = `${dir.endsWith('/') ? dir : dir + '/'}onyx-import-temp-${Date.now()}.json`;
+                  await legacy.copyAsync({ from: fileUri, to: tempPath });
+                  jsonData = await legacy.readAsStringAsync(tempPath, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
+                  await legacy.deleteAsync(tempPath, { idempotent: true });
+                } else {
+                  throw new Error('Impossible de lire le fichier');
+                }
+              }
               
               const success = await importData(jsonData);
               
