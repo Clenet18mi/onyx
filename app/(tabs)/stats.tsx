@@ -1,11 +1,12 @@
 // ============================================
 // ONYX - Statistiques
-// Graphiques et analyses
+// Graphiques et analyses, catégories cliquables
 // ============================================
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { BarChart } from 'react-native-gifted-charts';
@@ -20,14 +21,23 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTransactionStore, useAccountStore } from '@/stores';
-import { formatCurrency, formatPercentage } from '@/utils/format';
+import { formatCurrency, formatPercentage, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { CATEGORIES } from '@/types';
+import type { Transaction } from '@/types';
 
 const { width } = Dimensions.get('window');
 
+type CategoryModalType = 'expense' | 'income';
+
 export default function StatsScreen() {
+  const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [modalCategory, setModalCategory] = useState<{
+    catId: string;
+    label: string;
+    type: CategoryModalType;
+  } | null>(null);
   const transactions = useTransactionStore((state) => state.transactions);
   const accounts = useAccountStore((state) => state.accounts);
 
@@ -68,6 +78,26 @@ export default function StatsScreen() {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 8);
   }, [filteredTx]);
+
+  const byCategoryIncome = useMemo(() => {
+    const map: Record<string, number> = {};
+    filteredTx
+      .filter((t) => t.type === 'income')
+      .forEach((t) => {
+        map[t.category] = (map[t.category] || 0) + t.amount;
+      });
+    return Object.entries(map)
+      .map(([catId, amount]) => ({ catId, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 8);
+  }, [filteredTx]);
+
+  const modalTransactions = useMemo(() => {
+    if (!modalCategory) return [];
+    return filteredTx
+      .filter((t) => t.category === modalCategory.catId && t.type === modalCategory.type)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredTx, modalCategory]);
 
   const chartData = useMemo(() => {
     return byCategory.map(({ catId, amount }) => {
@@ -187,16 +217,19 @@ export default function StatsScreen() {
             </View>
           )}
 
-          {/* Liste catégories */}
-          <View className="px-6 mb-8">
-            <Text className="text-white font-semibold mb-3">Détail des catégories</Text>
+          {/* Liste catégories dépenses */}
+          <View className="px-6 mb-6">
+            <Text className="text-white font-semibold mb-3">Détail des dépenses par catégorie</Text>
+            <Text className="text-onyx-500 text-xs mb-3">Appuyez sur une catégorie pour voir les transactions</Text>
             {byCategory.map(({ catId, amount }) => {
               const cat = CATEGORIES.find((c) => c.id === catId);
               const pct = expenses > 0 ? (amount / expenses) * 100 : 0;
               const Icon = cat ? (Icons as any)[cat.icon] : Icons.CircleDot;
               return (
-                <View
+                <TouchableOpacity
                   key={catId}
+                  activeOpacity={0.7}
+                  onPress={() => setModalCategory({ catId, label: cat?.label || catId, type: 'expense' })}
                   className="flex-row items-center py-3"
                   style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}
                 >
@@ -211,14 +244,121 @@ export default function StatsScreen() {
                     <Text className="text-onyx-500 text-xs">{formatPercentage(pct)}</Text>
                   </View>
                   <Text className="text-white font-semibold">{formatCurrency(amount)}</Text>
-                </View>
+                  <Icons.ChevronRight size={18} color="#71717A" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
               );
             })}
             {byCategory.length === 0 && (
               <Text className="text-onyx-500 py-6 text-center">Aucune dépense sur cette période</Text>
             )}
           </View>
+
+          {/* Liste catégories revenus */}
+          <View className="px-6 mb-8">
+            <Text className="text-white font-semibold mb-3">Revenus par catégorie</Text>
+            <Text className="text-onyx-500 text-xs mb-3">Appuyez sur une catégorie pour voir les transactions</Text>
+            {byCategoryIncome.map(({ catId, amount }) => {
+              const cat = CATEGORIES.find((c) => c.id === catId);
+              const pct = income > 0 ? (amount / income) * 100 : 0;
+              const Icon = cat ? (Icons as any)[cat.icon] : Icons.CircleDot;
+              return (
+                <TouchableOpacity
+                  key={catId}
+                  activeOpacity={0.7}
+                  onPress={() => setModalCategory({ catId, label: cat?.label || catId, type: 'income' })}
+                  className="flex-row items-center py-3"
+                  style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  <View
+                    className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+                    style={{ backgroundColor: `${cat?.color || '#6366F1'}20` }}
+                  >
+                    <Icon size={20} color={cat?.color || '#6366F1'} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white font-medium">{cat?.label || catId}</Text>
+                    <Text className="text-onyx-500 text-xs">{formatPercentage(pct)}</Text>
+                  </View>
+                  <Text className="text-white font-semibold" style={{ color: '#10B981' }}>
+                    +{formatCurrency(amount)}
+                  </Text>
+                  <Icons.ChevronRight size={18} color="#71717A" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              );
+            })}
+            {byCategoryIncome.length === 0 && (
+              <Text className="text-onyx-500 py-6 text-center">Aucun revenu sur cette période</Text>
+            )}
+          </View>
         </ScrollView>
+
+        {/* Modal liste des transactions de la catégorie */}
+        <Modal
+          visible={!!modalCategory}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setModalCategory(null)}
+        >
+          <View className="flex-1 justify-end">
+            <TouchableOpacity
+              className="flex-1 bg-black/60"
+              activeOpacity={1}
+              onPress={() => setModalCategory(null)}
+            />
+            <View
+              className="bg-onyx-100 rounded-t-3xl max-h-[80%]"
+              style={{ backgroundColor: '#18181B' }}
+            >
+              <View className="flex-row items-center justify-between px-6 py-4 border-b border-onyx-200/20">
+                <Text className="text-white text-lg font-bold" numberOfLines={1}>
+                  {modalCategory?.label}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setModalCategory(null)}
+                  className="w-10 h-10 rounded-full items-center justify-center"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+                >
+                  <Icons.X size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={modalTransactions}
+                keyExtractor={(item) => item.id}
+                className="flex-1"
+                ListEmptyComponent={
+                  <Text className="text-onyx-500 text-center py-8">Aucune transaction</Text>
+                }
+                renderItem={({ item }: { item: Transaction }) => {
+                  const isIncome = item.type === 'income';
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setModalCategory(null);
+                        router.push(`/transaction/${item.id}`);
+                      }}
+                      className="flex-row items-center px-6 py-4 border-b border-onyx-200/10"
+                    >
+                      <View className="flex-1">
+                        <Text className="text-white font-medium" numberOfLines={1}>
+                          {item.description || 'Sans description'}
+                        </Text>
+                        <Text className="text-onyx-500 text-xs mt-0.5">{formatDate(item.date)}</Text>
+                      </View>
+                      <Text
+                        className="font-semibold text-base"
+                        style={{ color: isIncome ? '#10B981' : '#EF4444' }}
+                      >
+                        {isIncome ? '+' : '−'}{formatCurrency(item.amount)}
+                      </Text>
+                      <Icons.ChevronRight size={18} color="#71717A" style={{ marginLeft: 8 }} />
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
