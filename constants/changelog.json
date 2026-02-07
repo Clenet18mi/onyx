@@ -1,12 +1,13 @@
 {
   "appVersion": "1.0.0",
-  "buildNumber": "84",
-  "generatedAt": "2026-02-07T14:18:35.071Z",
+  "buildNumber": "85",
+  "generatedAt": "2026-02-07T14:28:50.558Z",
   "entries": [
     {
       "version": "1.0.0",
       "date": "2026-02-07",
       "logs": [
+        "feat(reminders): enhance notification handling and permissions management",
         "feat(settings): add changelog screen and version display",
         "chore(assets): update adaptive and icon images",
         "refactor(more): simplify MoreScreen by removing export/import functionalities",
@@ -85,8 +86,7 @@
         "Implement account management store",
         "Add reusable UI components",
         "Build PIN pad and lock screen components",
-        "Create authentication store with PIN logic",
-        "Add formatting utilities"
+        "Create authentication store with PIN logic"
       ]
     }
   ]

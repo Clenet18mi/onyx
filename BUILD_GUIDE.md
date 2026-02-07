@@ -52,9 +52,14 @@ Réponds aux questions :
 ### Étape 3 : Lancer le build
 
 ```bash
-# Build APK de test/preview
+# Build APK de test/preview (recommandé)
+npm run build:android:eas
+
+# Ou directement EAS
 eas build --platform android --profile preview
 ```
+
+> **Toutes les commandes npm** (build local, prebuild, changelog, etc.) sont listées dans le **README.md** section « Scripts npm / Commandes ».
 
 ### Étape 4 : Attendre et télécharger
 
@@ -113,18 +118,29 @@ eas build --platform android --profile preview
 
 ## 🔄 Mettre à Jour l'App
 
+### Commandes utiles avant release
+
+```bash
+# Mettre à jour le journal des versions (depuis les commits Git)
+npm run changelog
+
+# (Optionnel) Appliquer un fond noir à l'icône
+npm run icon:black
+```
+
 ### Workflow pour chaque mise à jour
 
 1. **Modifie** le code
-2. **Incrémente** la version dans `app.json` :
+2. **Incrémente** la version dans `app.json` (et `package.json` si besoin) :
    ```json
    "version": "1.0.0" → "1.1.0"
    "versionCode": 1 → 2
    ```
 3. **Build** le nouvel APK :
    ```bash
-   eas build --platform android --profile preview
+   npm run build:android:eas
    ```
+   (Ou build local : `npm run build:android` après `npm run prebuild:android`.)
 4. **Installe** par-dessus l'ancienne version
 5. **Les données sont préservées !** ✅
 
