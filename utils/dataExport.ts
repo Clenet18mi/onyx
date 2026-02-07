@@ -5,7 +5,6 @@
 
 import { Alert } from 'react-native';
 import { Paths, File } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { useAccountStore } from '@/stores/accountStore';
 import { useTransactionStore } from '@/stores/transactionStore';
 import { useBudgetStore } from '@/stores/budgetStore';
@@ -386,21 +385,6 @@ function restorePlannedTransactions(rows: SerializedPlannedTransaction[]): Plann
   }));
 }
 
-/**
- * Expo Sharing only accepts file:// URIs. If we have a content:// URI (e.g. from new File API),
- * copy to cache with legacy API to get a file:// path.
- */
-async function ensureFileUriForSharing(uri: string): Promise<string> {
-  if (uri.startsWith('file://')) return uri;
-  if (!uri.startsWith('content://')) return uri;
-  const legacy = await import('expo-file-system/legacy');
-  const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
-  if (!dir) return uri;
-  const dest = `${dir.endsWith('/') ? dir : dir + '/'}onyx-export-share-${Date.now()}.ndjson`;
-  await legacy.copyAsync({ from: uri, to: dest });
-  return dest;
-}
-
 /** Format NDJSON : une ligne = un objet JSON. Plus simple et robuste qu'un gros JSON. */
 function buildNDJSON(data: ExportData): string {
   const lines: string[] = [];
@@ -454,7 +438,7 @@ function parseNDJSON(content: string): ExportData {
 }
 
 /**
- * Exporte toutes les données en NDJSON (format simple : une ligne = un enregistrement) et ouvre le partage.
+ * Exporte toutes les données en NDJSON (format simple : une ligne = un enregistrement) et enregistre le fichier directement.
  */
 export async function exportDataAsJSON(): Promise<void> {
   const step = { current: '' };
@@ -493,23 +477,12 @@ export async function exportDataAsJSON(): Promise<void> {
       throw new Error('URI du fichier indisponible');
     }
 
-    step.current = 'partage';
-    const shareUri = await ensureFileUriForSharing(fileUri);
-    const canShare = await Sharing.isAvailableAsync();
-
-    if (canShare) {
-      await Sharing.shareAsync(shareUri, {
-        mimeType: 'application/x-ndjson',
-        dialogTitle: 'Sauvegarde ONYX',
-        UTI: 'public.json',
-      });
-    } else {
-      Alert.alert(
-        'Export réussi',
-        `Fichier créé : ${fileUri}`,
-        [{ text: 'OK' }]
-      );
-    }
+    step.current = 'finalisation';
+    Alert.alert(
+      'Export réussi',
+      'Le fichier a été enregistré.',
+      [{ text: 'OK' }]
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const detail = `Étape : ${step.current}. ${message}`;
@@ -584,16 +557,31 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
         const parsed = JSON.parse(jsonString) as Record<string, unknown>;
         const exportDate = (parsed.exportDate ?? parsed.exportedAt) as string | undefined;
         const version = parsed.version as string | undefined;
-        data = {
-          version: version ?? '1.0',
-          exportDate: exportDate ?? new Date().toISOString(),
-          accounts: Array.isArray(parsed.accounts) ? (parsed.accounts as SerializedAccount[]) : [],
-          transactions: Array.isArray(parsed.transactions) ? (parsed.transactions as SerializedTransaction[]) : [],
-          budgets: Array.isArray(parsed.budgets) ? (parsed.budgets as SerializedBudget[]) : [],
-          goals: Array.isArray(parsed.goals) ? (parsed.goals as SerializedGoal[]) : [],
-          subscriptions: Array.isArray(parsed.subscriptions) ? (parsed.subscriptions as SerializedSubscription[]) : [],
-          plannedTransactions: Array.isArray(parsed.plannedTransactions) ? (parsed.plannedTransactions as SerializedPlannedTransaction[]) : [],
-        };
+
+        if (parsed.data && typeof parsed.data === 'object') {
+          const raw = parsed.data as Record<string, { state?: Record<string, unknown> }>;
+          data = {
+            version: version ?? '1.0',
+            exportDate: (exportDate ?? new Date().toISOString()) as string,
+            accounts: Array.isArray(raw['onyx-accounts']?.state?.accounts) ? (raw['onyx-accounts'].state.accounts as SerializedAccount[]) : [],
+            transactions: Array.isArray(raw['onyx-transactions']?.state?.transactions) ? (raw['onyx-transactions'].state.transactions as SerializedTransaction[]) : [],
+            budgets: Array.isArray(raw['onyx-budgets']?.state?.budgets) ? (raw['onyx-budgets'].state.budgets as SerializedBudget[]) : [],
+            goals: Array.isArray(raw['onyx-goals']?.state?.goals) ? (raw['onyx-goals'].state.goals as SerializedGoal[]) : [],
+            subscriptions: Array.isArray(raw['onyx-subscriptions']?.state?.subscriptions) ? (raw['onyx-subscriptions'].state.subscriptions as SerializedSubscription[]) : [],
+            plannedTransactions: Array.isArray(raw['onyx-planned-transactions']?.state?.plannedTransactions) ? (raw['onyx-planned-transactions'].state.plannedTransactions as SerializedPlannedTransaction[]) : [],
+          };
+        } else {
+          data = {
+            version: version ?? '1.0',
+            exportDate: exportDate ?? new Date().toISOString(),
+            accounts: Array.isArray(parsed.accounts) ? (parsed.accounts as SerializedAccount[]) : [],
+            transactions: Array.isArray(parsed.transactions) ? (parsed.transactions as SerializedTransaction[]) : [],
+            budgets: Array.isArray(parsed.budgets) ? (parsed.budgets as SerializedBudget[]) : [],
+            goals: Array.isArray(parsed.goals) ? (parsed.goals as SerializedGoal[]) : [],
+            subscriptions: Array.isArray(parsed.subscriptions) ? (parsed.subscriptions as SerializedSubscription[]) : [],
+            plannedTransactions: Array.isArray(parsed.plannedTransactions) ? (parsed.plannedTransactions as SerializedPlannedTransaction[]) : [],
+          };
+        }
       }
     } catch (parseErr) {
       console.error('[importDataFromJSON] parse error', parseErr);
