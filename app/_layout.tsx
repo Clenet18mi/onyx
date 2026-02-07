@@ -15,10 +15,15 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
+import { setReminderNotificationHandler, syncReminderNotifications } from '@/utils/reminderNotifications';
+import { useReminderStore } from '@/stores';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
 SplashScreen.preventAutoHideAsync();
+
+// Afficher les notifications de rappels même quand l'app est au premier plan
+setReminderNotificationHandler();
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -74,6 +79,9 @@ export default function RootLayout() {
               } catch (subError) {
                 console.error('[ONYX] Process subscriptions error:', subError);
               }
+              syncReminderNotifications(useReminderStore.getState().reminders).catch((syncError) => {
+                console.warn('[ONYX] Reminder notifications sync error:', syncError);
+              });
             }
           } catch (hydrationError) {
             console.error('[ONYX] Hydration check error:', hydrationError);
