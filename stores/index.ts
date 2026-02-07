@@ -20,6 +20,7 @@ export { useGamificationStore } from './gamificationStore';
 export { useSplitStore } from './splitStore';
 export { useWishlistStore } from './wishlistStore';
 export { useReminderStore } from './reminderStore';
+export { usePlannedTransactionStore } from './plannedTransactionStore';
 export type { 
   CustomCategory, 
   CustomAccountType, 

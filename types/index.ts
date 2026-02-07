@@ -99,6 +99,37 @@ export interface SavingsGoal {
 }
 
 // ============================================
+// TRANSACTIONS PRÉVUES (futures)
+// ============================================
+export type PlannedTransactionType = 'expense' | 'income';
+export type PlannedTransactionStatus = 'pending' | 'realized' | 'cancelled';
+
+export interface PlannedTransactionRecurrence {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number;
+  endDate?: string;
+  count?: number;
+}
+
+export interface PlannedTransaction {
+  id: string;
+  type: PlannedTransactionType;
+  amount: number;
+  category: TransactionCategory;
+  accountId: string;
+  plannedDate: string;
+  description: string;
+  note?: string;
+  status: PlannedTransactionStatus;
+  realizedTransactionId?: string;
+  realizedDate?: string;
+  isRecurring?: boolean;
+  recurrence?: PlannedTransactionRecurrence;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
 // ABONNEMENTS RÉCURRENTS
 // ============================================
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';

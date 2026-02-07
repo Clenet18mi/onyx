@@ -11,7 +11,8 @@ import { useTransactionStore } from '@/stores/transactionStore';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useGoalStore } from '@/stores/goalStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
-import type { Account, Transaction, Budget, SavingsGoal, Subscription } from '@/types';
+import { usePlannedTransactionStore } from '@/stores/plannedTransactionStore';
+import type { Account, Transaction, Budget, SavingsGoal, Subscription, PlannedTransaction } from '@/types';
 
 const EXPORT_VERSION = '1.0';
 
@@ -23,6 +24,25 @@ export interface ExportData {
   budgets: SerializedBudget[];
   goals: SerializedGoal[];
   subscriptions: SerializedSubscription[];
+  plannedTransactions: SerializedPlannedTransaction[];
+}
+
+interface SerializedPlannedTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  category: string;
+  accountId: string;
+  plannedDate: string;
+  description: string;
+  note?: string;
+  status: string;
+  realizedTransactionId?: string;
+  realizedDate?: string;
+  isRecurring?: boolean;
+  recurrence?: { frequency: string; interval: number; endDate?: string; count?: number };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SerializedAccount {
@@ -190,12 +210,33 @@ function cleanSubscriptions(subs: Subscription[]): SerializedSubscription[] {
   }));
 }
 
+function cleanPlannedTransactions(list: PlannedTransaction[]): SerializedPlannedTransaction[] {
+  return (list ?? []).map((p) => ({
+    id: String(p.id),
+    type: String(p.type),
+    amount: Number(p.amount),
+    category: String(p.category),
+    accountId: String(p.accountId),
+    plannedDate: ensureString(p.plannedDate),
+    description: String(p.description ?? ''),
+    note: p.note,
+    status: String(p.status),
+    realizedTransactionId: p.realizedTransactionId,
+    realizedDate: p.realizedDate,
+    isRecurring: p.isRecurring,
+    recurrence: p.recurrence,
+    createdAt: ensureString(p.createdAt),
+    updatedAt: ensureString(p.updatedAt),
+  }));
+}
+
 function prepareDataForExport(): ExportData {
   let accounts: Account[] = [];
   let transactions: Transaction[] = [];
   let budgets: Budget[] = [];
   let goals: SavingsGoal[] = [];
   let subscriptions: Subscription[] = [];
+  let plannedTransactions: PlannedTransaction[] = [];
 
   try {
     accounts = useAccountStore.getState().accounts ?? [];
@@ -222,6 +263,11 @@ function prepareDataForExport(): ExportData {
   } catch (e) {
     console.warn('[dataExport] subscriptionStore.getState()', e);
   }
+  try {
+    plannedTransactions = usePlannedTransactionStore.getState().plannedTransactions ?? [];
+  } catch (e) {
+    console.warn('[dataExport] plannedTransactionStore.getState()', e);
+  }
 
   return {
     version: EXPORT_VERSION,
@@ -231,6 +277,7 @@ function prepareDataForExport(): ExportData {
     budgets: cleanBudgets(budgets),
     goals: cleanGoals(goals),
     subscriptions: cleanSubscriptions(subscriptions),
+    plannedTransactions: cleanPlannedTransactions(plannedTransactions),
   };
 }
 
@@ -319,6 +366,26 @@ function restoreSubscriptions(rows: SerializedSubscription[]): Subscription[] {
   }));
 }
 
+function restorePlannedTransactions(rows: SerializedPlannedTransaction[]): PlannedTransaction[] {
+  return (Array.isArray(rows) ? rows : []).filter(Boolean).map((p) => ({
+    id: String(p?.id ?? ''),
+    type: (p?.type || 'expense') as PlannedTransaction['type'],
+    amount: Number(p?.amount) || 0,
+    category: (p?.category || 'other') as PlannedTransaction['category'],
+    accountId: String(p?.accountId ?? ''),
+    plannedDate: toDateString(p?.plannedDate),
+    description: String(p?.description ?? ''),
+    note: p?.note,
+    status: (p?.status || 'pending') as PlannedTransaction['status'],
+    realizedTransactionId: p?.realizedTransactionId,
+    realizedDate: p?.realizedDate,
+    isRecurring: Boolean(p?.isRecurring),
+    recurrence: p?.recurrence as PlannedTransaction['recurrence'],
+    createdAt: toDateString(p?.createdAt),
+    updatedAt: toDateString(p?.updatedAt),
+  }));
+}
+
 /**
  * Sur Android, convertit un file:// en content:// pour le partage.
  */
@@ -347,6 +414,7 @@ function buildNDJSON(data: ExportData): string {
   data.budgets.forEach((b) => push({ _: 'budget', ...b } as unknown as Record<string, unknown>));
   data.goals.forEach((g) => push({ _: 'goal', ...g } as unknown as Record<string, unknown>));
   data.subscriptions.forEach((s) => push({ _: 'subscription', ...s } as unknown as Record<string, unknown>));
+  data.plannedTransactions.forEach((p) => push({ _: 'planned', ...p } as unknown as Record<string, unknown>));
   return lines.join('\n');
 }
 
@@ -357,6 +425,7 @@ function parseNDJSON(content: string): ExportData {
   const budgets: SerializedBudget[] = [];
   const goals: SerializedGoal[] = [];
   const subscriptions: SerializedSubscription[] = [];
+  const plannedTransactions: SerializedPlannedTransaction[] = [];
   let version = '1.0';
   let exportDate = new Date().toISOString();
 
@@ -376,12 +445,13 @@ function parseNDJSON(content: string): ExportData {
       else if (type === 'budget') budgets.push(rest as unknown as SerializedBudget);
       else if (type === 'goal') goals.push(rest as unknown as SerializedGoal);
       else if (type === 'subscription') subscriptions.push(rest as unknown as SerializedSubscription);
+      else if (type === 'planned') plannedTransactions.push(rest as unknown as SerializedPlannedTransaction);
     } catch {
       // ignorer les lignes invalides
     }
   }
 
-  return { version, exportDate, accounts, transactions, budgets, goals, subscriptions };
+  return { version, exportDate, accounts, transactions, budgets, goals, subscriptions, plannedTransactions };
 }
 
 /**
@@ -520,6 +590,7 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
           budgets: Array.isArray(parsed.budgets) ? (parsed.budgets as SerializedBudget[]) : [],
           goals: Array.isArray(parsed.goals) ? (parsed.goals as SerializedGoal[]) : [],
           subscriptions: Array.isArray(parsed.subscriptions) ? (parsed.subscriptions as SerializedSubscription[]) : [],
+          plannedTransactions: Array.isArray(parsed.plannedTransactions) ? (parsed.plannedTransactions as SerializedPlannedTransaction[]) : [],
         };
       }
     } catch (parseErr) {
@@ -567,6 +638,10 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
                 if (data.subscriptions?.length) {
                   const subscriptions = restoreSubscriptions(data.subscriptions).filter((s) => s.id && s.accountId);
                   if (subscriptions.length) useSubscriptionStore.getState().setSubscriptionsForImport(subscriptions);
+                }
+                if (data.plannedTransactions?.length) {
+                  const planned = restorePlannedTransactions(data.plannedTransactions).filter((p) => p.id && p.accountId);
+                  if (planned.length) usePlannedTransactionStore.getState().setPlannedTransactionsForImport(planned);
                 }
                 Alert.alert('Import réussi', 'Vos données ont été restaurées.', [{ text: 'OK' }]);
               } catch (err) {

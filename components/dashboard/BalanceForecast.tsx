@@ -6,13 +6,10 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
-import { useAccountStore } from '@/stores';
-import { useTransactionStore } from '@/stores';
-import { useConfigStore } from '@/stores';
-import { useSubscriptionStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useConfigStore, useSubscriptionStore, usePlannedTransactionStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { addDays, parseISO, differenceInDays, getDate } from 'date-fns';
+import { addDays, parseISO, differenceInDays, getDate, startOfDay } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +18,7 @@ export function BalanceForecast() {
   const transactions = useTransactionStore((s) => s.transactions);
   const profile = useConfigStore((s) => s.profile);
   const subscriptions = useSubscriptionStore((s) => s.subscriptions).filter((s) => s.isActive);
+  const plannedTransactions = usePlannedTransactionStore((s) => s.plannedTransactions);
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -35,10 +33,11 @@ export function BalanceForecast() {
   const salaryDay = profile.salaryDay;
   const salaryAmount = profile.defaultSalaryAmount ?? 0;
 
-  // Recompute when balance or transactions change
+  // Recompute when balance, transactions or planned change
   const chartData = useMemo(() => {
     const points: { value: number; label: string; dataPointText?: string }[] = [];
     let balance = totalBalance;
+    const todayStart = startOfDay(now);
     for (let i = 0; i <= 30; i++) {
       const d = addDays(now, i);
       if (i > 0) {
@@ -48,6 +47,16 @@ export function BalanceForecast() {
           const next = parseISO(sub.nextBillingDate);
           if (differenceInDays(next, d) === 0) balance -= sub.amount;
         });
+        plannedTransactions
+          .filter((pt) => pt.status === 'pending')
+          .forEach((pt) => {
+            const plannedDay = startOfDay(parseISO(pt.plannedDate));
+            const diff = differenceInDays(plannedDay, todayStart);
+            if (diff === i) {
+              if (pt.type === 'income') balance += pt.amount;
+              else balance -= pt.amount;
+            }
+          });
       }
       points.push({
         value: Math.round(balance * 100) / 100,
@@ -56,7 +65,7 @@ export function BalanceForecast() {
       });
     }
     return points;
-  }, [totalBalance, dailyAvg, salaryDay, salaryAmount, subscriptions, transactions.length]);
+  }, [totalBalance, dailyAvg, salaryDay, salaryAmount, subscriptions, transactions.length, plannedTransactions]);
 
   const minBalance = Math.min(...chartData.map((p) => p.value));
   const maxBalance = Math.max(...chartData.map((p) => p.value));

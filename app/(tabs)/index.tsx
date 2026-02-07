@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Settings, Bell, Banknote } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useSubscriptionStore, useSettingsStore, useAccountStore } from '@/stores';
+import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore } from '@/stores';
 import { 
   BalanceCard, 
   CashflowChart, 
@@ -24,6 +24,8 @@ import {
   BalanceForecast,
   MerchantAnalysis,
 } from '@/components/dashboard';
+import { PlannedTransactionCard } from '@/components/planned';
+import { CalendarClock } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -35,6 +37,8 @@ export default function DashboardScreen() {
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
+  const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
   
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -164,6 +168,42 @@ export default function DashboardScreen() {
 
           {/* Prévision solde 30j */}
           <BalanceForecast />
+
+          {/* Transactions prévues */}
+          {(overduePlanned.length > 0 || upcomingPlanned.length > 0) && (
+            <View className="mb-6">
+              <View className="flex-row items-center mb-3">
+                <CalendarClock size={22} color="#6366F1" />
+                <Text className="text-white text-lg font-semibold ml-2">Transactions prévues</Text>
+              </View>
+              {overduePlanned.length > 0 && (
+                <View className="mb-4 p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)' }}>
+                  <Text className="text-red-400 font-semibold mb-2">
+                    {overduePlanned.length} en retard
+                  </Text>
+                  {overduePlanned.map((pt) => (
+                    <PlannedTransactionCard key={pt.id} planned={pt} overdue />
+                  ))}
+                </View>
+              )}
+              {upcomingPlanned.length > 0 && (
+                <View className="mb-4">
+                  <Text className="text-onyx-500 text-sm mb-2">Prochaines 7 jours</Text>
+                  {upcomingPlanned.map((pt) => (
+                    <PlannedTransactionCard key={pt.id} planned={pt} />
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => router.push('/planned-transaction/add')}
+            className="mb-6 py-4 rounded-xl flex-row items-center justify-center"
+            style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.5)', borderStyle: 'dashed' }}
+          >
+            <CalendarClock size={20} color="#6366F1" />
+            <Text className="text-indigo-400 font-semibold ml-2">Prévoir une transaction</Text>
+          </TouchableOpacity>
 
           {/* Analyse par commerçant */}
           <MerchantAnalysis />
