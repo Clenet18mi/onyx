@@ -57,7 +57,7 @@ export function BalanceForecast() {
     });
 
     const hasSalaryThisMonth = transactions.some(
-      (t) => t.type === 'income' && t.category === 'salary' && isWithinInterval(parseISO(t.date), { start: thisMonthStart, end: now })
+      (t) => t.type !== 'transfer' && t.type === 'income' && t.category === 'salary' && isWithinInterval(parseISO(t.date), { start: thisMonthStart, end: now })
     );
     let salaryIn30Amount = 0;
     for (let i = 0; i <= 30; i++) {

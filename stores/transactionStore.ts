@@ -203,7 +203,7 @@ export const useTransactionStore = create<TransactionState>()(
 
       // Analytics
       getTotalIncome: (startDate, endDate) => {
-        let transactions = get().transactions.filter((tx) => tx.type === 'income');
+        let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'income');
         
         if (startDate && endDate) {
           const start = parseISO(startDate);
@@ -218,7 +218,7 @@ export const useTransactionStore = create<TransactionState>()(
       },
 
       getTotalExpenses: (startDate, endDate) => {
-        let transactions = get().transactions.filter((tx) => tx.type === 'expense');
+        let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'expense');
         
         if (startDate && endDate) {
           const start = parseISO(startDate);
@@ -243,7 +243,7 @@ export const useTransactionStore = create<TransactionState>()(
       },
 
       getSpendingByCategory: (startDate, endDate) => {
-        let transactions = get().transactions.filter((tx) => tx.type === 'expense');
+        let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'expense');
         
         if (startDate && endDate) {
           const start = parseISO(startDate);
