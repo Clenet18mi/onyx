@@ -15,7 +15,9 @@ import {
   Settings 
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useSettingsStore } from '@/stores';
+import { useSettingsStore, useSubscriptionStore } from '@/stores';
+import { parseISO } from 'date-fns';
+import { startOfDay } from 'date-fns';
 
 interface TabIconProps {
   Icon: any;
@@ -43,6 +45,11 @@ function TabIcon({ Icon, focused, color }: TabIconProps) {
 
 export default function TabsLayout() {
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
+  const today = startOfDay(new Date());
+  const overdueSubscriptionCount = subscriptions.filter(
+    (s) => s.isActive && startOfDay(parseISO(s.nextBillingDate)) < today
+  ).length;
 
   const handleTabPress = () => {
     if (hapticEnabled) {
@@ -138,6 +145,7 @@ export default function TabsLayout() {
         name="more"
         options={{
           title: 'Plus',
+          tabBarBadge: overdueSubscriptionCount > 0 ? overdueSubscriptionCount : undefined,
           tabBarIcon: ({ focused, color }) => (
             <TabIcon Icon={Settings} focused={focused} color={color} />
           ),
