@@ -7,9 +7,10 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useBudgetStore, useTransactionStore, useConfigStore } from '@/stores';
+import { useBudgetStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatPercentage } from '@/utils/format';
 import { TransactionCategory, Budget, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -109,6 +110,7 @@ export default function BudgetsScreen() {
   const { budgets, addBudget, updateBudget, deleteBudget, getAllBudgetsProgress } = useBudgetStore();
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const expenseCategories = getVisibleCategories('expense');
   const budgetsWithProgress = getAllBudgetsProgress();
   
@@ -183,6 +185,7 @@ export default function BudgetsScreen() {
             text: 'Supprimer',
             style: 'destructive',
             onPress: () => {
+              if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               deleteBudget(editingBudget.id);
               setModalVisible(false);
               resetForm();

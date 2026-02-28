@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useSubscriptionStore, useAccountStore } from '@/stores';
+import * as Haptics from 'expo-haptics';
+import { useSubscriptionStore, useAccountStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ export default function SubscriptionDetailScreen() {
   
   const subscription = useSubscriptionStore((state) => state.getSubscription(id || ''));
   const { toggleSubscription, deleteSubscription } = useSubscriptionStore();
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const account = useAccountStore((state) => 
     subscription ? state.getAccount(subscription.accountId) : undefined
   );
@@ -54,6 +56,7 @@ export default function SubscriptionDetailScreen() {
           text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
+            if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             deleteSubscription(subscription.id);
             router.back();
           },

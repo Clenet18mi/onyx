@@ -6,8 +6,9 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore, useFilterStore, useConfigStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useFilterStore, useConfigStore, useSettingsStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
@@ -135,6 +136,7 @@ export function TransactionFeed() {
   const [splitTransaction, setSplitTransaction] = useState<Transaction | null>(null);
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
 
   const transactions = useTransactionStore((state) => state.transactions);
   const activeFilter = useFilterStore((state) => state.activeFilter);
@@ -334,7 +336,10 @@ export function TransactionFeed() {
                     : `Supprimer cette ${t.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(t.amount)} — ${desc} du ${dateStr} ?`;
                   Alert.alert('Supprimer', msg, [
                     { text: 'Annuler', style: 'cancel' },
-                    { text: 'Supprimer', style: 'destructive', onPress: () => deleteTransaction(t.id) },
+                    { text: 'Supprimer', style: 'destructive', onPress: () => {
+                      if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      deleteTransaction(t.id);
+                    } },
                   ]);
                 }}
               />

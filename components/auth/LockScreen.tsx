@@ -7,8 +7,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Haptics from 'expo-haptics';
 import { Shield } from 'lucide-react-native';
-import { useAuthStore } from '@/stores';
+import { useAuthStore, useSettingsStore } from '@/stores';
 import { PinPad } from './PinPad';
 import { PinDots } from './PinDots';
 
@@ -34,6 +35,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
     getLockoutRemainingSeconds,
     wipeAllData,
   } = useAuthStore();
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   useEffect(() => {
     checkBiometric();
@@ -64,6 +66,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
     try {
       const result = await validatePin(pin);
       if (result.success) {
+        if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onUnlock();
         return;
       }
@@ -104,6 +107,7 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
         disableDeviceFallback: true,
       });
       if (result.success) {
+        if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         unlockWithBiometric();
         onUnlock();
       }

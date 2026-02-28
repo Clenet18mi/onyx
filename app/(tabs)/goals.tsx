@@ -9,7 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useGoalStore, useAccountStore } from '@/stores';
+import * as Haptics from 'expo-haptics';
+import { useGoalStore, useAccountStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatLongDate } from '@/utils/format';
 import { SavingsGoal, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -265,6 +266,7 @@ export default function GoalsScreen() {
             text: 'Supprimer',
             style: 'destructive',
             onPress: () => {
+              if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               deleteGoal(editingGoal.id);
               setModalVisible(false);
               resetForm();

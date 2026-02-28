@@ -8,6 +8,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Swit
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -125,6 +126,7 @@ export default function MoreScreen() {
             text: 'Supprimer',
             style: 'destructive',
             onPress: () => {
+              if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               deleteSubscription(editingSubscription.id);
               setSubscriptionModalVisible(false);
               resetForm();
