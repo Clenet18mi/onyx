@@ -12,6 +12,8 @@ import * as Haptics from 'expo-haptics';
 import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore } from '@/stores';
 import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 
@@ -70,7 +72,8 @@ export default function EditTransactionScreen() {
 
   const handleDelete = () => {
     if (!id) return;
-    Alert.alert('Supprimer', 'Supprimer cette transaction ?', [
+    const cat = getCategoryById(tx.category);
+    Alert.alert('Supprimer', `Supprimer cette ${tx.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(tx.amount)}${tx.description ? ` — ${tx.description}` : ''} du ${format(new Date(tx.date), 'd MMM', { locale: fr })} ?`, [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Supprimer', style: 'destructive', onPress: () => {
         deleteTransaction(id);
@@ -78,6 +81,22 @@ export default function EditTransactionScreen() {
         router.back();
       }},
     ]);
+  };
+
+  const handleDuplicate = () => {
+    if (!tx) return;
+    router.push({
+      pathname: '/transaction/add',
+      params: {
+        prefill: JSON.stringify({
+          amount: tx.amount,
+          category: tx.category,
+          description: tx.description ?? '',
+          accountId: tx.accountId,
+          type: tx.type,
+        }),
+      },
+    });
   };
 
   const handleAmountChange = (text: string) => {
@@ -107,9 +126,14 @@ export default function EditTransactionScreen() {
             <Icons.X size={24} color="#71717A" />
           </TouchableOpacity>
           <Text className="text-white text-lg font-semibold">Modifier</Text>
-          <TouchableOpacity onPress={handleDelete}>
-            <Icons.Trash2 size={22} color="#EF4444" />
-          </TouchableOpacity>
+          <View className="flex-row items-center" style={{ gap: 12 }}>
+            <TouchableOpacity onPress={handleDuplicate}>
+              <Icons.Copy size={22} color="#6366F1" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete}>
+              <Icons.Trash2 size={22} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
         </View>
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View className="px-6 mb-6">

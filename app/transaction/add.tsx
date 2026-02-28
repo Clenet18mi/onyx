@@ -23,13 +23,14 @@ import { fr } from 'date-fns/locale';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ accountId?: string; category?: string; type?: string; amount?: string; description?: string }>();
+  const params = useLocalSearchParams<{ accountId?: string; category?: string; type?: string; amount?: string; description?: string; prefill?: string }>();
   
   const [type, setType] = useState<TransactionType>((params.type as TransactionType) || 'expense');
   const [amount, setAmount] = useState(params.amount ?? '');
   const [description, setDescription] = useState(params.description ?? '');
   const [category, setCategory] = useState<TransactionCategory>((params.category as TransactionCategory) || 'other');
   const [accountId, setAccountId] = useState(params.accountId || '');
+  const [isDuplicatePrefill, setIsDuplicatePrefill] = useState(false);
   
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
@@ -55,22 +56,45 @@ export default function AddTransactionScreen() {
   const [pendingDuplicateMatches, setPendingDuplicateMatches] = useState<ReturnType<typeof findSimilarTransactions>>([]);
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const amountInputRef = React.useRef<TextInput>(null);
+  const prefillAccountAppliedRef = React.useRef(false);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [voiceNoteModalVisible, setVoiceNoteModalVisible] = useState(false);
 
-  // Sélectionner le premier compte si aucun n'est sélectionné ; appliquer params template
+  // Sélectionner le premier compte si aucun n'est sélectionné ; appliquer params template ; pré-remplir compte depuis prefill quand les comptes sont chargés
   React.useEffect(() => {
     if (!accountId && accounts.length > 0) {
       setAccountId(params.accountId || accounts[0].id);
     }
-  }, [accounts, params.accountId]);
+    if (params.prefill && accounts.length > 0 && !prefillAccountAppliedRef.current) {
+      try {
+        const p = JSON.parse(params.prefill) as { accountId?: string };
+        if (p.accountId && accounts.some((a) => a.id === p.accountId)) {
+          setAccountId(p.accountId);
+          prefillAccountAppliedRef.current = true;
+        }
+      } catch (_) {}
+    }
+  }, [accounts, params.accountId, params.prefill]);
   React.useEffect(() => {
     if (params.category) setCategory(params.category as TransactionCategory);
     if (params.type) setType(params.type as TransactionType);
     if (params.amount != null) setAmount(params.amount);
     if (params.description != null) setDescription(params.description);
   }, [params.category, params.type, params.amount, params.description]);
+
+  React.useEffect(() => {
+    if (!params.prefill) return;
+    try {
+      const prefill = JSON.parse(params.prefill) as { amount?: number; category?: string; description?: string; accountId?: string; type?: TransactionType };
+      if (prefill.amount != null) setAmount(String(prefill.amount));
+      if (prefill.category) setCategory(prefill.category as TransactionCategory);
+      if (prefill.description != null) setDescription(prefill.description);
+      if (prefill.accountId && accounts.some((a) => a.id === prefill.accountId)) setAccountId(prefill.accountId);
+      if (prefill.type) setType(prefill.type);
+      setIsDuplicatePrefill(true);
+    } catch (_) {}
+  }, [params.prefill]);
 
   const getIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName];
@@ -202,6 +226,11 @@ export default function AddTransactionScreen() {
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {isDuplicatePrefill && (
+            <View className="mx-6 mb-4 px-4 py-2 rounded-lg bg-onyx-200/30 border border-onyx-200/50">
+              <Text className="text-onyx-400 text-sm">Duplicata — modifiez si besoin avant d'enregistrer</Text>
+            </View>
+          )}
           {/* Type Toggle */}
           <View className="px-6 mb-6">
             <View 
