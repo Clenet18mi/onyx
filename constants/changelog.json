@@ -1,12 +1,14 @@
 {
   "appVersion": "1.0.0",
-  "buildNumber": "149",
-  "generatedAt": "2026-02-28T22:39:50.151Z",
+  "buildNumber": "151",
+  "generatedAt": "2026-02-28T22:45:13.400Z",
   "entries": [
     {
       "version": "1.0.0",
       "date": "2026-02-28",
       "logs": [
+        "feat: add billing date picker functionality to subscription management in MoreScreen",
+        "feat: enhance global error handling and debugging capabilities across the application",
         "feat: add crash report screen and debug error handling in RootLayout",
         "refactor: replace parseISO with safeParseISO for improved date handling across components",
         "feat: implement safe date parsing utility and enhance error handling in various components",
@@ -84,9 +86,7 @@
         "docs: add changelog, user guide, test plan, and release checklist",
         "feat(ux): LoadingSpinner, useDebounce, and utils/hooks exports",
         "feat(robustness): central error handling, validation, confirmations, data integrity",
-        "feat(security): PIN hashing with SHA-256, lockout, and optional data wipe",
-        "feat: integrate planned transactions management into dashboard and balance forecast components",
-        "feat: refactor transaction input handling by replacing calculator with direct text input for amount entry"
+        "feat(security): PIN hashing with SHA-256, lockout, and optional data wipe"
       ]
     }
   ]
