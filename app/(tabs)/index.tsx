@@ -25,6 +25,7 @@ import {
   MerchantAnalysis,
   MonthlyRecapModal,
   HealthScore,
+  SpendingTrends,
 } from '@/components/dashboard';
 import { PlannedTransactionCard } from '@/components/planned';
 import { CalendarClock } from 'lucide-react-native';
@@ -168,6 +169,9 @@ export default function DashboardScreen() {
           {/* Quick Expenses */}
           <QuickExpenses />
           
+          {/* Tendances par catégorie */}
+          <SpendingTrends />
+
           {/* Quick Accounts */}
           <QuickAccounts />
           

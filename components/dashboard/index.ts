@@ -15,3 +15,4 @@ export { FinancialInsights, MerchantAnalysis } from '@/components/insights';
 export { BalanceForecast } from './BalanceForecast';
 export { MonthlyRecapModal } from './MonthlyRecapModal';
 export { HealthScore } from './HealthScore';
+export { SpendingTrends } from './SpendingTrends';
