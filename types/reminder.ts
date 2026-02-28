@@ -11,6 +11,8 @@ export interface Reminder {
   recurrence: ReminderRecurrence;
   /** Jour du mois (1-31) si monthly, jour de la semaine (0-6) si weekly */
   recurrenceValue?: number;
+  /** Optionnel : rappel lié à une transaction (pour nettoyage orphelins) */
+  transactionId?: string;
   completed: boolean;
   completedAt?: string;
   createdAt: string;
