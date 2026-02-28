@@ -20,6 +20,8 @@ import {
   getStoredDataVersion,
   CURRENT_DATA_VERSION,
 } from '@/utils/migrations';
+import { exportToPDF } from '@/utils/pdfExport';
+import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -28,6 +30,10 @@ export default function DataManagementScreen() {
   const [loading, setLoading] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [dataVersion, setDataVersion] = useState<number>(0);
+
+  const transactions = useTransactionStore((s) => s.transactions);
+  const accounts = useAccountStore((s) => s.accounts.filter((a) => !a.isArchived));
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
 
   useEffect(() => {
     getStoredDataVersion().then(setDataVersion);
@@ -117,6 +123,22 @@ export default function DataManagementScreen() {
     } catch (error) {
       console.error('[ONYX] export error:', error);
       Alert.alert('Erreur', 'Impossible d\'exporter les données. Réessayez.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setLoading(true);
+    try {
+      const selectedMonth = new Date();
+      const getCategoryLabel = (id: string) => getCategoryById(id)?.label;
+      await exportToPDF(transactions, accounts, selectedMonth, getCategoryLabel);
+      const fileName = `ONYX_Releve_${format(selectedMonth, 'yyyy-MM')}.html`;
+      Alert.alert('Export réussi', `Relevé exporté : ${fileName}\n\nVous pouvez l’ouvrir ou le partager depuis le dialogue de partage.`);
+    } catch (error) {
+      console.error('[ONYX] PDF export error:', error);
+      Alert.alert('Erreur', 'Impossible d’exporter le relevé. Réessayez.');
     } finally {
       setLoading(false);
     }
@@ -264,6 +286,14 @@ export default function DataManagementScreen() {
                   onPress={handleExportData}
                   disabled={loading}
                   icon={<Icons.Download size={18} color="white" />}
+                />
+                <Button
+                  title="Exporter le relevé du mois (PDF/HTML)"
+                  variant="secondary"
+                  fullWidth
+                  onPress={handleExportPDF}
+                  disabled={loading}
+                  icon={<Icons.FileText size={18} color="#6366F1" />}
                 />
                 <Button
                   title="Importer des données"
