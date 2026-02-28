@@ -115,9 +115,10 @@ export default function MoreScreen() {
 
   const handleDeleteSubscription = () => {
     if (editingSubscription) {
+      const freqLabel = editingSubscription.frequency === 'monthly' ? 'mois' : editingSubscription.frequency === 'yearly' ? 'an' : editingSubscription.frequency === 'weekly' ? 'semaine' : 'jour';
       Alert.alert(
         'Supprimer l\'abonnement',
-        'Voulez-vous vraiment supprimer cet abonnement ?',
+        `Supprimer l'abonnement ${editingSubscription.name} (${formatCurrency(editingSubscription.amount)}/${freqLabel}) ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {

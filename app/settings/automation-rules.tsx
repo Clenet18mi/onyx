@@ -70,10 +70,10 @@ export default function AutomationRulesScreen() {
     setModalVisible(false);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Supprimer', 'Supprimer cette règle ?', [
+  const handleDelete = (r: { id: string; name: string }) => {
+    Alert.alert('Supprimer', `Supprimer la règle « ${r.name} » ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteRule(id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => deleteRule(r.id) },
     ]);
   };
 
@@ -120,7 +120,7 @@ export default function AutomationRulesScreen() {
                           {r.enabled ? 'On' : 'Off'}
                         </Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(r.id)}>
+                      <TouchableOpacity onPress={() => handleDelete(r)}>
                         <Icons.Trash2 size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>

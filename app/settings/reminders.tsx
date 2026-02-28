@@ -97,15 +97,15 @@ export default function RemindersScreen() {
     setModalVisible(false);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Supprimer', 'Supprimer ce rappel ?', [
+  const handleDelete = (r: { id: string; title: string }) => {
+    Alert.alert('Supprimer', `Supprimer le rappel « ${r.title} » ?`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
         style: 'destructive',
         onPress: () => {
-          cancelReminderNotification(id).catch(() => {});
-          deleteReminder(id);
+          cancelReminderNotification(r.id).catch(() => {});
+          deleteReminder(r.id);
         },
       },
     ]);
@@ -168,7 +168,7 @@ export default function RemindersScreen() {
                       <TouchableOpacity onPress={() => handleComplete(r.id)}>
                         <Icons.Check size={22} color="#10B981" />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(r.id)}>
+                      <TouchableOpacity onPress={() => handleDelete(r)}>
                         <Icons.Trash2 size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>

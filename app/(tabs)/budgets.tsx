@@ -108,6 +108,7 @@ export default function BudgetsScreen() {
   
   const { budgets, addBudget, updateBudget, deleteBudget, getAllBudgetsProgress } = useBudgetStore();
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const expenseCategories = getVisibleCategories('expense');
   const budgetsWithProgress = getAllBudgetsProgress();
   
@@ -172,9 +173,10 @@ export default function BudgetsScreen() {
 
   const handleDelete = () => {
     if (editingBudget) {
+      const catLabel = getCategoryById(editingBudget.category)?.label ?? editingBudget.category;
       Alert.alert(
         'Supprimer le budget',
-        'Voulez-vous vraiment supprimer ce budget ?',
+        `Supprimer le budget ${catLabel} (limite : ${formatCurrency(editingBudget.limit)}) ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {

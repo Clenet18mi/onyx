@@ -258,7 +258,7 @@ export default function GoalsScreen() {
     if (editingGoal) {
       Alert.alert(
         'Supprimer l\'objectif',
-        'L\'argent épargné sera retourné au compte lié. Continuer ?',
+        `Supprimer l'objectif "${editingGoal.name}" (cible : ${formatCurrency(editingGoal.targetAmount)}) ? L'argent épargné sera retourné au compte lié.`,
         [
           { text: 'Annuler', style: 'cancel' },
           {

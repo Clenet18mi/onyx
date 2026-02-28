@@ -69,10 +69,10 @@ export default function WishlistScreen() {
     setModalVisible(false);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Supprimer', 'Retirer cet article de la liste ?', [
+  const handleDelete = (item: { id: string; name: string; price: number }) => {
+    Alert.alert('Supprimer', `Retirer « ${item.name} » (${formatCurrency(item.price)}) de la liste ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteItem(id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => deleteItem(item.id) },
     ]);
   };
 
@@ -106,7 +106,7 @@ export default function WishlistScreen() {
                       <TouchableOpacity onPress={() => markPurchased(i.id)} style={{ padding: 4 }}>
                         <Icons.Check size={22} color="#10B981" />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(i.id)}>
+                      <TouchableOpacity onPress={() => handleDelete(i)}>
                         <Icons.Trash2 size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>

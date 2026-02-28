@@ -105,10 +105,10 @@ export default function TemplatesScreen() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Supprimer', 'Supprimer ce template ?', [
+  const handleDelete = (t: { id: string; name: string }) => {
+    Alert.alert('Supprimer', `Supprimer le template « ${t.name} » ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteTemplate(id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => deleteTemplate(t.id) },
     ]);
   };
 
@@ -148,7 +148,7 @@ export default function TemplatesScreen() {
                       <TouchableOpacity onPress={() => openEdit(t)}>
                         <Icons.Pencil size={20} color="#6366F1" />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(t.id)}>
+                      <TouchableOpacity onPress={() => handleDelete(t)}>
                         <Icons.Trash2 size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>

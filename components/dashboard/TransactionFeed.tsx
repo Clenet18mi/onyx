@@ -134,6 +134,7 @@ export function TransactionFeed() {
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
   const [splitTransaction, setSplitTransaction] = useState<Transaction | null>(null);
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
 
   const transactions = useTransactionStore((state) => state.transactions);
   const activeFilter = useFilterStore((state) => state.activeFilter);
@@ -325,7 +326,13 @@ export function TransactionFeed() {
                 onSplit={setSplitTransaction}
                 onDelete={(t) => {
                   const { Alert } = require('react-native');
-                  Alert.alert('Supprimer', 'Supprimer cette transaction ?', [
+                  const cat = getCategoryById(t.category);
+                  const desc = t.description || cat?.label || t.category || 'Transaction';
+                  const dateStr = format(parseISO(t.date), 'd MMM', { locale: fr });
+                  const msg = t.type === 'transfer'
+                    ? `Supprimer ce virement de ${formatCurrency(t.amount)} du ${dateStr} ?`
+                    : `Supprimer cette ${t.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(t.amount)} — ${desc} du ${dateStr} ?`;
+                  Alert.alert('Supprimer', msg, [
                     { text: 'Annuler', style: 'cancel' },
                     { text: 'Supprimer', style: 'destructive', onPress: () => deleteTransaction(t.id) },
                   ]);

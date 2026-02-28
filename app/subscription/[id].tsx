@@ -44,9 +44,10 @@ export default function SubscriptionDetailScreen() {
   const Icon = (Icons as any)[subscription.icon] || Icons.CreditCard;
 
   const handleDelete = () => {
+    const freqLabel = subscription.frequency === 'monthly' ? 'mois' : subscription.frequency === 'yearly' ? 'an' : subscription.frequency === 'weekly' ? 'semaine' : 'jour';
     Alert.alert(
       'Supprimer l\'abonnement',
-      `Voulez-vous supprimer "${subscription.name}" ?`,
+      `Supprimer l'abonnement ${subscription.name} (${formatCurrency(subscription.amount)}/${freqLabel}) ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
