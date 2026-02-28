@@ -6,8 +6,9 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import * as Icons from 'lucide-react-native';
-import { startOfMonth, endOfMonth, format, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useTransactionStore, useBudgetStore, useSubscriptionStore } from '@/stores';
+import { safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 
 function clamp(value: number, min: number, max: number) {
@@ -47,7 +48,12 @@ export function HealthScore() {
     else if (savingsRate >= 0) c2 = 5;
     else c2 = 0;
 
-    const daysWithTx = new Set(txs.map((t) => format(parseISO(t.date), 'yyyy-MM-dd'))).size;
+    const daysWithTx = new Set(
+      txs
+        .map((t) => safeParseISO(t.date))
+        .filter((d): d is Date => d != null)
+        .map((d) => format(d, 'yyyy-MM-dd'))
+    ).size;
     let c3 = 0;
     if (daysWithTx >= 15) c3 = 25;
     else if (daysWithTx >= 7) c3 = 15;

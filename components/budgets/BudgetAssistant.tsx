@@ -6,9 +6,10 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTransactionStore, useBudgetStore, useConfigStore } from '@/stores';
-import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
+import { safeParseISO } from '@/utils/format';
 import type { TransactionCategory } from '@/types';
 
 function roundSmart(value: number): number {
@@ -32,8 +33,8 @@ export function BudgetAssistant() {
         const monthStart = startOfMonth(subMonths(now, i));
         const monthEnd = endOfMonth(subMonths(now, i));
         const txs = transactions.filter((t) => {
-          const d = parseISO(t.date);
-          return t.type === 'expense' && t.category === cat && isWithinInterval(d, { start: monthStart, end: monthEnd });
+          const d = safeParseISO(t.date);
+          return d != null && t.type === 'expense' && t.category === cat && isWithinInterval(d, { start: monthStart, end: monthEnd });
         });
         return txs.reduce((s, t) => s + t.amount, 0);
       }).filter((v) => v > 0);

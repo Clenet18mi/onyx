@@ -8,7 +8,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '@/utils/storage';
 import { generateId } from '@/utils/crypto';
 import type { Achievement, StreakData, LevelData, MonthlyChallenge } from '@/types/gamification';
-import { startOfMonth, endOfMonth, parseISO, differenceInDays, format } from 'date-fns';
+import { startOfMonth, endOfMonth, differenceInDays, format } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 import { useTransactionStore } from './transactionStore';
 
 const XP_PER_LEVEL_BASE = 100;
@@ -99,7 +100,12 @@ export const useGamificationStore = create<GamificationState>()(
       updateStreak: () => {
         const transactions = useTransactionStore.getState().transactions;
         const today = format(new Date(), 'yyyy-MM-dd');
-        const dates = [...new Set(transactions.map((t) => format(parseISO(t.date), 'yyyy-MM-dd')))].sort();
+        const dates = [...new Set(
+          transactions
+            .map((t) => safeParseISO(t.date))
+            .filter((d): d is Date => d != null)
+            .map((d) => format(d, 'yyyy-MM-dd'))
+        )].sort();
 
         let current = 0;
         let longest = get().streak.longestStreak;
@@ -109,7 +115,11 @@ export const useGamificationStore = create<GamificationState>()(
           return;
         }
 
-        const last = parseISO(lastDate);
+        const last = safeParseISO(lastDate);
+        if (!last) {
+          set((state) => ({ streak: { ...state.streak, currentStreak: 0 } }));
+          return;
+        }
         const todayDate = new Date();
         if (differenceInDays(todayDate, last) > 1) {
           set((state) => ({ streak: { ...state.streak, currentStreak: 0, lastActivityDate: lastDate } }));
@@ -117,8 +127,9 @@ export const useGamificationStore = create<GamificationState>()(
         }
 
         for (let i = dates.length - 1; i >= 0; i--) {
-          const d = parseISO(dates[i]);
-          const prev = i > 0 ? parseISO(dates[i - 1]) : null;
+          const d = safeParseISO(dates[i]);
+          const prev = i > 0 ? safeParseISO(dates[i - 1]) : null;
+          if (!d) break;
           if (prev && differenceInDays(d, prev) !== 1) break;
           current++;
         }
@@ -140,8 +151,8 @@ export const useGamificationStore = create<GamificationState>()(
         const monthEnd = endOfMonth(now);
         const txStore = useTransactionStore.getState();
         const transactions = txStore.transactions.filter((t) => {
-          const d = parseISO(t.date);
-          return d >= monthStart && d <= monthEnd;
+          const d = safeParseISO(t.date);
+          return d != null && d >= monthStart && d <= monthEnd;
         });
         const expenses = transactions.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
         const income = transactions.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);

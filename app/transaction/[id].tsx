@@ -11,9 +11,7 @@ import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore } from '@/stores';
 import { TransactionCategory, TransactionType } from '@/types';
-import { formatCurrency } from '@/utils/format';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatCurrency, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 
@@ -73,7 +71,7 @@ export default function EditTransactionScreen() {
   const handleDelete = () => {
     if (!id) return;
     const cat = getCategoryById(tx.category);
-    Alert.alert('Supprimer', `Supprimer cette ${tx.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(tx.amount)}${tx.description ? ` — ${tx.description}` : ''} du ${format(new Date(tx.date), 'd MMM', { locale: fr })} ?`, [
+    Alert.alert('Supprimer', `Supprimer cette ${tx.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(tx.amount)}${tx.description ? ` — ${tx.description}` : ''} du ${formatDate(tx.date)} ?`, [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Supprimer', style: 'destructive', onPress: () => {
         deleteTransaction(id);

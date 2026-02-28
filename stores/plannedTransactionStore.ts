@@ -9,7 +9,8 @@ import { zustandStorage } from '@/utils/storage';
 import type { PlannedTransaction, PlannedTransactionRecurrence } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
-import { addDays, addWeeks, addMonths, addYears, parseISO, startOfDay, isBefore, isAfter, differenceInDays } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, startOfDay, isBefore, isAfter, differenceInDays } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 
 interface PlannedTransactionState {
   plannedTransactions: PlannedTransaction[];
@@ -30,7 +31,8 @@ interface PlannedTransactionState {
 }
 
 function nextOccurrence(plannedDate: string, recurrence: PlannedTransactionRecurrence): string | null {
-  const current = parseISO(plannedDate);
+  const current = safeParseISO(plannedDate);
+  if (!current) return null;
   let next: Date;
   switch (recurrence.frequency) {
     case 'daily':
@@ -48,7 +50,8 @@ function nextOccurrence(plannedDate: string, recurrence: PlannedTransactionRecur
     default:
       return null;
   }
-  if (recurrence.endDate && isAfter(next, parseISO(recurrence.endDate))) return null;
+  const endDateParsed = recurrence.endDate ? safeParseISO(recurrence.endDate) : null;
+  if (endDateParsed && isAfter(next, endDateParsed)) return null;
   return next.toISOString();
 }
 
@@ -139,8 +142,10 @@ export const usePlannedTransactionStore = create<PlannedTransactionState>()(
         const now = startOfDay(new Date());
         return get().plannedTransactions.filter((pt) => {
           if (pt.status !== 'pending') return false;
-          const d = startOfDay(parseISO(pt.plannedDate));
-          const diff = differenceInDays(d, now);
+          const d = safeParseISO(pt.plannedDate);
+          if (!d) return false;
+          const dayStart = startOfDay(d);
+          const diff = differenceInDays(dayStart, now);
           return diff >= 0 && diff <= days;
         });
       },
@@ -157,7 +162,8 @@ export const usePlannedTransactionStore = create<PlannedTransactionState>()(
         const now = startOfDay(new Date());
         return get().plannedTransactions.filter((pt) => {
           if (pt.status !== 'pending') return false;
-          return isBefore(parseISO(pt.plannedDate), now);
+          const d = safeParseISO(pt.plannedDate);
+          return d != null && isBefore(d, now);
         });
       },
 

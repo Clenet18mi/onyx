@@ -11,11 +11,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
-import { formatCurrency, formatDate, displayAmount } from '@/utils/format';
+import { formatCurrency, formatDate, displayAmount, safeParseISO } from '@/utils/format';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { addMonths, parseISO, startOfDay, differenceInDays, isToday, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
+import { addMonths, startOfDay, differenceInDays, isToday, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
 
 const SUBSCRIPTION_ICONS = [
   'Tv', 'Music', 'Film', 'Gamepad2', 'Cloud', 'Newspaper',
@@ -220,7 +220,8 @@ export default function MoreScreen() {
                     const SubIcon = getIcon(sub.icon);
                     const account = accounts.find((a) => a.id === sub.accountId);
                     const AccountIcon = account ? getIcon(account.icon) : Icons.Wallet;
-                    const billingDate = parseISO(sub.nextBillingDate);
+                    const billingDate = safeParseISO(sub.nextBillingDate);
+                    if (!billingDate) return null;
                     const today = startOfDay(new Date());
                     const days = differenceInDays(billingDate, today);
                     let daysLabel = '';

@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useAccountStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency, formatDate, displayAmount } from '@/utils/format';
+import { formatCurrency, formatDate, displayAmount, safeParseISO } from '@/utils/format';
 import { Transaction, ACCOUNT_TYPES } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SwipeableTransactionRow } from '@/components/ui/SwipeableTransactionRow';
@@ -32,9 +32,11 @@ export default function AccountDetailScreen() {
   
   const transactions = useMemo(() => {
     if (!id) return [];
-    return getTransactionsByAccount(id).sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    return getTransactionsByAccount(id).sort((a, b) => {
+      const ta = safeParseISO(a.date)?.getTime() ?? 0;
+      const tb = safeParseISO(b.date)?.getTime() ?? 0;
+      return tb - ta;
+    });
   }, [id, getTransactionsByAccount]);
 
   const filteredTransactions = useMemo(() => {

@@ -8,9 +8,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
-import { formatCurrency } from '@/utils/format';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatCurrency, formatDate } from '@/utils/format';
 import type { DuplicateMatch } from '@/utils/duplicateDetector';
 import type { DuplicateCandidate } from '@/utils/duplicateDetector';
 import { useConfigStore } from '@/stores';
@@ -100,7 +98,7 @@ export function DuplicateAlertModal({
                 {formatCurrency(m.transaction.amount)}
               </Text>
               <Text style={{ color: colors.text.tertiary, fontSize: 12 }}>
-                {format(parseISO(m.transaction.date), "d MMM yyyy, HH:mm", { locale: fr })} • {m.score}% similaire
+                {formatDate(m.transaction.date)} • {m.score}% similaire
               </Text>
             </View>
             <Text style={{ color: colors.accent.primary, fontSize: 13 }}>Voir →</Text>

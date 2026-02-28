@@ -8,13 +8,12 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { useTransactionStore, useAccountStore, useBudgetStore, useSubscriptionStore, useConfigStore } from '@/stores';
-import { formatCurrency, formatPercentage } from '@/utils/format';
+import { formatCurrency, formatPercentage, safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { 
   startOfMonth, 
   endOfMonth, 
   subMonths, 
-  parseISO, 
   isWithinInterval,
   differenceInDays,
   endOfDay,
@@ -84,14 +83,14 @@ export function SmartInsights() {
     
     // Transactions ce mois
     const thisMonthTx = transactions.filter((t) => {
-      const date = parseISO(t.date);
-      return isWithinInterval(date, { start: thisMonthStart, end: thisMonthEnd });
+      const date = safeParseISO(t.date);
+      return date != null && isWithinInterval(date, { start: thisMonthStart, end: thisMonthEnd });
     });
     
     // Transactions mois dernier
     const lastMonthTx = transactions.filter((t) => {
-      const date = parseISO(t.date);
-      return isWithinInterval(date, { start: lastMonthStart, end: lastMonthEnd });
+      const date = safeParseISO(t.date);
+      return date != null && isWithinInterval(date, { start: lastMonthStart, end: lastMonthEnd });
     });
     
     // Revenus/Dépenses ce mois (virements exclus)

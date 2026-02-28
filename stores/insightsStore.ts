@@ -8,12 +8,12 @@ import {
   startOfMonth,
   endOfMonth,
   subMonths,
-  parseISO,
   isWithinInterval,
   differenceInDays,
   getDate,
   addDays,
 } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 import { useTransactionStore } from './transactionStore';
 import { useAccountStore } from './accountStore';
 import { useBudgetStore } from './budgetStore';
@@ -58,12 +58,12 @@ export function computeFinancialInsights(): FinancialInsightsData {
   const transactions = getTransactions();
 
   const thisMonthTx = transactions.filter((t) => {
-    const d = parseISO(t.date);
-    return isWithinInterval(d, { start: thisMonthStart, end: thisMonthEnd });
+    const d = safeParseISO(t.date);
+    return d != null && isWithinInterval(d, { start: thisMonthStart, end: thisMonthEnd });
   });
   const lastMonthTx = transactions.filter((t) => {
-    const d = parseISO(t.date);
-    return isWithinInterval(d, { start: lastMonthStart, end: lastMonthEnd });
+    const d = safeParseISO(t.date);
+    return d != null && isWithinInterval(d, { start: lastMonthStart, end: lastMonthEnd });
   });
 
   const thisMonthIncome = thisMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -159,7 +159,8 @@ export function computeFinancialInsights(): FinancialInsightsData {
       if (daysUntilSalary >= 0 && daysUntilSalary <= daysAhead) balance += salaryAmount;
     }
     subs.forEach((sub) => {
-      const next = parseISO(sub.nextBillingDate);
+      const next = safeParseISO(sub.nextBillingDate);
+      if (!next) return;
       const daysUntil = differenceInDays(next, now);
       if (daysUntil >= 0 && daysUntil <= daysAhead) balance -= sub.amount;
     });

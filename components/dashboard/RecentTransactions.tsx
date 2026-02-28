@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { useTransactionStore, useAccountStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, safeParseISO } from '@/utils/format';
 import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 import { SwipeableTransactionRow } from '../ui/SwipeableTransactionRow';
@@ -71,7 +71,11 @@ export function RecentTransactions() {
   
   // Prendre les 5 dernières transactions (tri par date décroissante)
   const recentTransactions = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      const ta = safeParseISO(a.date)?.getTime() ?? 0;
+      const tb = safeParseISO(b.date)?.getTime() ?? 0;
+      return tb - ta;
+    })
     .slice(0, 5);
 
   if (recentTransactions.length === 0) {

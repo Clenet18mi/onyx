@@ -9,7 +9,8 @@ import { zustandStorage } from '@/utils/storage';
 import { Transaction, TransactionType, TransactionCategory } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore } from './accountStore';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 
 interface TransactionState {
   transactions: Transaction[];
@@ -173,11 +174,11 @@ export const useTransactionStore = create<TransactionState>()(
       },
 
       getTransactionsByDateRange: (startDate, endDate) => {
-        const start = parseISO(startDate);
-        const end = parseISO(endDate);
+        const start = safeParseISO(startDate) ?? new Date(0);
+        const end = safeParseISO(endDate) ?? new Date(8640000000000000);
         return get().transactions.filter((tx) => {
-          const txDate = parseISO(tx.date);
-          return isWithinInterval(txDate, { start, end });
+          const txDate = safeParseISO(tx.date);
+          return txDate != null && isWithinInterval(txDate, { start, end });
         });
       },
 
@@ -186,8 +187,8 @@ export const useTransactionStore = create<TransactionState>()(
         const start = startOfMonth(now);
         const end = endOfMonth(now);
         return get().transactions.filter((tx) => {
-          const txDate = parseISO(tx.date);
-          return isWithinInterval(txDate, { start, end });
+          const txDate = safeParseISO(tx.date);
+          return txDate != null && isWithinInterval(txDate, { start, end });
         });
       },
 
@@ -196,8 +197,8 @@ export const useTransactionStore = create<TransactionState>()(
         const start = startOfWeek(now, { weekStartsOn: 1 });
         const end = endOfWeek(now, { weekStartsOn: 1 });
         return get().transactions.filter((tx) => {
-          const txDate = parseISO(tx.date);
-          return isWithinInterval(txDate, { start, end });
+          const txDate = safeParseISO(tx.date);
+          return txDate != null && isWithinInterval(txDate, { start, end });
         });
       },
 
@@ -206,11 +207,11 @@ export const useTransactionStore = create<TransactionState>()(
         let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'income');
         
         if (startDate && endDate) {
-          const start = parseISO(startDate);
-          const end = parseISO(endDate);
+          const start = safeParseISO(startDate) ?? new Date(0);
+          const end = safeParseISO(endDate) ?? new Date(8640000000000000);
           transactions = transactions.filter((tx) => {
-            const txDate = parseISO(tx.date);
-            return isWithinInterval(txDate, { start, end });
+            const txDate = safeParseISO(tx.date);
+            return txDate != null && isWithinInterval(txDate, { start, end });
           });
         }
         
@@ -221,11 +222,11 @@ export const useTransactionStore = create<TransactionState>()(
         let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'expense');
         
         if (startDate && endDate) {
-          const start = parseISO(startDate);
-          const end = parseISO(endDate);
+          const start = safeParseISO(startDate) ?? new Date(0);
+          const end = safeParseISO(endDate) ?? new Date(8640000000000000);
           transactions = transactions.filter((tx) => {
-            const txDate = parseISO(tx.date);
-            return isWithinInterval(txDate, { start, end });
+            const txDate = safeParseISO(tx.date);
+            return txDate != null && isWithinInterval(txDate, { start, end });
           });
         }
         
@@ -246,11 +247,11 @@ export const useTransactionStore = create<TransactionState>()(
         let transactions = get().transactions.filter((tx) => tx.type !== 'transfer' && tx.type === 'expense');
         
         if (startDate && endDate) {
-          const start = parseISO(startDate);
-          const end = parseISO(endDate);
+          const start = safeParseISO(startDate) ?? new Date(0);
+          const end = safeParseISO(endDate) ?? new Date(8640000000000000);
           transactions = transactions.filter((tx) => {
-            const txDate = parseISO(tx.date);
-            return isWithinInterval(txDate, { start, end });
+            const txDate = safeParseISO(tx.date);
+            return txDate != null && isWithinInterval(txDate, { start, end });
           });
         }
         

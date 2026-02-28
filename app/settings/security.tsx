@@ -14,8 +14,9 @@ import { useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { PinPad } from '@/components/auth/PinPad';
 import { PinDots } from '@/components/auth/PinDots';
-import { format, parseISO, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { safeParseISO } from '@/utils/format';
 
 type Step = 'menu' | 'current' | 'new' | 'confirm';
 
@@ -273,7 +274,15 @@ export default function SecurityScreen() {
                 <Text className="text-onyx-500 text-sm">10 dernières tentatives de déverrouillage</Text>
               </View>
               {(accessLog ?? []).slice(0, 10).map((entry, i) => {
-                const d = parseISO(entry.date);
+                const d = safeParseISO(entry.date);
+                if (!d) return (
+                  <View key={`${entry.date}-${i}`} className="flex-row items-center justify-between p-4 border-b border-onyx-200/10">
+                    <Text className={entry.success ? 'text-accent-success' : 'text-accent-danger'}>
+                      {entry.success ? '✓' : '✗'} {entry.success ? 'Déverrouillage réussi' : 'Échec'}
+                    </Text>
+                    <Text className="text-onyx-500 text-sm">—</Text>
+                  </View>
+                );
                 const timeStr = format(d, 'HH:mm', { locale: fr });
                 const dateLabel = isToday(d) ? "aujourd'hui" : isYesterday(d) ? 'hier' : format(d, 'd MMM yyyy', { locale: fr });
                 const label = entry.success ? 'Déverrouillage réussi' : 'Échec';

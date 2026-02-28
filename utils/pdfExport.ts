@@ -7,8 +7,9 @@ import { Platform } from 'react-native';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { safeParseISO } from '@/utils/format';
 import { Transaction, Account, CATEGORIES } from '@/types';
 
 interface ExportData {
@@ -30,7 +31,8 @@ function generatePDFHTML(data: ExportData): string {
   // Grouper les transactions par date
   const transactionsByDate: { [key: string]: Transaction[] } = {};
   data.transactions.forEach(tx => {
-    const dateKey = format(parseISO(tx.date), 'dd/MM/yyyy');
+    const d = safeParseISO(tx.date);
+    const dateKey = d ? format(d, 'dd/MM/yyyy') : '—';
     if (!transactionsByDate[dateKey]) {
       transactionsByDate[dateKey] = [];
     }
@@ -77,7 +79,7 @@ function generatePDFHTML(data: ExportData): string {
         return `
           <tr>
             <td style="padding: 12px 8px; border-bottom: 1px solid #27272A;">
-              ${format(parseISO(tx.date), 'HH:mm')}
+              ${(safeParseISO(tx.date) ? format(safeParseISO(tx.date)!, 'HH:mm') : '—')}
             </td>
             <td style="padding: 12px 8px; border-bottom: 1px solid #27272A;">
               <strong>${tx.description || categoryLabel || category?.label || 'Transaction'}</strong>
@@ -356,9 +358,13 @@ export async function exportToPDF(
   
   // Filtrer les transactions du mois
   const monthTransactions = transactions.filter(tx => {
-    const txDate = parseISO(tx.date);
-    return txDate >= monthStart && txDate <= monthEnd;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const txDate = safeParseISO(tx.date);
+    return txDate != null && txDate >= monthStart && txDate <= monthEnd;
+  }).sort((a, b) => {
+    const ta = safeParseISO(a.date)?.getTime() ?? 0;
+    const tb = safeParseISO(b.date)?.getTime() ?? 0;
+    return tb - ta;
+  });
   
   // Calculer les totaux
   const totalIncome = monthTransactions
@@ -419,11 +425,11 @@ export async function exportToCSV(
   const rows = transactions.map(tx => {
     const account = accounts.find(a => a.id === tx.accountId);
     const categoryLabel = getCategoryLabel ? getCategoryLabel(tx.category) : CATEGORIES.find(c => c.id === tx.category)?.label;
-    const txDate = parseISO(tx.date);
+    const txDate = safeParseISO(tx.date);
     
     return [
-      format(txDate, 'dd/MM/yyyy'),
-      format(txDate, 'HH:mm'),
+      txDate ? format(txDate, 'dd/MM/yyyy') : '—',
+      txDate ? format(txDate, 'HH:mm') : '—',
       tx.type === 'income' ? 'Revenu' : tx.type === 'expense' ? 'Dépense' : 'Virement',
       categoryLabel || tx.category,
       tx.amount.toFixed(2),
@@ -463,7 +469,8 @@ export async function exportToJSON(
   let filtered = transactions;
   if (options?.startDate || options?.endDate) {
     filtered = transactions.filter((tx) => {
-      const d = parseISO(tx.date);
+      const d = safeParseISO(tx.date);
+      if (!d) return false;
       if (options.startDate && d < options.startDate) return false;
       if (options.endDate && d > options.endDate) return false;
       return true;

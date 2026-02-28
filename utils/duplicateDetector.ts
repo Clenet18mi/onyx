@@ -3,7 +3,8 @@
 // Alerte avant d'ajouter une transaction similaire
 // ============================================
 
-import { parseISO, differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 import type { Transaction, TransactionCategory } from '@/types';
 
 export interface DuplicateCandidate {
@@ -47,7 +48,10 @@ function categoryScore(candidate: TransactionCategory, existing: TransactionCate
 
 /** Score date : 100 si même jour, décroît jusqu'à ±1 jour */
 function dateScore(candidateDate: string, existingDate: string): number {
-  const days = Math.abs(differenceInCalendarDays(parseISO(candidateDate), parseISO(existingDate)));
+  const c = safeParseISO(candidateDate);
+  const e = safeParseISO(existingDate);
+  if (!c || !e) return 0;
+  const days = Math.abs(differenceInCalendarDays(c, e));
   if (days === 0) return 100;
   if (days <= DATE_TOLERANCE_DAYS) return 70;
   return Math.max(0, 70 - days * 20);
@@ -67,14 +71,15 @@ export function findSimilarTransactions(
   } = {}
 ): DuplicateMatch[] {
   const { lookbackDays = 7, threshold = SCORE_THRESHOLD, excludeIds = [] } = options;
-  const candidateDate = parseISO(candidate.date);
+  const candidateDate = safeParseISO(candidate.date);
+  if (!candidateDate) return [];
   const cutoff = new Date(candidateDate);
   cutoff.setDate(cutoff.getDate() - lookbackDays);
 
   const recent = existingTransactions.filter((tx) => {
     if (excludeIds.includes(tx.id)) return false;
-    const txDate = parseISO(tx.date);
-    if (txDate < cutoff) return false;
+    const txDate = safeParseISO(tx.date);
+    if (!txDate || txDate < cutoff) return false;
     if (tx.type !== candidate.type) return false;
     return true;
   });
@@ -88,7 +93,9 @@ export function findSimilarTransactions(
 
     const score = amtScore * AMOUNT_WEIGHT + catScore * CATEGORY_WEIGHT + dScore * DATE_WEIGHT;
     const amountDiff = tx.amount === 0 ? 0 : ((candidate.amount - tx.amount) / tx.amount) * 100;
-    const dateDiff = differenceInCalendarDays(parseISO(candidate.date), parseISO(tx.date));
+    const cd = safeParseISO(candidate.date);
+    const td = safeParseISO(tx.date);
+    const dateDiff = cd && td ? differenceInCalendarDays(cd, td) : 0;
 
     if (score >= threshold) {
       matches.push({

@@ -9,8 +9,9 @@ import type { PlannedTransaction } from '@/types';
 import { usePlannedTransactionStore } from '@/stores/plannedTransactionStore';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { parseISO, format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { safeParseISO } from '@/utils/format';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Props {
@@ -23,7 +24,7 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
   const cancelPlannedTransaction = usePlannedTransactionStore((s) => s.cancelPlannedTransaction);
   const updatePlannedTransaction = usePlannedTransactionStore((s) => s.updatePlannedTransaction);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pickerDate, setPickerDate] = useState(() => parseISO(planned.plannedDate));
+  const [pickerDate, setPickerDate] = useState(() => safeParseISO(planned.plannedDate) ?? new Date());
 
   const handleRealize = () => {
     Alert.alert(
@@ -48,7 +49,7 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
   };
 
   const handleChangeDate = () => {
-    setPickerDate(parseISO(planned.plannedDate));
+    setPickerDate(safeParseISO(planned.plannedDate) ?? new Date());
     setShowDatePicker(true);
   };
 
@@ -66,7 +67,8 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
     setShowDatePicker(false);
   };
 
-  const dateStr = format(parseISO(planned.plannedDate), 'EEEE d MMM yyyy', { locale: fr });
+  const plannedDateParsed = safeParseISO(planned.plannedDate);
+  const dateStr = plannedDateParsed ? format(plannedDateParsed, 'EEEE d MMM yyyy', { locale: fr }) : '—';
   const isIncome = planned.type === 'income';
 
   return (

@@ -5,7 +5,8 @@
 
 import { create } from 'zustand';
 import { useTransactionStore } from './transactionStore';
-import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 
 export interface MerchantStats {
   /** Nom normalisé du commerçant */
@@ -113,11 +114,11 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       }
       byKey[key].amounts.push(t.amount);
       byKey[key].dates.push(t.date);
-      const d = parseISO(t.date);
-      if (isWithinInterval(d, { start: thisMonthStart, end: thisMonthEnd })) {
+      const d = safeParseISO(t.date);
+      if (d != null && isWithinInterval(d, { start: thisMonthStart, end: thisMonthEnd })) {
         byKey[key].thisMonth += t.amount;
       }
-      if (isWithinInterval(d, { start: lastMonthStart, end: lastMonthEnd })) {
+      if (d != null && isWithinInterval(d, { start: lastMonthStart, end: lastMonthEnd })) {
         byKey[key].lastMonth += t.amount;
       }
     });

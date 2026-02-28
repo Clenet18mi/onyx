@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 import { useTransactionStore } from '@/stores';
-import { formatCurrency, formatShortDate } from '@/utils/format';
+import { formatCurrency, formatShortDate, safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { 
   startOfWeek, 
@@ -17,7 +17,6 @@ import {
   eachDayOfInterval,
   eachWeekOfInterval,
   format,
-  parseISO,
   isWithinInterval,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -47,8 +46,8 @@ export function CashflowChart() {
       const dayEnd = new Date(day.setHours(23, 59, 59, 999));
       
       const dayTransactions = transactions.filter((tx) => {
-        const txDate = parseISO(tx.date);
-        return isWithinInterval(txDate, { start: dayStart, end: dayEnd }) && tx.type !== 'transfer';
+        const txDate = safeParseISO(tx.date);
+        return txDate != null && isWithinInterval(txDate, { start: dayStart, end: dayEnd }) && tx.type !== 'transfer';
       });
       
       const income = dayTransactions
@@ -77,8 +76,8 @@ export function CashflowChart() {
       const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
       
       const weekTransactions = transactions.filter((tx) => {
-        const txDate = parseISO(tx.date);
-        return isWithinInterval(txDate, { start: weekStart, end: weekEnd }) && tx.type !== 'transfer';
+        const txDate = safeParseISO(tx.date);
+        return txDate != null && isWithinInterval(txDate, { start: weekStart, end: weekEnd }) && tx.type !== 'transfer';
       });
       
       const income = weekTransactions

@@ -17,13 +17,12 @@ import {
   endOfYear,
   subMonths,
   format,
-  parseISO,
   isWithinInterval,
   eachMonthOfInterval,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
-import { formatCurrency, formatPercentage, formatDate } from '@/utils/format';
+import { formatCurrency, formatPercentage, formatDate, safeParseISO } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SpendingTrends } from '@/components/dashboard';
 import type { Transaction } from '@/types';
@@ -54,8 +53,8 @@ export default function StatsScreen() {
   const filteredTx = useMemo(
     () =>
       transactions.filter((tx) => {
-        const d = parseISO(tx.date);
-        return isWithinInterval(d, { start: range.start, end: range.end });
+        const d = safeParseISO(tx.date);
+        return d != null && isWithinInterval(d, { start: range.start, end: range.end });
       }),
     [transactions, range]
   );
@@ -131,8 +130,8 @@ export default function StatsScreen() {
   const yearTx = useMemo(
     () =>
       transactions.filter((tx) => {
-        const d = parseISO(tx.date);
-        return isWithinInterval(d, { start: yearStart, end: yearEnd });
+        const d = safeParseISO(tx.date);
+        return d != null && isWithinInterval(d, { start: yearStart, end: yearEnd });
       }),
     [transactions, yearStart, yearEnd]
   );
@@ -150,8 +149,8 @@ export default function StatsScreen() {
     return months.map((monthStart) => {
       const monthEnd = endOfMonth(monthStart);
       const txInMonth = yearTx.filter((tx) => {
-        const d = parseISO(tx.date);
-        return isWithinInterval(d, { start: monthStart, end: monthEnd });
+        const d = safeParseISO(tx.date);
+        return d != null && isWithinInterval(d, { start: monthStart, end: monthEnd });
       });
       const inc = txInMonth.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
       const exp = txInMonth.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);

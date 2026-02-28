@@ -6,9 +6,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { differenceInDays, parseISO, startOfDay, isToday } from 'date-fns';
+import { differenceInDays, startOfDay, isToday } from 'date-fns';
 import { useSubscriptionStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 
 export function NextSubscriptionWidget() {
@@ -18,14 +18,16 @@ export function NextSubscriptionWidget() {
   const next = useMemo(() => {
     const today = startOfDay(new Date());
     const upcoming = subscriptions
-      .filter((s) => parseISO(s.nextBillingDate).getTime() >= today.getTime())
-      .sort((a, b) => parseISO(a.nextBillingDate).getTime() - parseISO(b.nextBillingDate).getTime());
-    return upcoming[0] ?? null;
+      .map((s) => ({ sub: s, d: safeParseISO(s.nextBillingDate) }))
+      .filter(({ d }) => d != null && d.getTime() >= today.getTime())
+      .sort((a, b) => (a.d!.getTime()) - (b.d!.getTime()));
+    return upcoming[0]?.sub ?? null;
   }, [subscriptions]);
 
   if (!next) return null;
 
-  const billingDate = parseISO(next.nextBillingDate);
+  const billingDate = safeParseISO(next.nextBillingDate);
+  if (!billingDate) return null;
   const days = differenceInDays(billingDate, startOfDay(new Date()));
   let label = '';
   if (isToday(billingDate)) label = "aujourd'hui ⚠️";

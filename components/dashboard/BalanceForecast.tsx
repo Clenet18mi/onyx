@@ -7,9 +7,9 @@ import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useAccountStore, useTransactionStore, useConfigStore, useSubscriptionStore, usePlannedTransactionStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, safeParseISO } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { addDays, parseISO, differenceInDays, getDate, startOfDay, isWithinInterval } from 'date-fns';
+import { addDays, differenceInDays, getDate, startOfDay, isWithinInterval } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 
@@ -27,8 +27,8 @@ export function BalanceForecast() {
   const daysElapsed = differenceInDays(now, thisMonthStart) + 1;
   const thisMonthExpenses = transactions
     .filter((t) => {
-      const d = parseISO(t.date);
-      return d >= thisMonthStart && d <= now && t.type !== 'transfer' && t.type === 'expense';
+      const d = safeParseISO(t.date);
+      return d != null && d >= thisMonthStart && d <= now && t.type !== 'transfer' && t.type === 'expense';
     })
     .reduce((s, t) => s + t.amount, 0);
   const dailyAvg = daysElapsed > 0 ? thisMonthExpenses / daysElapsed : 0;
@@ -38,8 +38,8 @@ export function BalanceForecast() {
   const { projectedBalance, expectedIncomes, expectedExpenses, salaryIn30, plannedIncomeCount, plannedExpenseCount, subCountIn30 } = useMemo(() => {
     const pending = plannedTransactions.filter((pt) => pt.status === 'pending');
     const plannedIn30 = pending.filter((pt) => {
-      const d = startOfDay(parseISO(pt.plannedDate));
-      return isWithinInterval(d, { start: todayStart, end: end30 });
+      const d = safeParseISO(pt.plannedDate);
+      return d != null && isWithinInterval(startOfDay(d), { start: todayStart, end: end30 });
     });
     const plannedIncome = plannedIn30.filter((pt) => pt.type === 'income').reduce((s, pt) => s + pt.amount, 0);
     const plannedExpense = plannedIn30.filter((pt) => pt.type === 'expense').reduce((s, pt) => s + pt.amount, 0);
@@ -49,16 +49,17 @@ export function BalanceForecast() {
     let subTotal = 0;
     let subCount = 0;
     subscriptions.forEach((sub) => {
-      const next = startOfDay(parseISO(sub.nextBillingDate));
-      if (isWithinInterval(next, { start: todayStart, end: end30 })) {
+      const next = safeParseISO(sub.nextBillingDate);
+      if (next != null && isWithinInterval(startOfDay(next), { start: todayStart, end: end30 })) {
         subTotal += sub.amount;
         subCount += 1;
       }
     });
 
-    const hasSalaryThisMonth = transactions.some(
-      (t) => t.type !== 'transfer' && t.type === 'income' && t.category === 'salary' && isWithinInterval(parseISO(t.date), { start: thisMonthStart, end: now })
-    );
+    const hasSalaryThisMonth = transactions.some((t) => {
+      const d = safeParseISO(t.date);
+      return d != null && t.type !== 'transfer' && t.type === 'income' && t.category === 'salary' && isWithinInterval(d, { start: thisMonthStart, end: now });
+    });
     let salaryIn30Amount = 0;
     for (let i = 0; i <= 30; i++) {
       const d = addDays(now, i);
@@ -93,15 +94,19 @@ export function BalanceForecast() {
         balance -= dailyAvg;
         if (salaryDay != null && getDate(d) === salaryDay && salaryAmount > 0) balance += salaryAmount;
         subscriptions.forEach((sub) => {
-          const next = startOfDay(parseISO(sub.nextBillingDate));
-          const diff = differenceInDays(next, todayStart);
+          const next = safeParseISO(sub.nextBillingDate);
+          if (next == null) return;
+          const nextDay = startOfDay(next);
+          const diff = differenceInDays(nextDay, todayStart);
           if (diff === i) balance -= sub.amount;
         });
         plannedTransactions
           .filter((pt) => pt.status === 'pending')
           .forEach((pt) => {
-            const plannedDay = startOfDay(parseISO(pt.plannedDate));
-            const diff = differenceInDays(plannedDay, todayStart);
+            const plannedDay = safeParseISO(pt.plannedDate);
+            if (plannedDay == null) return;
+            const dayStart = startOfDay(plannedDay);
+            const diff = differenceInDays(dayStart, todayStart);
             if (diff === i) {
               if (pt.type === 'income') balance += pt.amount;
               else balance -= pt.amount;

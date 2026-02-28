@@ -14,12 +14,11 @@ import {
   endOfMonth,
   subMonths,
   format,
-  parseISO,
   isWithinInterval,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTransactionStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, safeParseISO } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 export default function PeriodComparatorScreen() {
@@ -35,8 +34,8 @@ export default function PeriodComparatorScreen() {
     });
     const filter = (start: Date, end: Date) =>
       transactions.filter((tx) => {
-        const t = parseISO(tx.date);
-        return isWithinInterval(t, { start, end });
+        const t = safeParseISO(tx.date);
+        return t != null && isWithinInterval(t, { start, end });
       });
     const ra = range(monthA);
     const rb = range(monthB);

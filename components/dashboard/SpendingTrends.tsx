@@ -8,7 +8,8 @@ import { View, Text } from 'react-native';
 import { useTransactionStore, useConfigStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
-import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 
 export function SpendingTrends() {
   const transactions = useTransactionStore((s) => s.transactions);
@@ -29,7 +30,10 @@ export function SpendingTrends() {
           (t) =>
             t.type !== 'transfer' &&
             t.type === 'expense' &&
-            isWithinInterval(parseISO(t.date), { start, end })
+            (() => {
+              const d = safeParseISO(t.date);
+              return d != null && isWithinInterval(d, { start, end });
+            })()
         )
         .reduce((acc, t) => {
           acc[t.category] = (acc[t.category] || 0) + t.amount;

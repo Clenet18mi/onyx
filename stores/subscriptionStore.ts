@@ -9,7 +9,8 @@ import { zustandStorage } from '@/utils/storage';
 import { Subscription, RecurrenceFrequency } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
-import { addDays, addWeeks, addMonths, addYears, isBefore, parseISO, startOfDay, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, isBefore, startOfDay, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 
 interface SubscriptionState {
   subscriptions: Subscription[];
@@ -37,8 +38,9 @@ interface SubscriptionState {
 
 // Calculer la prochaine date de facturation
 function getNextBillingDate(currentDate: string, frequency: RecurrenceFrequency): string {
-  const date = parseISO(currentDate);
-  
+  const date = safeParseISO(currentDate);
+  if (!date) return currentDate;
+
   switch (frequency) {
     case 'daily':
       return addDays(date, 1).toISOString();
@@ -146,8 +148,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
         subscriptions.forEach((sub) => {
           if (!sub.isActive) return;
-
-          const billingDate = startOfDay(parseISO(sub.nextBillingDate));
+          const billingDateParsed = safeParseISO(sub.nextBillingDate);
+          if (!billingDateParsed) return;
+          const billingDate = startOfDay(billingDateParsed);
           
           // Si la date de facturation est passée ou aujourd'hui
           if (isBefore(billingDate, today) || billingDate.getTime() === today.getTime()) {
@@ -201,10 +204,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           .subscriptions
           .filter((sub) => {
             if (!sub.isActive) return false;
-            const d = parseISO(sub.nextBillingDate);
-            return isWithinInterval(d, { start, end });
+            const d = safeParseISO(sub.nextBillingDate);
+            return d != null && isWithinInterval(d, { start, end });
           })
-          .sort((a, b) => parseISO(a.nextBillingDate).getTime() - parseISO(b.nextBillingDate).getTime());
+          .sort((a, b) => {
+            const da = safeParseISO(a.nextBillingDate)?.getTime() ?? 0;
+            const db = safeParseISO(b.nextBillingDate)?.getTime() ?? 0;
+            return da - db;
+          });
       },
 
       // Abonnements à venir dans les X prochains jours
@@ -216,12 +223,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           .subscriptions
           .filter((sub) => {
             if (!sub.isActive) return false;
-            const billingDate = parseISO(sub.nextBillingDate);
-            return isBefore(billingDate, futureDate);
+            const billingDate = safeParseISO(sub.nextBillingDate);
+            return billingDate != null && isBefore(billingDate, futureDate);
           })
-          .sort((a, b) => 
-            parseISO(a.nextBillingDate).getTime() - parseISO(b.nextBillingDate).getTime()
-          );
+          .sort((a, b) => {
+            const da = safeParseISO(a.nextBillingDate)?.getTime() ?? 0;
+            const db = safeParseISO(b.nextBillingDate)?.getTime() ?? 0;
+            return da - db;
+          });
       },
 
       setSubscriptionsForImport: (subscriptions) => {

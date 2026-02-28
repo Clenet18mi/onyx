@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useAccountStore, useTransactionStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, safeParseISO } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 
@@ -31,9 +31,11 @@ export default function ScenariosScreen() {
   const avgMonthlyIncome = useMemo(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    const tx = transactions.filter(
-      (t) => t.type !== 'transfer' && t.type === 'income' && new Date(t.date) >= start
-    );
+    const tx = transactions.filter((t) => {
+      if (t.type !== 'transfer' && t.type !== 'income') return false;
+      const d = safeParseISO(t.date);
+      return d != null && d >= start;
+    });
     const sum = tx.reduce((s, t) => s + t.amount, 0);
     return tx.length ? sum / 3 : 0;
   }, [transactions]);
@@ -41,9 +43,11 @@ export default function ScenariosScreen() {
   const avgMonthlyExpense = useMemo(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    const tx = transactions.filter(
-      (t) => t.type !== 'transfer' && t.type === 'expense' && new Date(t.date) >= start
-    );
+    const tx = transactions.filter((t) => {
+      if (t.type !== 'transfer' && t.type !== 'expense') return false;
+      const d = safeParseISO(t.date);
+      return d != null && d >= start;
+    });
     const sum = tx.reduce((s, t) => s + t.amount, 0);
     return tx.length ? sum / 3 : 0;
   }, [transactions]);
