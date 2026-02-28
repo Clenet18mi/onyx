@@ -27,6 +27,8 @@ interface AuthState {
   /** Échecs consécutifs (pour option effacement après N échecs) */
   criticalFailures: number;
   wipeDataOnMaxFailures: boolean;
+  /** Verrouillage auto après inactivité (minutes). 0 = jamais, 1/5/15 */
+  autoLockDelay: number;
 
   setupPin: (pin: string, length: 4 | 6) => Promise<void>;
   /** Vérifie le PIN et déverrouille. Retourne résultat détaillé. */
@@ -41,6 +43,7 @@ interface AuthState {
   resetAuth: () => void;
   isLockedOut: () => boolean;
   setWipeDataOnMaxFailures: (enabled: boolean) => void;
+  setAutoLockDelay: (minutes: number) => void;
   wipeAllData: () => Promise<void>;
 }
 
@@ -62,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
       hasHydrated: false,
       criticalFailures: 0,
       wipeDataOnMaxFailures: false,
+      autoLockDelay: 0,
 
       setupPin: async (pin: string, length: 4 | 6) => {
         const h = await hashPin(pin);
@@ -205,6 +209,10 @@ export const useAuthStore = create<AuthState>()(
         set({ wipeDataOnMaxFailures: enabled });
       },
 
+      setAutoLockDelay: (minutes: number) => {
+        set({ autoLockDelay: minutes });
+      },
+
       wipeAllData: async () => {
         const { storage } = await import('@/utils/storage');
         const { useAccountStore } = await import('@/stores/accountStore');
@@ -260,6 +268,7 @@ export const useAuthStore = create<AuthState>()(
         lockoutUntil: s.lockoutUntil,
         criticalFailures: s.criticalFailures,
         wipeDataOnMaxFailures: s.wipeDataOnMaxFailures,
+        autoLockDelay: s.autoLockDelay,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

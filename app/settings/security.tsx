@@ -26,6 +26,8 @@ export default function SecurityScreen() {
     lock,
     wipeDataOnMaxFailures,
     setWipeDataOnMaxFailures,
+    autoLockDelay,
+    setAutoLockDelay,
   } = useAuthStore();
 
   const [step, setStep] = useState<Step>('menu');
@@ -203,6 +205,31 @@ export default function SecurityScreen() {
                 trackColor={{ false: '#3F3F46', true: '#6366F1' }}
                 thumbColor="#fff"
               />
+            </View>
+            <View className="p-4 border-b border-onyx-200/10">
+              <Text className="text-white font-medium">Verrouillage automatique</Text>
+              <Text className="text-onyx-500 text-sm mb-3">Verrouiller l'app après inactivité (passage en arrière-plan)</Text>
+              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                {[
+                  { value: 0, label: 'Jamais' },
+                  { value: 1, label: '1 min' },
+                  { value: 5, label: '5 min' },
+                  { value: 15, label: '15 min' },
+                ].map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setAutoLockDelay(opt.value)}
+                    className="px-4 py-2 rounded-xl"
+                    style={{
+                      backgroundColor: autoLockDelay === opt.value ? '#6366F1' : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Text className={autoLockDelay === opt.value ? 'text-white font-medium' : 'text-onyx-500'}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
             <View className="flex-row items-center justify-between p-4">
               <View className="flex-1">

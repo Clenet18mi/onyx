@@ -147,8 +147,22 @@ export default function RootLayout() {
   }, [storesHydrated, isAuthenticated, router]);
 
   const appStateRef = useRef(AppState.currentState);
+  const backgroundTimeRef = useRef<number | null>(null);
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
+        const lock = useAuthStore.getState().lock;
+        const autoLockDelay = useAuthStore.getState().autoLockDelay;
+        const bg = backgroundTimeRef.current;
+        if (autoLockDelay > 0 && bg != null) {
+          const elapsed = (Date.now() - bg) / 1000 / 60;
+          if (elapsed >= autoLockDelay) lock();
+        }
+        backgroundTimeRef.current = null;
+      } else if (nextState.match(/inactive|background/)) {
+        if (useAuthStore.getState().isAuthenticated) backgroundTimeRef.current = Date.now();
+      }
       appStateRef.current = nextState;
     });
     return () => sub.remove();
