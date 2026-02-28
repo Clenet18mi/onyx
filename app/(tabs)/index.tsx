@@ -45,6 +45,8 @@ export default function DashboardScreen() {
   const cleanOrphanReminders = useReminderStore((state) => state.cleanOrphanReminders);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
+  const lastPaydayModal = useSettingsStore((state) => state.lastPaydayModal);
+  const updateSettings = useSettingsStore((state) => state.updateSettings);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const profile = useConfigStore((state) => state.profile);
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
@@ -56,6 +58,16 @@ export default function DashboardScreen() {
       setBilanModalVisible(true);
     }
   }, [lastBilanMonth]);
+
+  useEffect(() => {
+    const now = new Date();
+    const currentMonthKey = format(now, 'yyyy-MM');
+    const dayOfMonth = now.getDate();
+    const isPayday = profile?.salaryDay != null && dayOfMonth === profile.salaryDay;
+    if (isPayday && lastPaydayModal !== currentMonthKey) {
+      setPaydayModalVisible(true);
+    }
+  }, [profile?.salaryDay, lastPaydayModal]);
   
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -281,6 +293,13 @@ export default function DashboardScreen() {
         <PaydayModal 
           visible={paydayModalVisible}
           onClose={() => setPaydayModalVisible(false)}
+          onDismissLater={() => {
+            updateSettings({ lastPaydayModal: format(new Date(), 'yyyy-MM') });
+            setPaydayModalVisible(false);
+          }}
+          onRecordSalary={() => {
+            updateSettings({ lastPaydayModal: format(new Date(), 'yyyy-MM') });
+          }}
         />
         
         {/* Bilan de fin de mois (mois précédent) */}

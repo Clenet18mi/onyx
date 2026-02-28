@@ -16,7 +16,7 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-import { useAccountStore, useTransactionStore, useSettingsStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore, useSubscriptionStore, useGoalStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -25,9 +25,11 @@ import { storage } from '@/utils/storage';
 interface PaydayModalProps {
   visible: boolean;
   onClose: () => void;
+  onDismissLater?: () => void;
+  onRecordSalary?: () => void;
 }
 
-export function PaydayModal({ visible, onClose }: PaydayModalProps) {
+export function PaydayModal({ visible, onClose, onDismissLater, onRecordSalary }: PaydayModalProps) {
   const [amount, setAmount] = useState('');
   const [accountId, setAccountId] = useState('');
   const [description, setDescription] = useState('Salaire');
@@ -36,18 +38,30 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const profile = useConfigStore((state) => state.profile);
+  const subscriptionsMonthly = useSubscriptionStore((state) => state.getTotalMonthlySubscriptions());
+  const goals = useGoalStore((state) => state.goals.filter((g) => !g.isCompleted));
+  const salaryConfig = profile?.defaultSalaryAmount ?? 0;
+  const goalsContribution = 0;
+  const freeBudget = Math.max(0, salaryConfig - subscriptionsMonthly - goalsContribution);
   
   // Animation
   const scale = useSharedValue(0.8);
   const confettiOpacity = useSharedValue(0);
 
-  // Récupérer le dernier salaire saisi
+  // Récupérer le dernier salaire saisi ou le salaire configuré
   useEffect(() => {
     if (visible) {
+      const configAmount = profile?.defaultSalaryAmount;
+      if (configAmount != null && configAmount > 0) setAmount(String(configAmount));
+      else {
+        (async () => {
+          const lastSalary = await storage.getString('last_salary_amount');
+          if (lastSalary) setAmount(lastSalary);
+        })();
+      }
       (async () => {
-        const lastSalary = await storage.getString('last_salary_amount');
         const lastAccountId = await storage.getString('last_salary_account');
-        if (lastSalary) setAmount(lastSalary);
         if (lastAccountId && accounts.find((a) => a.id === lastAccountId)) {
           setAccountId(lastAccountId);
         } else if (accounts.length > 0) {
@@ -56,7 +70,7 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
       })();
       scale.value = withSpring(1, { damping: 15 });
     }
-  }, [visible, accounts]);
+  }, [visible, accounts, profile?.defaultSalaryAmount]);
 
   const handleAddSalary = () => {
     const salaryAmount = parseFloat(amount);
@@ -97,8 +111,14 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
 
     setTimeout(() => {
       setShowSuccess(false);
+      onRecordSalary?.();
       onClose();
     }, 2000);
+  };
+
+  const handleLater = () => {
+    onDismissLater?.();
+    onClose();
   };
 
   const getIcon = (iconName: string) => {
@@ -159,6 +179,29 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
                 <TouchableOpacity onPress={onClose}>
                   <Icons.X size={24} color="#71717A" />
                 </TouchableOpacity>
+              </View>
+
+              {/* Répartition */}
+              <View className="mb-6 p-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                <Text className="text-onyx-500 text-xs mb-2">Répartition du mois</Text>
+                <View className="flex-row justify-between mb-1">
+                  <Text className="text-onyx-400 text-sm">Salaire configuré</Text>
+                  <Text className="text-accent-success font-medium">{formatCurrency(salaryConfig)}</Text>
+                </View>
+                <View className="flex-row justify-between mb-1">
+                  <Text className="text-onyx-400 text-sm">Abonnements du mois</Text>
+                  <Text className="text-accent-danger font-medium">−{formatCurrency(subscriptionsMonthly)}</Text>
+                </View>
+                {goalsContribution > 0 && (
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-onyx-400 text-sm">Contribution objectifs</Text>
+                    <Text className="text-onyx-400 font-medium">−{formatCurrency(goalsContribution)}</Text>
+                  </View>
+                )}
+                <View className="flex-row justify-between mt-2 pt-2" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
+                  <Text className="text-white font-medium">Budget libre</Text>
+                  <Text className="text-white font-semibold">{formatCurrency(freeBudget)}</Text>
+                </View>
               </View>
 
               {/* Montant */}
@@ -222,12 +265,18 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
 
               {/* Bouton */}
               <Button
-                title="Encaisser le salaire 🎉"
+                title="Enregistrer mon salaire"
                 variant="primary"
                 size="lg"
                 fullWidth
                 onPress={handleAddSalary}
               />
+              <TouchableOpacity
+                onPress={handleLater}
+                className="mt-3 py-2"
+              >
+                <Text className="text-onyx-500 text-center text-sm">Plus tard</Text>
+              </TouchableOpacity>
             </GlassCard>
           )}
         </Animated.View>
