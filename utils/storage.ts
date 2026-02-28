@@ -10,6 +10,7 @@ const PREFIX = '@onyx_';
 
 // --------------------------------------------
 // Adapter pour Zustand persist (async)
+// En cas de données corrompues ou invalides, on retourne null pour éviter un crash au démarrage.
 // --------------------------------------------
 
 export const zustandStorage: StateStorage = {
@@ -17,7 +18,15 @@ export const zustandStorage: StateStorage = {
     try {
       const key = PREFIX + name;
       const value = await AsyncStorage.getItem(key);
-      return value ?? null;
+      if (value == null || value === '') return null;
+      // Vérifier que le JSON est valide pour éviter un crash à la désérialisation
+      try {
+        JSON.parse(value);
+      } catch {
+        console.warn(`[ONYX] Storage key ${name}: invalid JSON, ignoring`);
+        return null;
+      }
+      return value;
     } catch (error) {
       console.error(`[ONYX] Storage getItem ${name}:`, error);
       return null;

@@ -4,8 +4,7 @@
 // ============================================
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 
 interface Props {
   children: ReactNode;
@@ -41,9 +40,6 @@ export class ErrorBoundary extends Component<Props, State> {
       error,
       errorInfo,
     });
-
-    // En production, vous pouvez envoyer l'erreur à un service de logging
-    // Ex: Sentry, Crashlytics, etc.
   }
 
   handleReset = () => {
@@ -55,16 +51,42 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReload = () => {
-    // Forcer un rechargement de l'app
-    // En React Native, on peut utiliser Updates.reloadAsync() d'Expo
     if (__DEV__) {
       Alert.alert('Rechargement', 'En développement, redémarrez l\'app manuellement');
     } else {
-      // En production, vous pouvez utiliser expo-updates
-      // import * as Updates from 'expo-updates';
-      // Updates.reloadAsync();
       Alert.alert('Rechargement', 'Redémarrez l\'application');
     }
+  };
+
+  handleResetData = () => {
+    Alert.alert(
+      'Réinitialiser les données',
+      'Toutes les données (comptes, transactions, paramètres) seront effacées et l\'application redémarrera. À utiliser si l\'app plante après un import.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Tout effacer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { storage } = await import('@/utils/storage');
+              await storage.clearAll();
+              const { useAuthStore } = await import('@/stores/authStore');
+              useAuthStore.getState().resetAuth();
+              this.setState({ hasError: false, error: null, errorInfo: null });
+              Alert.alert(
+                'Données effacées',
+                'Fermez complètement l\'application (la quitter), puis rouvrez-la.',
+                [{ text: 'OK' }]
+              );
+            } catch (e) {
+              console.error('[ONYX] Reset data failed:', e);
+              Alert.alert('Erreur', 'Impossible d\'effacer les données.', [{ text: 'OK' }]);
+            }
+          },
+        },
+      ]
+    );
   };
 
   render() {
@@ -122,6 +144,22 @@ export class ErrorBoundary extends Component<Props, State> {
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' }}>
                   Recharger l'application
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={this.handleResetData}
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  padding: 15,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#EF4444',
+                }}
+              >
+                <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: 'bold' }}>
+                  Réinitialiser les données (tout effacer)
                 </Text>
               </TouchableOpacity>
             </View>

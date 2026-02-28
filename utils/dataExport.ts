@@ -656,7 +656,20 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
                   const planned = restorePlannedTransactions(data.plannedTransactions).filter((p) => p.id && p.accountId);
                   if (planned.length) usePlannedTransactionStore.getState().setPlannedTransactionsForImport(planned);
                 }
-                Alert.alert('Import réussi', 'Vos données ont été restaurées.', [{ text: 'OK' }]);
+                // Laisser le temps au persist Zustand d'écrire en AsyncStorage avant le rechargement
+                await new Promise((r) => setTimeout(r, 600));
+                // Redémarrer l'app pour appliquer les données importées (réhydratation propre)
+                try {
+                  const Updates = await import('expo-updates');
+                  await Updates.reloadAsync();
+                } catch (_) {
+                  // En mode développement ou si expo-updates n'est pas dispo
+                  Alert.alert(
+                    'Import réussi',
+                    'Vos données ont été restaurées. Fermez complètement l\'application puis rouvrez-la pour tout actualiser.',
+                    [{ text: 'OK' }]
+                  );
+                }
               } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
                 console.error('[importDataFromJSON] Restauration:', err);

@@ -25,7 +25,7 @@ SplashScreen.preventAutoHideAsync();
 // Afficher les notifications de rappels même quand l'app est au premier plan
 setReminderNotificationHandler();
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [storesHydrated, setStoresHydrated] = useState(false);
   const hasShownLateAlert = useRef(false);
@@ -170,10 +170,12 @@ export default function RootLayout() {
 
   if (!appIsReady || !fontsLoaded || !storesHydrated) {
     return (
-      <View className="flex-1" style={{ backgroundColor: bgColor }}>
-        <StatusBar barStyle="light-content" backgroundColor={bgColor} />
-        <SplashLoader />
-      </View>
+      <ErrorBoundary>
+        <View className="flex-1" style={{ backgroundColor: bgColor }}>
+          <StatusBar barStyle="light-content" backgroundColor={bgColor} />
+          <SplashLoader />
+        </View>
+      </ErrorBoundary>
     );
   }
 
@@ -267,6 +269,14 @@ export default function RootLayout() {
         <Stack.Screen name="scenarios" />
       </Stack>
       </View>
+    </ErrorBoundary>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ErrorBoundary>
+      <RootLayoutContent />
     </ErrorBoundary>
   );
 }
