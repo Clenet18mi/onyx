@@ -27,6 +27,7 @@ export function SpendingTrends() {
       transactions
         .filter(
           (t) =>
+            t.type !== 'transfer' &&
             t.type === 'expense' &&
             isWithinInterval(parseISO(t.date), { start, end })
         )

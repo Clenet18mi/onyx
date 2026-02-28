@@ -23,6 +23,7 @@ import { fr } from 'date-fns/locale';
 import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { SpendingTrends } from '@/components/dashboard';
 import type { Transaction } from '@/types';
 
 const { width } = Dimensions.get('window');
@@ -131,35 +132,50 @@ export default function StatsScreen() {
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Mois */}
+          {/* Période + Comparer */}
           <View className="px-6 mb-4">
             <Text className="text-onyx-500 text-sm mb-2">Période</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row" style={{ gap: 8 }}>
-                {monthOptions.map((d) => {
-                  const isSelected =
-                    d.getMonth() === selectedMonth.getMonth() &&
-                    d.getFullYear() === selectedMonth.getFullYear();
-                  return (
-                    <TouchableOpacity
-                      key={d.toISOString()}
-                      onPress={() => setSelectedMonth(d)}
-                      className="px-4 py-2 rounded-xl"
-                      style={{
-                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.08)',
-                      }}
-                    >
-                      <Text
-                        className="font-medium"
-                        style={{ color: isSelected ? '#fff' : '#71717A' }}
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                <View className="flex-row" style={{ gap: 8 }}>
+                  {monthOptions.map((d) => {
+                    const isSelected =
+                      d.getMonth() === selectedMonth.getMonth() &&
+                      d.getFullYear() === selectedMonth.getFullYear();
+                    return (
+                      <TouchableOpacity
+                        key={d.toISOString()}
+                        onPress={() => setSelectedMonth(d)}
+                        className="px-4 py-2 rounded-xl"
+                        style={{
+                          backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255,255,255,0.08)',
+                        }}
                       >
-                        {format(d, 'MMM yyyy', { locale: fr })}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
+                        <Text
+                          className="font-medium"
+                          style={{ color: isSelected ? '#fff' : '#71717A' }}
+                        >
+                          {format(d, 'MMM yyyy', { locale: fr })}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+              <TouchableOpacity
+                onPress={() => router.push('/period-comparator')}
+                className="flex-row items-center px-3 py-2 rounded-xl"
+                style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}
+              >
+                <Icons.GitCompare size={18} color="#6366F1" />
+                <Text className="text-accent-primary text-sm font-medium ml-1">Comparer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Tendances par catégorie */}
+          <View className="px-6">
+            <SpendingTrends />
           </View>
 
           {/* Résumé */}
