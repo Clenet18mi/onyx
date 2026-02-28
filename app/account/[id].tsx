@@ -111,6 +111,8 @@ export default function AccountDetailScreen() {
     return { income, expenses };
   }, [transactions, id]);
 
+  const summaryNet = stats.income - stats.expenses;
+
   return (
     <LinearGradient
       colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
@@ -184,6 +186,17 @@ export default function AccountDetailScreen() {
           {/* Transactions */}
           <View className="px-6">
             <Text className="text-white text-lg font-semibold mb-4">Historique</Text>
+            
+            {transactions.length > 0 && (
+              <View className="flex-row items-center justify-between mb-3 py-2 px-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                <Text className="text-onyx-500 text-sm">
+                  {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}  •{' '}
+                  <Text className={summaryNet >= 0 ? 'text-accent-success' : 'text-accent-danger'}>
+                    {summaryNet >= 0 ? '+' : ''}{formatCurrency(summaryNet)}
+                  </Text>
+                </Text>
+              </View>
+            )}
             
             {transactions.length === 0 ? (
               <View className="items-center py-12">
