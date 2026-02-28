@@ -52,6 +52,7 @@ export default function MoreScreen() {
   const { hapticEnabled, toggleHaptic } = useSettingsStore();
   
   const monthlyTotal = getTotalMonthlySubscriptions();
+  const yearlyTotal = getTotalYearlySubscriptions();
   const subscriptionsThisMonth = getSubscriptionsThisMonth();
   const { streak, levelData, updateStreak } = useGamificationStore();
   React.useEffect(() => { updateStreak(); }, [transactions.length, updateStreak]);
@@ -253,6 +254,14 @@ export default function MoreScreen() {
                     </Text>
                   </View>
                 </GlassCard>
+              </View>
+            )}
+
+            {subscriptions.filter((s) => s.isActive).length > 0 && (
+              <View className="mb-4 px-1">
+                <Text className="text-onyx-500 text-sm">
+                  📊 Coût annuel de vos abonnements : {formatCurrency(yearlyTotal)}
+                </Text>
               </View>
             )}
 
