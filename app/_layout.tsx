@@ -4,11 +4,11 @@
 // ============================================
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, View, StatusBar } from 'react-native';
-import { Stack } from 'expo-router';
+import { AppState, AppStateStatus, View, StatusBar, Alert } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useAuthStore, useSubscriptionStore } from '@/stores';
+import { useAuthStore, useSubscriptionStore, usePlannedTransactionStore, useReminderStore } from '@/stores';
 import { useTheme } from '@/hooks/useTheme';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -16,7 +16,6 @@ import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
 import { setReminderNotificationHandler, syncReminderNotifications } from '@/utils/reminderNotifications';
-import { useReminderStore } from '@/stores';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -28,6 +27,8 @@ setReminderNotificationHandler();
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [storesHydrated, setStoresHydrated] = useState(false);
+  const hasShownLateAlert = useRef(false);
+  const router = useRouter();
   const { theme } = useTheme();
   const { isSetup, isAuthenticated } = useAuthStore();
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
@@ -79,6 +80,11 @@ export default function RootLayout() {
               } catch (subError) {
                 console.error('[ONYX] Process subscriptions error:', subError);
               }
+              try {
+                useReminderStore.getState().cleanOrphanReminders();
+              } catch (e) {
+                console.warn('[ONYX] cleanOrphanReminders', e);
+              }
               syncReminderNotifications(useReminderStore.getState().reminders).catch((syncError) => {
                 console.warn('[ONYX] Reminder notifications sync error:', syncError);
               });
@@ -121,6 +127,23 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [appIsReady, fontsLoaded]);
+
+  // Alerte une fois par session : transactions prévues en retard
+  useEffect(() => {
+    if (!storesHydrated || !isAuthenticated || hasShownLateAlert.current) return;
+    const overdue = usePlannedTransactionStore.getState().getOverdue();
+    if (overdue.length === 0) return;
+    hasShownLateAlert.current = true;
+    const count = overdue.length;
+    Alert.alert(
+      'Transactions prévues en retard',
+      `${count} transaction(s) prévue(s) sont en retard.\nVoulez-vous les consulter ?`,
+      [
+        { text: 'Plus tard', style: 'cancel' },
+        { text: 'Voir', onPress: () => router.push('/(tabs)/') },
+      ]
+    );
+  }, [storesHydrated, isAuthenticated, router]);
 
   const appStateRef = useRef(AppState.currentState);
   useEffect(() => {
