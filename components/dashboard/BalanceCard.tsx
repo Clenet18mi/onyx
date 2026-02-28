@@ -30,7 +30,7 @@ export function BalanceCard() {
   const [isHidden, setIsHidden] = useState(false);
   
   const totalBalance = useAccountStore((state) => state.getTotalBalance());
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const transactions = useTransactionStore((state) => state.transactions);
   const budgetsAtRisk = useBudgetStore((state) => 
     state.getAllBudgetsProgress().filter(b => b.percentage >= 80)

@@ -11,8 +11,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore } from '@/stores';
-import { CATEGORIES, TransactionCategory, TransactionType } from '@/types';
+import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
+import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -31,7 +31,7 @@ export default function AddTransactionScreen() {
   const [category, setCategory] = useState<TransactionCategory>((params.category as TransactionCategory) || 'other');
   const [accountId, setAccountId] = useState(params.accountId || '');
   
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const transactions = useTransactionStore((state) => state.transactions);
   const addPlannedTransaction = usePlannedTransactionStore((state) => state.addPlannedTransaction);
@@ -39,6 +39,7 @@ export default function AddTransactionScreen() {
   const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
   const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
   const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
+  const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
 
   const [isPlanned, setIsPlanned] = useState(false);
   const [plannedDate, setPlannedDate] = useState(() => {
@@ -74,9 +75,12 @@ export default function AddTransactionScreen() {
     return IconComponent || Icons.CircleDot;
   };
 
-  const filteredCategories = CATEGORIES.filter(
-    (c) => c.type === type || c.type === 'both'
-  );
+  const filteredCategories = getVisibleCategories(type === 'income' ? 'income' : type === 'expense' ? 'expense' : undefined);
+  React.useEffect(() => {
+    if (filteredCategories.length > 0 && !filteredCategories.some((c) => c.id === category)) {
+      setCategory(filteredCategories[0].id);
+    }
+  }, [type, filteredCategories]);
 
   const doSave = () => {
     if (!accountId) return;

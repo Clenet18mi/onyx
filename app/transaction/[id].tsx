@@ -9,8 +9,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useAccountStore, useTransactionStore, useSettingsStore } from '@/stores';
-import { CATEGORIES, TransactionCategory, TransactionType } from '@/types';
+import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore } from '@/stores';
+import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -21,7 +21,9 @@ export default function EditTransactionScreen() {
   const getTransaction = useTransactionStore((s) => s.getTransaction);
   const updateTransaction = useTransactionStore((s) => s.updateTransaction);
   const deleteTransaction = useTransactionStore((s) => s.deleteTransaction);
-  const accounts = useAccountStore((s) => s.getActiveAccounts());
+  const accounts = useAccountStore((s) => s.accounts.filter((a) => !a.isArchived));
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
+  const getVisibleCategories = useConfigStore((s) => s.getVisibleCategories);
   const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
   const tx = id ? getTransaction(id) : null;
 
@@ -43,7 +45,7 @@ export default function EditTransactionScreen() {
   }, [tx]);
 
   const getIcon = (iconName: string) => (Icons as any)[iconName] || Icons.CircleDot;
-  const filteredCategories = CATEGORIES.filter((c) => c.type === type || c.type === 'both');
+  const filteredCategories = getVisibleCategories(type === 'income' ? 'income' : type === 'expense' ? 'expense' : undefined);
 
   const handleSave = () => {
     if (!id || !tx) return;

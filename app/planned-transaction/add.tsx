@@ -8,8 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, usePlannedTransactionStore } from '@/stores';
-import { CATEGORIES, TransactionCategory } from '@/types';
+import { useAccountStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
+import { TransactionCategory } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { addDays, format } from 'date-fns';
@@ -26,8 +26,9 @@ const QUICK_DATES = [
 
 export default function AddPlannedTransactionScreen() {
   const router = useRouter();
-  const accounts = useAccountStore((s) => s.getActiveAccounts());
+  const accounts = useAccountStore((s) => s.accounts.filter((a) => !a.isArchived));
   const addPlannedTransaction = usePlannedTransactionStore((s) => s.addPlannedTransaction);
+  const getVisibleCategories = useConfigStore((s) => s.getVisibleCategories);
 
   const [type, setType] = useState<PlannedType>('expense');
   const [amount, setAmount] = useState('');
@@ -43,7 +44,7 @@ export default function AddPlannedTransactionScreen() {
     if (accounts.length && !accountId) setAccountId(accounts[0].id);
   }, [accounts, accountId]);
 
-  const filteredCategories = CATEGORIES.filter((c) => c.type === type || c.type === 'both');
+  const filteredCategories = getVisibleCategories(type === 'income' ? 'income' : 'expense');
 
   const handleSave = () => {
     const amountNum = parseFloat(amount?.replace(',', '.') ?? '0');

@@ -26,7 +26,7 @@ const CURRENCIES = [
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const { profile, updateProfile } = useConfigStore();
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   
   const [name, setName] = useState(profile.name);
   const [currency, setCurrency] = useState(profile.currency);

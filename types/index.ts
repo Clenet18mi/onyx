@@ -46,7 +46,8 @@ export type TransactionCategory =
   | 'taxes'
   | 'savings'
   | 'transfer'
-  | 'other';
+  | 'other'
+  | (string & {}); // permet les IDs de catégories personnalisées (configStore)
 
 export interface Transaction {
   id: string;

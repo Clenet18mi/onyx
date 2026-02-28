@@ -26,7 +26,7 @@ function QuickExpenseModal({ visible, template, onClose }: QuickExpenseModalProp
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
   
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
 

@@ -36,7 +36,7 @@ export default function DashboardScreen() {
   
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
   const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
   

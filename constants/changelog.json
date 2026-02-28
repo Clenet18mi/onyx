@@ -1,12 +1,13 @@
 {
   "appVersion": "1.0.0",
-  "buildNumber": "93",
-  "generatedAt": "2026-02-28T18:59:53.711Z",
+  "buildNumber": "94",
+  "generatedAt": "2026-02-28T19:01:13.604Z",
   "entries": [
     {
       "version": "1.0.0",
       "date": "2026-02-28",
       "logs": [
+        "chore: update changelog with latest commits",
         "chore: remove obsolete report and analysis markdown files",
         "feat(settings): add PDF/HTML monthly statement export to data management",
         "docs: add DOC_APP_ONYX full app documentation for handover",
@@ -85,8 +86,7 @@
         "Implement visual transfer screen",
         "Create transaction add screen",
         "Build account management screens",
-        "Add cashflow chart and account quick view",
-        "Create dashboard balance card and quick actions"
+        "Add cashflow chart and account quick view"
       ]
     }
   ]

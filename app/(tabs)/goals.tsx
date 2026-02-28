@@ -136,7 +136,7 @@ export default function GoalsScreen() {
   const [contributeFromAccount, setContributeFromAccount] = useState('');
   
   const { goals, addGoal, updateGoal, deleteGoal, contributeToGoal, getActiveGoals, getCompletedGoals } = useGoalStore();
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   
   const activeGoals = getActiveGoals();
   const completedGoals = getCompletedGoals();

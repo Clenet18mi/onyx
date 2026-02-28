@@ -7,9 +7,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { CATEGORIES, Transaction } from '@/types';
+import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 
 interface TransactionItemProps {
@@ -22,8 +22,7 @@ function TransactionItem({ transaction, onPress }: TransactionItemProps) {
   const toAccount = transaction.toAccountId 
     ? useAccountStore((state) => state.getAccount(transaction.toAccountId))
     : null;
-  
-  const category = CATEGORIES.find((c) => c.id === transaction.category);
+  const category = useConfigStore((s) => s.getCategoryById(transaction.category));
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
   
   const isIncome = transaction.type === 'income';
@@ -45,7 +44,7 @@ function TransactionItem({ transaction, onPress }: TransactionItemProps) {
       
       <View className="flex-1">
         <Text className="text-white text-base font-medium" numberOfLines={1}>
-          {transaction.description || category?.label || 'Transaction'}
+          {transaction.description || category?.label || transaction.category || 'Transaction'}
         </Text>
         <Text className="text-onyx-500 text-sm">
           {isTransfer && toAccount

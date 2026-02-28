@@ -14,7 +14,7 @@ import { ACCOUNT_TYPES } from '@/types';
 
 export function QuickAccounts() {
   const router = useRouter();
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
 
   const getIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName];

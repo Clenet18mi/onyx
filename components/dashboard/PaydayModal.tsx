@@ -33,7 +33,7 @@ export function PaydayModal({ visible, onClose }: PaydayModalProps) {
   const [description, setDescription] = useState('Salaire');
   const [showSuccess, setShowSuccess] = useState(false);
   
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   

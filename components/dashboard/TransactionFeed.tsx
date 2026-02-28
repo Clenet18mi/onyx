@@ -7,9 +7,9 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore, useFilterStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useFilterStore, useConfigStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
-import { CATEGORIES, Transaction } from '@/types';
+import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 import { AdvancedFilters, SplitBillModal } from '@/components/transactions';
 import { format, parseISO, isToday, isYesterday, isThisWeek, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -30,8 +30,7 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete }: Transaction
   const toAccount = transaction.toAccountId
     ? useAccountStore((state) => state.getAccount(transaction.toAccountId))
     : null;
-
-  const category = CATEGORIES.find((c) => c.id === transaction.category);
+  const category = useConfigStore((s) => s.getCategoryById(transaction.category));
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
 
   const isIncome = transaction.type === 'income';
@@ -51,7 +50,7 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete }: Transaction
     else {
       const { Alert } = require('react-native');
       Alert.alert(
-        transaction.description || category?.label || 'Transaction',
+        transaction.description || category?.label || transaction.category || 'Transaction',
         undefined,
         [
           { text: 'Modifier', onPress: () => router.push(`/transaction/${transaction.id}`) },
@@ -78,7 +77,7 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete }: Transaction
       
       <View className="flex-1">
         <Text className="text-white text-base font-medium" numberOfLines={1}>
-          {transaction.description || category?.label || 'Transaction'}
+          {transaction.description || category?.label || transaction.category || 'Transaction'}
         </Text>
         <Text className="text-onyx-500 text-sm" numberOfLines={1}>
           {isTransfer && toAccount
