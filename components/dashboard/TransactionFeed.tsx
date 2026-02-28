@@ -208,11 +208,11 @@ export function TransactionFeed() {
     }));
   }, [filteredTransactions, expanded]);
 
-  // Calculer les totaux
+  // Calculer les totaux (virements exclus des totaux revenus/dépenses)
   const totals = useMemo(() => {
     return {
-      income: transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-      expense: transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+      income: transactions.filter(t => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0),
+      expense: transactions.filter(t => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0),
       transfer: transactions.filter(t => t.type === 'transfer').reduce((s, t) => s + t.amount, 0),
     };
   }, [transactions]);

@@ -94,20 +94,20 @@ export function SmartInsights() {
       return isWithinInterval(date, { start: lastMonthStart, end: lastMonthEnd });
     });
     
-    // Revenus/Dépenses ce mois
+    // Revenus/Dépenses ce mois (virements exclus)
     const thisMonthIncome = thisMonthTx
-      .filter(t => t.type === 'income')
+      .filter(t => t.type !== 'transfer' && t.type === 'income')
       .reduce((s, t) => s + t.amount, 0);
     const thisMonthExpense = thisMonthTx
-      .filter(t => t.type === 'expense')
+      .filter(t => t.type !== 'transfer' && t.type === 'expense')
       .reduce((s, t) => s + t.amount, 0);
     
-    // Revenus/Dépenses mois dernier
+    // Revenus/Dépenses mois dernier (virements exclus)
     const lastMonthIncome = lastMonthTx
-      .filter(t => t.type === 'income')
+      .filter(t => t.type !== 'transfer' && t.type === 'income')
       .reduce((s, t) => s + t.amount, 0);
     const lastMonthExpense = lastMonthTx
-      .filter(t => t.type === 'expense')
+      .filter(t => t.type !== 'transfer' && t.type === 'expense')
       .reduce((s, t) => s + t.amount, 0);
     
     // Tendance des dépenses
@@ -115,10 +115,10 @@ export function SmartInsights() {
       ? ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100 
       : 0;
     
-    // Top catégories de dépenses
+    // Top catégories de dépenses (virements exclus)
     const categoryTotals: { [key: string]: number } = {};
     thisMonthTx
-      .filter(t => t.type === 'expense')
+      .filter(t => t.type !== 'transfer' && t.type === 'expense')
       .forEach(t => {
         categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
       });

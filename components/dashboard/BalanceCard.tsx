@@ -44,7 +44,7 @@ export function BalanceCard() {
   const thisMonthTx = transactions.filter((t) => {
     const txDate = parseISO(t.date);
     return isWithinInterval(txDate, { start: monthStart, end: monthEnd });
-  });
+  }).filter((t) => t.type !== 'transfer');
   
   const monthlyIncome = thisMonthTx
     .filter(t => t.type === 'income')
@@ -63,7 +63,7 @@ export function BalanceCard() {
   const lastMonthTx = transactions.filter((t) => {
     const txDate = parseISO(t.date);
     return isWithinInterval(txDate, { start: lastMonthStart, end: lastMonthEnd });
-  });
+  }).filter((t) => t.type !== 'transfer');
   
   const lastMonthExpense = lastMonthTx
     .filter(t => t.type === 'expense')

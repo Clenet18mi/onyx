@@ -43,9 +43,9 @@ export default function PeriodComparatorScreen() {
     const txA = filter(ra.start, ra.end);
     const txB = filter(rb.start, rb.end);
     const income = (tx: typeof transactions) =>
-      tx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      tx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const expenses = (tx: typeof transactions) =>
-      tx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      tx.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     return {
       incomeA: income(txA),
       incomeB: income(txB),

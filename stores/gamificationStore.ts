@@ -143,8 +143,8 @@ export const useGamificationStore = create<GamificationState>()(
           const d = parseISO(t.date);
           return d >= monthStart && d <= monthEnd;
         });
-        const expenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-        const income = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const expenses = transactions.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        const income = transactions.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
         const saved = income - expenses;
 
         return [

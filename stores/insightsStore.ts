@@ -66,10 +66,10 @@ export function computeFinancialInsights(): FinancialInsightsData {
     return isWithinInterval(d, { start: lastMonthStart, end: lastMonthEnd });
   });
 
-  const thisMonthIncome = thisMonthTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const thisMonthExpenses = thisMonthTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const lastMonthIncome = lastMonthTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const lastMonthExpenses = lastMonthTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const thisMonthIncome = thisMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const thisMonthExpenses = thisMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const lastMonthIncome = lastMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const lastMonthExpenses = lastMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const daysElapsed = getDate(now);
   const lastDayOfMonth = getDate(endOfMonth(now));
@@ -99,8 +99,8 @@ export function computeFinancialInsights(): FinancialInsightsData {
 
   const categoryTrends: CategoryTrend[] = categories
     .map((cat) => {
-      const thisVal = thisMonthTx.filter((t) => t.category === cat && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      const lastVal = lastMonthTx.filter((t) => t.category === cat && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const thisVal = thisMonthTx.filter((t) => t.type !== 'transfer' && t.category === cat && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const lastVal = lastMonthTx.filter((t) => t.type !== 'transfer' && t.category === cat && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
       const variation = lastVal === 0 ? (thisVal > 0 ? 100 : 0) : ((thisVal - lastVal) / lastVal) * 100;
       return {
         category: cat,
@@ -114,15 +114,15 @@ export function computeFinancialInsights(): FinancialInsightsData {
     .sort((a, b) => Math.abs(b.variationPercent) - Math.abs(a.variationPercent))
     .slice(0, 6);
 
-  // Dépenses inhabituelles (écart-type)
-  const expenseAmounts = thisMonthTx.filter((t) => t.type === 'expense').map((t) => t.amount);
+  // Dépenses inhabituelles (virements exclus)
+  const expenseAmounts = thisMonthTx.filter((t) => t.type !== 'transfer' && t.type === 'expense').map((t) => t.amount);
   const mean = expenseAmounts.length ? expenseAmounts.reduce((a, b) => a + b, 0) / expenseAmounts.length : 0;
   const variance = expenseAmounts.length
     ? expenseAmounts.reduce((s, x) => s + (x - mean) ** 2, 0) / expenseAmounts.length
     : 0;
   const std = Math.sqrt(variance) || 1;
   const unusualExpenses: UnusualExpense[] = thisMonthTx
-    .filter((t) => t.type === 'expense' && t.amount > mean + 2 * std)
+    .filter((t) => t.type !== 'transfer' && t.type === 'expense' && t.amount > mean + 2 * std)
     .map((t) => ({
       transactionId: t.id,
       amount: t.amount,

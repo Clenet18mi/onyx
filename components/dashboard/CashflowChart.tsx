@@ -48,7 +48,7 @@ export function CashflowChart() {
       
       const dayTransactions = transactions.filter((tx) => {
         const txDate = parseISO(tx.date);
-        return isWithinInterval(txDate, { start: dayStart, end: dayEnd });
+        return isWithinInterval(txDate, { start: dayStart, end: dayEnd }) && tx.type !== 'transfer';
       });
       
       const income = dayTransactions
@@ -78,7 +78,7 @@ export function CashflowChart() {
       
       const weekTransactions = transactions.filter((tx) => {
         const txDate = parseISO(tx.date);
-        return isWithinInterval(txDate, { start: weekStart, end: weekEnd });
+        return isWithinInterval(txDate, { start: weekStart, end: weekEnd }) && tx.type !== 'transfer';
       });
       
       const income = weekTransactions
@@ -100,13 +100,13 @@ export function CashflowChart() {
     });
   }
 
-  // Calculer les totaux
+  // Calculer les totaux (exclure les virements)
   const totalIncome = transactions
-    .filter((tx) => tx.type === 'income')
+    .filter((tx) => tx.type !== 'transfer' && tx.type === 'income')
     .reduce((sum, tx) => sum + tx.amount, 0);
   
   const totalExpenses = transactions
-    .filter((tx) => tx.type === 'expense')
+    .filter((tx) => tx.type !== 'transfer' && tx.type === 'expense')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return (

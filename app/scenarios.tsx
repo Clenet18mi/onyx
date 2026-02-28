@@ -32,7 +32,7 @@ export default function ScenariosScreen() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
     const tx = transactions.filter(
-      (t) => t.type === 'income' && new Date(t.date) >= start
+      (t) => t.type !== 'transfer' && t.type === 'income' && new Date(t.date) >= start
     );
     const sum = tx.reduce((s, t) => s + t.amount, 0);
     return tx.length ? sum / 3 : 0;
@@ -42,7 +42,7 @@ export default function ScenariosScreen() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
     const tx = transactions.filter(
-      (t) => t.type === 'expense' && new Date(t.date) >= start
+      (t) => t.type !== 'transfer' && t.type === 'expense' && new Date(t.date) >= start
     );
     const sum = tx.reduce((s, t) => s + t.amount, 0);
     return tx.length ? sum / 3 : 0;

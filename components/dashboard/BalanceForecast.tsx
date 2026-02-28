@@ -26,7 +26,7 @@ export function BalanceForecast() {
   const thisMonthExpenses = transactions
     .filter((t) => {
       const d = parseISO(t.date);
-      return d >= thisMonthStart && d <= now && t.type === 'expense';
+      return d >= thisMonthStart && d <= now && t.type !== 'transfer' && t.type === 'expense';
     })
     .reduce((s, t) => s + t.amount, 0);
   const dailyAvg = daysElapsed > 0 ? thisMonthExpenses / daysElapsed : 0;

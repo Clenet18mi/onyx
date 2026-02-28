@@ -57,11 +57,11 @@ export default function StatsScreen() {
   );
 
   const income = useMemo(
-    () => filteredTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    () => filteredTx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0),
     [filteredTx]
   );
   const expenses = useMemo(
-    () => filteredTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    () => filteredTx.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0),
     [filteredTx]
   );
   const balance = income - expenses;
@@ -69,7 +69,7 @@ export default function StatsScreen() {
   const byCategory = useMemo(() => {
     const map: Record<string, number> = {};
     filteredTx
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type !== 'transfer' && t.type === 'expense')
       .forEach((t) => {
         map[t.category] = (map[t.category] || 0) + t.amount;
       });
@@ -82,7 +82,7 @@ export default function StatsScreen() {
   const byCategoryIncome = useMemo(() => {
     const map: Record<string, number> = {};
     filteredTx
-      .filter((t) => t.type === 'income')
+      .filter((t) => t.type !== 'transfer' && t.type === 'income')
       .forEach((t) => {
         map[t.category] = (map[t.category] || 0) + t.amount;
       });

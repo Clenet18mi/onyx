@@ -98,14 +98,14 @@ export default function AccountDetailScreen() {
     );
   };
 
-  // Calculer les statistiques
+  // Calculer les statistiques (virements exclus des totaux revenus/dépenses)
   const stats = useMemo(() => {
     const income = transactions
-      .filter((t) => t.type === 'income' && t.accountId === id)
+      .filter((t) => t.type !== 'transfer' && t.type === 'income' && t.accountId === id)
       .reduce((sum, t) => sum + t.amount, 0);
     
     const expenses = transactions
-      .filter((t) => t.type === 'expense' && t.accountId === id)
+      .filter((t) => t.type !== 'transfer' && t.type === 'expense' && t.accountId === id)
       .reduce((sum, t) => sum + t.amount, 0);
     
     return { income, expenses };
