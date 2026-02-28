@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, useTransactionStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSubscriptionStore, useGoalStore, usePlannedTransactionStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { Account, ACCOUNT_TYPES, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -34,8 +34,12 @@ export default function AccountsScreen() {
   const [color, setColor] = useState(AVAILABLE_COLORS[0]);
   const [icon, setIcon] = useState('Wallet');
   
-  const { accounts, addAccount, updateAccount, deleteAccount, getTotalBalance } = useAccountStore();
+  const { accounts, addAccount, updateAccount, deleteAccount, archiveAccount, getTotalBalance } = useAccountStore();
   const transactions = useTransactionStore((state) => state.transactions);
+  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
+  const updateSubscription = useSubscriptionStore((state) => state.updateSubscription);
+  const goals = useGoalStore((state) => state.goals);
+  const plannedTransactions = usePlannedTransactionStore((state) => state.plannedTransactions);
   
   const activeAccounts = accounts.filter((a) => !a.isArchived);
   const totalBalance = getTotalBalance();
@@ -91,9 +95,34 @@ export default function AccountsScreen() {
   };
 
   const handleDelete = (account: Account) => {
-    const accountTransactions = transactions.filter(
-      (t) => t.accountId === account.id || t.toAccountId === account.id
+    const accountId = account.id;
+    const linkedSubs = subscriptions.filter((s) => s.accountId === accountId && s.isActive);
+    const linkedGoals = goals.filter((g) => g.accountId === accountId);
+    const linkedPlanned = plannedTransactions.filter(
+      (p) => p.accountId === accountId && p.status === 'pending'
     );
+    const accountTransactions = transactions.filter(
+      (t) => t.accountId === accountId || t.toAccountId === accountId
+    );
+
+    const hasDeps = linkedSubs.length > 0 || linkedGoals.length > 0 || linkedPlanned.length > 0;
+
+    if (hasDeps) {
+      const lines: string[] = [];
+      if (linkedSubs.length > 0) lines.push(`${linkedSubs.length} abonnement(s) actif(s)`);
+      if (linkedGoals.length > 0) lines.push(`${linkedGoals.length} objectif(s) d'épargne`);
+      if (linkedPlanned.length > 0) lines.push(`${linkedPlanned.length} transaction(s) prévue(s)`);
+      const message = `Ce compte est encore utilisé par :\n• ${lines.join('\n• ')}\n\nSupprimez-les d'abord ou archivez le compte.`;
+
+      Alert.alert('Impossible de supprimer', message, [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Archiver à la place',
+          onPress: () => handleArchive(account),
+        },
+      ]);
+      return;
+    }
 
     if (accountTransactions.length > 0) {
       Alert.alert(
@@ -104,7 +133,7 @@ export default function AccountsScreen() {
           {
             text: 'Supprimer',
             style: 'destructive',
-            onPress: () => deleteAccount(account.id),
+            onPress: () => deleteAccount(accountId),
           },
         ]
       );
@@ -117,9 +146,23 @@ export default function AccountsScreen() {
           {
             text: 'Supprimer',
             style: 'destructive',
-            onPress: () => deleteAccount(account.id),
+            onPress: () => deleteAccount(accountId),
           },
         ]
+      );
+    }
+  };
+
+  const handleArchive = (account: Account) => {
+    const accountId = account.id;
+    const linkedSubs = subscriptions.filter((s) => s.accountId === accountId && s.isActive);
+    linkedSubs.forEach((s) => updateSubscription(s.id, { isActive: false }));
+    archiveAccount(accountId);
+    setModalVisible(false);
+    if (linkedSubs.length > 0) {
+      Alert.alert(
+        'Compte archivé',
+        `${linkedSubs.length} abonnement(s) lié(s) ont été désactivés.`
       );
     }
   };
@@ -319,6 +362,26 @@ export default function AccountsScreen() {
                   </View>
                 </View>
 
+                {/* Bouton Archiver (si édition et compte non archivé) */}
+                {editingAccount && !editingAccount.isArchived && (
+                  <Button
+                    title="Archiver ce compte"
+                    variant="secondary"
+                    fullWidth
+                    onPress={() => {
+                      Alert.alert(
+                        'Archiver le compte',
+                        `Archiver "${editingAccount.name}" ? Il n'apparaîtra plus dans la liste. Les abonnements liés seront désactivés.`,
+                        [
+                          { text: 'Annuler', style: 'cancel' },
+                          { text: 'Archiver', onPress: () => handleArchive(editingAccount) },
+                        ]
+                      );
+                    }}
+                    icon={<Icons.Archive size={18} color="#71717A" />}
+                    style={{ marginBottom: 12 }}
+                  />
+                )}
                 {/* Bouton Supprimer */}
                 {editingAccount && (
                   <Button
