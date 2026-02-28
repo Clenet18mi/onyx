@@ -73,8 +73,10 @@ export function RecentTransactions() {
   const router = useRouter();
   const transactions = useTransactionStore((state) => state.transactions);
   
-  // Prendre les 5 dernières transactions
-  const recentTransactions = transactions.slice(0, 5);
+  // Prendre les 5 dernières transactions (tri par date décroissante)
+  const recentTransactions = [...transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   if (recentTransactions.length === 0) {
     return (
