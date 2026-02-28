@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Settings, Bell, Banknote } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore } from '@/stores';
+import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
 import { 
   BalanceCard, 
   CashflowChart, 
@@ -42,6 +42,7 @@ export default function DashboardScreen() {
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
+  const profile = useConfigStore((state) => state.profile);
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
   const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
 
@@ -65,15 +66,18 @@ export default function DashboardScreen() {
     setPaydayModalVisible(true);
   };
 
-  const today = format(new Date(), 'EEEE d MMMM', { locale: fr });
-  const capitalizedDay = today.charAt(0).toUpperCase() + today.slice(1);
+  const today = format(new Date(), 'EEEE d MMMM yyyy', { locale: fr });
+  const capitalizedDate = today.charAt(0).toUpperCase() + today.slice(1);
   
-  // Message de salutation selon l'heure
+  // Salutation selon l'heure et le prénom du profil
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
+    const firstName = profile?.name?.trim().split(/\s+/)[0] || '';
+    if (!firstName) return 'Bonjour 👋';
+    if (hour >= 5 && hour < 12) return `Bonjour, ${firstName} ☀️`;
+    if (hour >= 12 && hour < 18) return `Bon après-midi, ${firstName} 👋`;
+    if (hour >= 18 && hour < 22) return `Bonsoir, ${firstName} 🌆`;
+    return `Bonne nuit, ${firstName} 🌙`;
   };
 
   // État vide - pas de comptes
@@ -115,8 +119,8 @@ export default function DashboardScreen() {
         {/* Header */}
         <View className="flex-row justify-between items-center px-6 py-4">
           <View>
-            <Text className="text-onyx-500 text-sm">{capitalizedDay}</Text>
-            <Text className="text-white text-2xl font-bold">{getGreeting()} 👋</Text>
+            <Text className="text-onyx-500 text-sm">{capitalizedDate}</Text>
+            <Text className="text-white text-2xl font-bold">{getGreeting()}</Text>
           </View>
           
           <View className="flex-row" style={{ gap: 12 }}>
