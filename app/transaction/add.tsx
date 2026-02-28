@@ -1,13 +1,14 @@
 // ============================================
 // ONYX - Add Transaction Screen
-// Écran d'ajout de transaction
+// Écran d'ajout de transaction — layout calculatrice
 // ============================================
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -66,6 +67,9 @@ export default function AddTransactionScreen() {
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [voiceNoteModalVisible, setVoiceNoteModalVisible] = useState(false);
+  const pillIndex = useSharedValue(type === 'expense' ? 0 : type === 'income' ? 1 : 2);
+  const { width: windowWidth } = useWindowDimensions();
+  const pillContainerWidth = windowWidth - 48; // px-6 = 24*2
 
   // Sélectionner le premier compte si aucun n'est sélectionné ; appliquer params template ; pré-remplir compte depuis prefill quand les comptes sont chargés
   React.useEffect(() => {
@@ -98,6 +102,25 @@ export default function AddTransactionScreen() {
     if (params.amount != null) setAmount(params.amount);
     if (params.description != null) setDescription(params.description);
   }, [params.category, params.type, params.amount, params.description]);
+
+  // Focus champ montant au montage (clavier numérique)
+  useEffect(() => {
+    const t = setTimeout(() => amountInputRef.current?.focus(), 500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Animation fond glissant des pills selon le type
+  useEffect(() => {
+    const idx = type === 'expense' ? 0 : type === 'income' ? 1 : 2;
+    pillIndex.value = withTiming(idx, { duration: 250 });
+  }, [type, pillIndex]);
+
+  const pillAnimatedStyle = useAnimatedStyle(() => {
+    const segmentWidth = (pillContainerWidth - 8) / 3;
+    return {
+      transform: [{ translateX: pillIndex.value * segmentWidth }],
+    };
+  });
 
   // Haptic quand on dépasse le budget (dépense, catégorie avec budget)
   React.useEffect(() => {
@@ -241,6 +264,8 @@ export default function AddTransactionScreen() {
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
 
+  const amountColor = type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444';
+
   return (
     <LinearGradient
       colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
@@ -256,7 +281,74 @@ export default function AddTransactionScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Haut ~30% : montant très grand, centré, couleur dynamique */}
+        <View className="items-center justify-center px-6" style={{ height: '28%' }}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => amountInputRef.current?.focus()}
+            className="flex-row items-center justify-center"
+          >
+            <Text className="text-6xl font-bold mr-1" style={{ color: amountColor }}>
+              {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
+            </Text>
+            <TextInput
+              ref={amountInputRef}
+              value={amount}
+              onChangeText={handleAmountChange}
+              placeholder="0"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              keyboardType="decimal-pad"
+              className="text-6xl font-bold text-center px-2 py-1"
+              style={{ color: amountColor, minWidth: 140 }}
+              selectTextOnFocus
+            />
+            <Text className="text-6xl font-bold ml-1" style={{ color: amountColor }}>
+              {' '}€
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Pills type : Dépense / Revenu / Virement — fond glissant */}
+        <View className="px-6 mb-4">
+          <View
+            className="flex-row rounded-2xl p-1 relative"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+          >
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  left: 0,
+                  top: 4,
+                  bottom: 4,
+                  width: (pillContainerWidth - 8) / 3,
+                  borderRadius: 12,
+                },
+                type === 'expense' && { backgroundColor: '#EF4444' },
+                type === 'income' && { backgroundColor: '#10B981' },
+                type === 'transfer' && { backgroundColor: '#6366F1' },
+                pillAnimatedStyle,
+              ]}
+            />
+            <TouchableOpacity onPress={() => setType('expense')} className="flex-1 py-3 rounded-xl z-10">
+              <Text className={`text-center font-semibold text-sm ${type === 'expense' ? 'text-white' : 'text-onyx-500'}`}>
+                Dépense
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setType('income')} className="flex-1 py-3 rounded-xl z-10">
+              <Text className={`text-center font-semibold text-sm ${type === 'income' ? 'text-white' : 'text-onyx-500'}`}>
+                Revenu
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setType('transfer')} className="flex-1 py-3 rounded-xl z-10">
+              <Text className={`text-center font-semibold text-sm ${type === 'transfer' ? 'text-white' : 'text-onyx-500'}`}>
+                Virement
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {isDuplicatePrefill && (
             <View className="mx-6 mb-4 px-4 py-2 rounded-lg bg-onyx-200/30 border border-onyx-200/50">
               <Text className="text-onyx-400 text-sm">Duplicata — modifiez si besoin avant d'enregistrer</Text>
@@ -287,76 +379,74 @@ export default function AddTransactionScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Montant style calculatrice : très grand en haut, centré */}
-          <View className="px-6 pt-2 pb-4 items-center">
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => amountInputRef.current?.focus()}
-              className="flex-row items-center justify-center min-h-[88px]"
-            >
-              <Text
-                className="text-5xl font-bold mr-1"
-                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444' }}
-              >
-                {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
-              </Text>
-              <TextInput
-                ref={amountInputRef}
-                value={amount}
-                onChangeText={handleAmountChange}
-                placeholder="0"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                keyboardType="decimal-pad"
-                className="text-5xl font-bold text-center px-2 py-1"
-                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444', minWidth: 120 }}
-                selectTextOnFocus
-              />
-              <Text
-                className="text-5xl font-bold ml-1"
-                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444' }}
-              >
-                {' '}€
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Pills type : Dépense / Revenu / Virement */}
-          <View className="px-6 mb-6">
-            <View 
-              className="flex-row rounded-2xl p-1"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              <TouchableOpacity
-                onPress={() => setType('expense')}
-                className={`flex-1 py-3 rounded-xl ${type === 'expense' ? 'bg-accent-danger' : ''}`}
-              >
-                <Text className={`text-center font-semibold text-sm ${type === 'expense' ? 'text-white' : 'text-onyx-500'}`}>
-                  Dépense
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setType('income')}
-                className={`flex-1 py-3 rounded-xl ${type === 'income' ? 'bg-accent-success' : ''}`}
-              >
-                <Text className={`text-center font-semibold text-sm ${type === 'income' ? 'text-white' : 'text-onyx-500'}`}>
-                  Revenu
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setType('transfer')}
-                className={`flex-1 py-3 rounded-xl ${type === 'transfer' ? 'bg-accent-primary' : ''}`}
-              >
-                <Text className={`text-center font-semibold text-sm ${type === 'transfer' ? 'text-white' : 'text-onyx-500'}`}>
-                  Virement
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* GlassCard scrollable : compte, catégorie, date, description, budget, actions */}
+          {/* GlassCard : catégorie, compte, date, note */}
           <View className="px-6 mb-8">
             <GlassCard variant="light" className="overflow-hidden">
               <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Catégorie */}
+          <View className="px-4 mb-6">
+            <Text className="text-onyx-500 text-sm mb-2">Catégorie</Text>
+            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+              {filteredCategories.map((cat) => {
+                const CatIcon = getIcon(cat.icon);
+                const isSelected = category === cat.id;
+                return (
+                    <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
+                    className={`px-3 py-2 rounded-xl flex-row items-center ${
+                      isSelected ? 'border' : ''
+                    }`}
+                    style={{ 
+                      backgroundColor: isSelected ? `${cat.color}20` : 'rgba(255, 255, 255, 0.08)',
+                      borderColor: isSelected ? cat.color : 'transparent',
+                    }}
+                  >
+                    <CatIcon size={16} color={isSelected ? cat.color : '#71717A'} />
+                    <Text 
+                      className={`ml-2 text-sm font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Compte */}
+          <View className="px-4 mb-6">
+            <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View className="flex-row" style={{ gap: 8 }}>
+                {accounts.map((account) => {
+                  const AccountIcon = getIcon(account.icon);
+                  const isSelected = accountId === account.id;
+                  return (
+                    <TouchableOpacity
+                      key={account.id}
+                      onPress={() => setAccountId(account.id)}
+                      className={`px-4 py-3 rounded-xl flex-row items-center ${
+                        isSelected ? 'border-2' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: isSelected ? `${account.color}20` : 'rgba(255, 255, 255, 0.08)',
+                        borderColor: isSelected ? account.color : 'transparent',
+                      }}
+                    >
+                      <AccountIcon size={18} color={isSelected ? account.color : '#71717A'} />
+                      <Text 
+                        className={`ml-2 font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
+                      >
+                        {account.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
           {type !== 'transfer' && (
             <View className="px-4 mb-6">
               <Text className="text-onyx-500 text-sm mb-2">Quand ?</Text>
@@ -449,71 +539,7 @@ export default function AddTransactionScreen() {
             );
           })()}
 
-          {/* Account Selector */}
-          <View className="px-4 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row" style={{ gap: 8 }}>
-                {accounts.map((account) => {
-                  const AccountIcon = getIcon(account.icon);
-                  const isSelected = accountId === account.id;
-                  return (
-                    <TouchableOpacity
-                      key={account.id}
-                      onPress={() => setAccountId(account.id)}
-                      className={`px-4 py-3 rounded-xl flex-row items-center ${
-                        isSelected ? 'border-2' : ''
-                      }`}
-                      style={{ 
-                        backgroundColor: isSelected ? `${account.color}20` : 'rgba(255, 255, 255, 0.08)',
-                        borderColor: isSelected ? account.color : 'transparent',
-                      }}
-                    >
-                      <AccountIcon size={18} color={isSelected ? account.color : '#71717A'} />
-                      <Text 
-                        className={`ml-2 font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
-                      >
-                        {account.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* Category Selector */}
-          <View className="px-4 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Catégorie</Text>
-            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-              {filteredCategories.map((cat) => {
-                const CatIcon = getIcon(cat.icon);
-                const isSelected = category === cat.id;
-                return (
-                    <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
-                    className={`px-3 py-2 rounded-xl flex-row items-center ${
-                      isSelected ? 'border' : ''
-                    }`}
-                    style={{ 
-                      backgroundColor: isSelected ? `${cat.color}20` : 'rgba(255, 255, 255, 0.08)',
-                      borderColor: isSelected ? cat.color : 'transparent',
-                    }}
-                  >
-                    <CatIcon size={16} color={isSelected ? cat.color : '#71717A'} />
-                    <Text 
-                      className={`ml-2 text-sm font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
-                    >
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Description */}
+          {/* Description / Note */}
           <View className="px-4 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Description (optionnel)</Text>
             <TextInput
