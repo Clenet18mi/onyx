@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +23,9 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [validating, setValidating] = useState(false);
+  /** 0 = normal, 1 = taper EFFACER */
+  const [forgotPinStep, setForgotPinStep] = useState<0 | 1>(0);
+  const [wipeConfirmText, setWipeConfirmText] = useState('');
 
   const {
     pinLength,
@@ -143,7 +146,76 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
     );
   };
 
+  const handleForgotPinPress = () => {
+    Alert.alert(
+      'PIN oublié',
+      'Cela va effacer toutes les données de l\'application (comptes, transactions, budgets, etc.). Cette action est irréversible.\n\nSouhaitez-vous continuer ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Je comprends, continuer',
+          style: 'destructive',
+          onPress: () => setForgotPinStep(1),
+        },
+      ]
+    );
+  };
+
+  const handleWipeConfirm = async () => {
+    if (wipeConfirmText.trim() !== 'EFFACER') return;
+    await wipeAllData();
+    setForgotPinStep(0);
+    setWipeConfirmText('');
+  };
+
   const locked = isLockedOut();
+
+  // Étape 2–3 : taper EFFACER puis effacer définitivement
+  if (forgotPinStep === 1) {
+    const canConfirm = wipeConfirmText.trim() === 'EFFACER';
+    return (
+      <LinearGradient
+        colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
+        className="flex-1"
+      >
+        <View className="flex-1 justify-center px-8">
+          <Text className="text-white text-xl font-bold mb-2">Effacer toutes les données</Text>
+          <Text className="text-onyx-500 mb-6">
+            Tapez <Text className="text-white font-semibold">EFFACER</Text> ci-dessous pour confirmer. Toutes vos données seront supprimées et vous devrez reconfigurer un nouveau code PIN.
+          </Text>
+          <TextInput
+            value={wipeConfirmText}
+            onChangeText={setWipeConfirmText}
+            placeholder="EFFACER"
+            placeholderTextColor="#52525B"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            className="bg-onyx-100 text-white px-4 py-3 rounded-xl text-base mb-6 border border-onyx-200/20"
+          />
+          <View style={{ gap: 12 }}>
+            <TouchableOpacity
+              onPress={handleWipeConfirm}
+              disabled={!canConfirm}
+              className="py-4 rounded-xl items-center"
+              style={{ backgroundColor: canConfirm ? '#EF4444' : 'rgba(239, 68, 68, 0.3)' }}
+            >
+              <Text className="text-white font-semibold">Effacer définitivement</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setForgotPinStep(0);
+                setWipeConfirmText('');
+              }}
+              className="py-4 rounded-xl items-center"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+            >
+              <Text className="text-white font-medium">Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -192,6 +264,15 @@ export function LockScreen({ onUnlock }: LockScreenProps) {
           showBiometric={biometricEnabled && biometricAvailable}
           disabled={locked}
         />
+
+        {!locked && (
+          <TouchableOpacity
+            onPress={handleForgotPinPress}
+            className="mt-8 py-3"
+          >
+            <Text className="text-onyx-500 text-sm">PIN oublié ?</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </LinearGradient>
   );
