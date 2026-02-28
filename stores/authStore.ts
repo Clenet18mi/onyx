@@ -29,6 +29,8 @@ interface AuthState {
   wipeDataOnMaxFailures: boolean;
   /** Verrouillage auto après inactivité (minutes). 0 = jamais, 1/5/15 */
   autoLockDelay: number;
+  /** Dernières tentatives de déverrouillage (max 20) */
+  accessLog: { date: string; success: boolean }[];
 
   setupPin: (pin: string, length: 4 | 6) => Promise<void>;
   /** Vérifie le PIN et déverrouille. Retourne résultat détaillé. */
@@ -45,6 +47,8 @@ interface AuthState {
   setWipeDataOnMaxFailures: (enabled: boolean) => void;
   setAutoLockDelay: (minutes: number) => void;
   wipeAllData: () => Promise<void>;
+  /** Enregistre une tentative d'accès (PIN ou biométrie). Max 20 entrées. */
+  logAccess: (success: boolean) => void;
 }
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -66,6 +70,7 @@ export const useAuthStore = create<AuthState>()(
       criticalFailures: 0,
       wipeDataOnMaxFailures: false,
       autoLockDelay: 0,
+      accessLog: [],
 
       setupPin: async (pin: string, length: 4 | 6) => {
         const h = await hashPin(pin);
@@ -110,12 +115,14 @@ export const useAuthStore = create<AuthState>()(
             lockoutUntil: null,
             criticalFailures: 0,
           });
+          get().logAccess(true);
           return { success: true };
         }
 
         const newAttempts = get().failedAttempts + 1;
         const newCritical = get().criticalFailures + 1;
         set({ failedAttempts: newAttempts, criticalFailures: newCritical });
+        get().logAccess(false);
 
         if (get().wipeDataOnMaxFailures && newCritical >= MAX_CRITICAL_FAILURES) {
           return {
@@ -165,6 +172,7 @@ export const useAuthStore = create<AuthState>()(
           lastUnlocked: new Date().toISOString(),
           failedAttempts: 0,
         });
+        get().logAccess(true);
       },
 
       lock: () => {
@@ -196,6 +204,7 @@ export const useAuthStore = create<AuthState>()(
           failedAttempts: 0,
           lockoutUntil: null,
           criticalFailures: 0,
+          accessLog: [],
         });
       },
 
@@ -211,6 +220,12 @@ export const useAuthStore = create<AuthState>()(
 
       setAutoLockDelay: (minutes: number) => {
         set({ autoLockDelay: minutes });
+      },
+
+      logAccess: (success: boolean) => {
+        const prev = get().accessLog ?? [];
+        const next = [{ date: new Date().toISOString(), success }, ...prev].slice(0, 20);
+        set({ accessLog: next });
       },
 
       wipeAllData: async () => {
@@ -269,6 +284,7 @@ export const useAuthStore = create<AuthState>()(
         criticalFailures: s.criticalFailures,
         wipeDataOnMaxFailures: s.wipeDataOnMaxFailures,
         autoLockDelay: s.autoLockDelay,
+        accessLog: s.accessLog ?? [],
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

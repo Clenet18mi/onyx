@@ -14,6 +14,8 @@ import { useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { PinPad } from '@/components/auth/PinPad';
 import { PinDots } from '@/components/auth/PinDots';
+import { format, parseISO, isToday, isYesterday } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 type Step = 'menu' | 'current' | 'new' | 'confirm';
 
@@ -29,6 +31,7 @@ export default function SecurityScreen() {
     setWipeDataOnMaxFailures,
     autoLockDelay,
     setAutoLockDelay,
+    accessLog,
   } = useAuthStore();
 
   const privacyMode = useSettingsStore((s) => s.privacyMode ?? false);
@@ -262,6 +265,29 @@ export default function SecurityScreen() {
               />
             </View>
           </GlassCard>
+
+          {((accessLog ?? []).length > 0) && (
+            <GlassCard noPadding className="mb-6">
+              <View className="p-4 border-b border-onyx-200/10">
+                <Text className="text-white font-medium">Derniers accès</Text>
+                <Text className="text-onyx-500 text-sm">10 dernières tentatives de déverrouillage</Text>
+              </View>
+              {(accessLog ?? []).slice(0, 10).map((entry, i) => {
+                const d = parseISO(entry.date);
+                const timeStr = format(d, 'HH:mm', { locale: fr });
+                const dateLabel = isToday(d) ? "aujourd'hui" : isYesterday(d) ? 'hier' : format(d, 'd MMM yyyy', { locale: fr });
+                const label = entry.success ? 'Déverrouillage réussi' : 'Échec';
+                return (
+                  <View key={`${entry.date}-${i}`} className="flex-row items-center justify-between p-4 border-b border-onyx-200/10">
+                    <Text className={entry.success ? 'text-accent-success' : 'text-accent-danger'}>
+                      {entry.success ? '✓' : '✗'} {label}
+                    </Text>
+                    <Text className="text-onyx-500 text-sm">{dateLabel} {timeStr}</Text>
+                  </View>
+                );
+              })}
+            </GlassCard>
+          )}
 
           <TouchableOpacity
             onPress={() => lock()}
