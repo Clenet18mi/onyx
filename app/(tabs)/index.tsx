@@ -3,14 +3,14 @@
 // Écran principal avec vue d'ensemble complète
 // ============================================
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Settings, Bell, Banknote } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
+import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore, useReminderStore } from '@/stores';
 import { 
   BalanceCard, 
   CashflowChart, 
@@ -38,8 +38,11 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [paydayModalVisible, setPaydayModalVisible] = useState(false);
   const [bilanModalVisible, setBilanModalVisible] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastAnim = useRef(new Animated.Value(-60)).current;
   
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
+  const cleanOrphanReminders = useReminderStore((state) => state.cleanOrphanReminders);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
@@ -57,8 +60,24 @@ export default function DashboardScreen() {
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     processSubscriptions();
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    cleanOrphanReminders();
+    setTimeout(() => {
+      setRefreshing(false);
+      setToastVisible(true);
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      setTimeout(() => {
+        Animated.timing(toastAnim, {
+          toValue: -60,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => setToastVisible(false));
+      }, 2000);
+    }, 800);
+  }, [processSubscriptions, cleanOrphanReminders, toastAnim]);
 
   const handlePayday = () => {
     if (hapticEnabled) {
@@ -117,6 +136,27 @@ export default function DashboardScreen() {
       className="flex-1"
     >
       <SafeAreaView className="flex-1" edges={['top']}>
+        {/* Toast Données mises à jour */}
+        {toastVisible && (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 24,
+              right: 24,
+              zIndex: 1000,
+              transform: [{ translateY: toastAnim }],
+            }}
+          >
+            <View
+              className="py-3 px-4 rounded-xl flex-row items-center justify-center"
+              style={{ backgroundColor: 'rgba(16, 185, 129, 0.95)' }}
+            >
+              <Text className="text-white font-medium">✓ Données mises à jour</Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Header */}
         <View className="flex-row justify-between items-center px-6 py-4">
           <View>
