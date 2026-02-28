@@ -140,7 +140,7 @@ export default function AccountsScreen() {
     } else {
       Alert.alert(
         'Supprimer le compte',
-        `Voulez-vous supprimer "${account.name}" ?`,
+        `Supprimer le compte "${account.name}" (solde : ${formatCurrency(account.balance)}) ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {
@@ -160,10 +160,7 @@ export default function AccountsScreen() {
     archiveAccount(accountId);
     setModalVisible(false);
     if (linkedSubs.length > 0) {
-      Alert.alert(
-        'Compte archivé',
-        `${linkedSubs.length} abonnement(s) lié(s) ont été désactivés.`
-      );
+      Alert.alert('Compte archivé', `Compte archivé. ${linkedSubs.length} abonnement(s) désactivé(s).`);
     }
   };
 
