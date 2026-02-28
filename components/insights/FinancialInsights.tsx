@@ -8,12 +8,13 @@ import { View, Text } from 'react-native';
 import * as Icons from 'lucide-react-native';
 import { useInsightsStore } from '@/stores/insightsStore';
 import { useTransactionStore } from '@/stores';
+import { useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { CATEGORIES } from '@/types';
 
 export function FinancialInsights() {
   useTransactionStore((s) => s.transactions); // re-render when transactions change
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
   const getInsights = useInsightsStore((s) => s.getInsights);
   const insights = getInsights();
 
@@ -112,7 +113,7 @@ export function FinancialInsights() {
         <GlassCard>
           <Text className="text-onyx-500 text-sm mb-2">Catégories en mouvement</Text>
           {categoryTrends.slice(0, 3).map((ct) => {
-            const cat = CATEGORIES.find((c) => c.id === ct.category);
+            const cat = getCategoryById(ct.category);
             return (
               <View key={ct.category} className="flex-row justify-between items-center py-1">
                 <Text className="text-white">{cat?.label ?? ct.category}</Text>

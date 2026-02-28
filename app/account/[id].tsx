@@ -9,9 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, useTransactionStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { CATEGORIES, Transaction, ACCOUNT_TYPES } from '@/types';
+import { Transaction, ACCOUNT_TYPES } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 export default function AccountDetailScreen() {
@@ -19,6 +19,7 @@ export default function AccountDetailScreen() {
   const router = useRouter();
   
   const account = useAccountStore((state) => state.getAccount(id || ''));
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const getTransactionsByAccount = useTransactionStore((state) => state.getTransactionsByAccount);
   
   const transactions = useMemo(() => {
@@ -54,7 +55,7 @@ export default function AccountDetailScreen() {
   const accountType = ACCOUNT_TYPES.find((t) => t.id === account.type);
 
   const renderTransaction = ({ item }: { item: Transaction }) => {
-    const category = CATEGORIES.find((c) => c.id === item.category);
+    const category = getCategoryById(item.category);
     const CategoryIcon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
     
     const isIncome = item.type === 'income';

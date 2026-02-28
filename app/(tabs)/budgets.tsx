@@ -9,9 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useBudgetStore, useTransactionStore } from '@/stores';
+import { useBudgetStore, useTransactionStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage } from '@/utils/format';
-import { CATEGORIES, TransactionCategory, Budget, AVAILABLE_COLORS } from '@/types';
+import { TransactionCategory, Budget, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { BudgetAssistant } from '@/components/budgets/BudgetAssistant';
@@ -23,7 +23,8 @@ interface BudgetGaugeProps {
 }
 
 function BudgetGauge({ budget, spent, percentage }: BudgetGaugeProps) {
-  const category = CATEGORIES.find((c) => c.id === budget.category);
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
+  const category = getCategoryById(budget.category);
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
   
   const isOverBudget = percentage >= 100;
@@ -106,6 +107,8 @@ export default function BudgetsScreen() {
   const [color, setColor] = useState(AVAILABLE_COLORS[0]);
   
   const { budgets, addBudget, updateBudget, deleteBudget, getAllBudgetsProgress } = useBudgetStore();
+  const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
+  const expenseCategories = getVisibleCategories('expense');
   const budgetsWithProgress = getAllBudgetsProgress();
   
   // Calculs
@@ -116,7 +119,8 @@ export default function BudgetsScreen() {
   const expenseCategories = CATEGORIES.filter((c) => c.type === 'expense' || c.type === 'both');
 
   const resetForm = () => {
-    setCategory('food');
+    const first = expenseCategories[0];
+    setCategory((first?.id as TransactionCategory) || 'food');
     setLimit('');
     setPeriod('monthly');
     setColor(AVAILABLE_COLORS[0]);

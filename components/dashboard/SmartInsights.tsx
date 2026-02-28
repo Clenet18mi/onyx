@@ -7,9 +7,8 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore, useBudgetStore, useSubscriptionStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useBudgetStore, useSubscriptionStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage } from '@/utils/format';
-import { CATEGORIES } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 import { 
   startOfMonth, 
@@ -74,6 +73,7 @@ export function SmartInsights() {
   const totalBalance = useAccountStore((state) => state.getTotalBalance());
   const budgets = useBudgetStore((state) => state.getAllBudgetsProgress());
   const monthlySubscriptions = useSubscriptionStore((state) => state.getTotalMonthlySubscriptions());
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
 
   const insights = useMemo(() => {
     const now = new Date();
@@ -127,7 +127,7 @@ export function SmartInsights() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([catId, amount]) => {
-        const cat = CATEGORIES.find(c => c.id === catId);
+        const cat = getCategoryById(catId);
         return { category: cat, amount };
       });
     
@@ -161,7 +161,7 @@ export function SmartInsights() {
       healthScore,
       transactionCount: thisMonthTx.length,
     };
-  }, [transactions, budgets]);
+  }, [transactions, budgets, getCategoryById]);
 
   // Déterminer la couleur du score
   const getScoreColor = (score: number) => {
@@ -177,7 +177,7 @@ export function SmartInsights() {
     }
     if (insights.budgetsAtRisk.length > 0) {
       const budget = insights.budgetsAtRisk[0];
-      const cat = CATEGORIES.find(c => c.id === budget.category);
+      const cat = getCategoryById(budget.category);
       return { 
         icon: '⚠️', 
         text: `Attention: Budget ${cat?.label || ''} à ${formatPercentage(budget.percentage)}` 

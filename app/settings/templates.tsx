@@ -8,23 +8,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTemplateStore } from '@/stores';
-import { useAccountStore } from '@/stores';
+import { useTemplateStore, useAccountStore, useConfigStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { CATEGORIES } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import type { TransactionCategory } from '@/types';
 import type { TransactionTemplate } from '@/types/template';
 
 export default function TemplatesScreen() {
   const router = useRouter();
-  const accounts = useAccountStore((s) => s.getActiveAccounts());
+  const accounts = useAccountStore((s) => s.accounts.filter((a) => !a.isArchived));
   const templates = useTemplateStore((s) => s.templates);
   const addTemplate = useTemplateStore((s) => s.addTemplate);
   const updateTemplate = useTemplateStore((s) => s.updateTemplate);
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
+  const getVisibleCategories = useConfigStore((s) => s.getVisibleCategories);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<TransactionTemplate | null>(null);
@@ -112,8 +112,8 @@ export default function TemplatesScreen() {
     ]);
   };
 
-  const expenseCategories = CATEGORIES.filter((c) => c.type === 'expense' || c.type === 'both');
-  const incomeCategories = CATEGORIES.filter((c) => c.type === 'income' || c.type === 'both');
+  const expenseCategories = getVisibleCategories('expense');
+  const incomeCategories = getVisibleCategories('income');
   const cats = type === 'income' ? incomeCategories : expenseCategories;
 
   return (
@@ -133,7 +133,7 @@ export default function TemplatesScreen() {
             <EmptyState variant="no_templates" actionLabel="Créer un template" onAction={openAdd} />
           ) : (
             templates.map((t) => {
-              const cat = CATEGORIES.find((c) => c.id === t.category);
+              const cat = getCategoryById(t.category);
               const acc = accounts.find((a) => a.id === t.accountId);
               return (
                 <GlassCard key={t.id} style={{ marginBottom: 12 }}>

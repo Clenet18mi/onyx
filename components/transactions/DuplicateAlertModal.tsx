@@ -13,7 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { DuplicateMatch } from '@/utils/duplicateDetector';
 import type { DuplicateCandidate } from '@/utils/duplicateDetector';
-import { CATEGORIES } from '@/types';
+import { useConfigStore } from '@/stores';
 
 export interface DuplicateAlertModalProps {
   visible: boolean;
@@ -36,7 +36,8 @@ export function DuplicateAlertModal({
 }: DuplicateAlertModalProps) {
   const { theme } = useTheme();
   const { colors } = theme;
-  const categoryLabel = CATEGORIES.find((c) => c.id === candidate.category)?.label ?? candidate.category;
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
+  const categoryLabel = getCategoryById(candidate.category)?.label ?? candidate.category;
 
   return (
     <Modal

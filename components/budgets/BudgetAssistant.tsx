@@ -5,12 +5,10 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { useTransactionStore } from '@/stores';
-import { useBudgetStore } from '@/stores';
+import { useTransactionStore, useBudgetStore, useConfigStore } from '@/stores';
 import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { CATEGORIES } from '@/types';
 import type { TransactionCategory } from '@/types';
 
 function roundSmart(value: number): number {
@@ -23,14 +21,13 @@ export function BudgetAssistant() {
   const transactions = useTransactionStore((s) => s.transactions);
   const budgets = useBudgetStore((s) => s.budgets);
   const addBudget = useBudgetStore((s) => s.addBudget);
+  const getVisibleCategories = useConfigStore((s) => s.getVisibleCategories);
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
 
   const suggestions = useMemo(() => {
     const now = new Date();
-    const categories: TransactionCategory[] = [
-      'food', 'transport', 'housing', 'utilities', 'entertainment',
-      'shopping', 'health', 'education', 'travel', 'subscriptions', 'other',
-    ];
-    return categories.map((cat) => {
+    const categoryIds = getVisibleCategories('expense').map((c) => c.id as TransactionCategory);
+    return categoryIds.map((cat) => {
       const last3Months = [0, 1, 2].map((i) => {
         const monthStart = startOfMonth(subMonths(now, i));
         const monthEnd = endOfMonth(subMonths(now, i));
@@ -47,13 +44,13 @@ export function BudgetAssistant() {
 
       return {
         category: cat,
-        label: CATEGORIES.find((c) => c.id === cat)?.label ?? cat,
+        label: getCategoryById(cat)?.label ?? cat,
         average: avg,
         suggested: suggested > 0 ? suggested : 250,
         currentLimit: existing?.limit,
       };
     }).filter((s) => s.average > 0 || s.currentLimit != null);
-  }, [transactions, budgets]);
+  }, [transactions, budgets, getVisibleCategories, getCategoryById]);
 
   const handleApplyAll = () => {
     suggestions.forEach((s) => {
@@ -62,7 +59,7 @@ export function BudgetAssistant() {
           category: s.category,
           limit: s.suggested,
           period: 'monthly',
-          color: CATEGORIES.find((c) => c.id === s.category)?.color ?? '#6366F1',
+          color: getCategoryById(s.category)?.color ?? '#6366F1',
         });
       }
     });
@@ -91,7 +88,7 @@ export function BudgetAssistant() {
                       category: s.category,
                       limit: s.suggested,
                       period: 'monthly',
-                      color: CATEGORIES.find((c) => c.id === s.category)?.color ?? '#6366F1',
+                      color: getCategoryById(s.category)?.color ?? '#6366F1',
                     })
                   }
                 />

@@ -20,10 +20,9 @@ import {
   eachMonthOfInterval,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useTransactionStore, useAccountStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { CATEGORIES } from '@/types';
 import type { Transaction } from '@/types';
 
 const { width } = Dimensions.get('window');
@@ -40,6 +39,7 @@ export default function StatsScreen() {
   } | null>(null);
   const transactions = useTransactionStore((state) => state.transactions);
   const accounts = useAccountStore((state) => state.accounts);
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
 
   const range = useMemo(() => {
     const start = startOfMonth(selectedMonth);
@@ -101,7 +101,7 @@ export default function StatsScreen() {
 
   const chartData = useMemo(() => {
     return byCategory.map(({ catId, amount }) => {
-      const cat = CATEGORIES.find((c) => c.id === catId);
+      const cat = getCategoryById(catId);
       const pct = expenses > 0 ? (amount / expenses) * 100 : 0;
       return {
         value: amount,
@@ -112,7 +112,7 @@ export default function StatsScreen() {
         ),
       };
     });
-  }, [byCategory, expenses]);
+  }, [byCategory, expenses, getCategoryById]);
 
   const monthOptions = useMemo(() => {
     const end = new Date();
@@ -222,7 +222,7 @@ export default function StatsScreen() {
             <Text className="text-white font-semibold mb-3">Détail des dépenses par catégorie</Text>
             <Text className="text-onyx-500 text-xs mb-3">Appuyez sur une catégorie pour voir les transactions</Text>
             {byCategory.map(({ catId, amount }) => {
-              const cat = CATEGORIES.find((c) => c.id === catId);
+              const cat = getCategoryById(catId);
               const pct = expenses > 0 ? (amount / expenses) * 100 : 0;
               const Icon = cat ? (Icons as any)[cat.icon] : Icons.CircleDot;
               return (
@@ -258,7 +258,7 @@ export default function StatsScreen() {
             <Text className="text-white font-semibold mb-3">Revenus par catégorie</Text>
             <Text className="text-onyx-500 text-xs mb-3">Appuyez sur une catégorie pour voir les transactions</Text>
             {byCategoryIncome.map(({ catId, amount }) => {
-              const cat = CATEGORIES.find((c) => c.id === catId);
+              const cat = getCategoryById(catId);
               const pct = income > 0 ? (amount / income) * 100 : 0;
               const Icon = cat ? (Icons as any)[cat.icon] : Icons.CircleDot;
               return (

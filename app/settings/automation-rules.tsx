@@ -8,11 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAutomationStore } from '@/stores';
+import { useAutomationStore, useConfigStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { CATEGORIES } from '@/types';
 import type { AutomationRule, Trigger, Action } from '@/types/automation';
 
 export default function AutomationRulesScreen() {
@@ -22,6 +21,9 @@ export default function AutomationRulesScreen() {
   const updateRule = useAutomationStore((s) => s.updateRule);
   const deleteRule = useAutomationStore((s) => s.deleteRule);
   const toggleRule = useAutomationStore((s) => s.toggleRule);
+
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
+  const expenseCategoriesForPicker = useConfigStore((s) => s.getVisibleCategories('expense'));
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
@@ -94,7 +96,7 @@ export default function AutomationRulesScreen() {
             rules.map((r) => {
               const noteVal = r.triggers.find((t) => t.type === 'note_contains')?.value as string;
               const catVal = r.actions.find((a) => a.type === 'set_category')?.value as string;
-              const catLabel = CATEGORIES.find((c) => c.id === catVal)?.label ?? catVal;
+              const catLabel = getCategoryById(catVal)?.label ?? catVal;
               return (
                 <GlassCard key={r.id} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -155,7 +157,7 @@ export default function AutomationRulesScreen() {
               <Text style={{ color: '#71717A', fontSize: 12, marginBottom: 4 }}>Alors catégorie</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {CATEGORIES.filter((c) => c.type === 'expense' || c.type === 'both').map((c) => (
+                  {expenseCategoriesForPicker.map((c) => (
                     <TouchableOpacity
                       key={c.id}
                       onPress={() => setActionCategory(c.id)}

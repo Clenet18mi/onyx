@@ -18,6 +18,8 @@ interface ExportData {
   totalIncome: number;
   totalExpense: number;
   totalBalance: number;
+  /** Optionnel : résoudre le libellé d'une catégorie (configStore.getCategoryById(id)?.label) */
+  getCategoryLabel?: (categoryId: string) => string | undefined;
 }
 
 // Générer le HTML du relevé
@@ -50,7 +52,10 @@ function generatePDFHTML(data: ExportData): string {
       }, 0);
       
       const txRows = txs.map(tx => {
-        const category = CATEGORIES.find(c => c.id === tx.category);
+        const categoryLabel = data.getCategoryLabel
+          ? data.getCategoryLabel(tx.category)
+          : CATEGORIES.find(c => c.id === tx.category)?.label;
+        const category = data.getCategoryLabel ? null : CATEGORIES.find(c => c.id === tx.category);
         const account = data.accounts.find(a => a.id === tx.accountId);
         const isIncome = tx.type === 'income';
         const isTransfer = tx.type === 'transfer';
@@ -75,8 +80,8 @@ function generatePDFHTML(data: ExportData): string {
               ${format(parseISO(tx.date), 'HH:mm')}
             </td>
             <td style="padding: 12px 8px; border-bottom: 1px solid #27272A;">
-              <strong>${tx.description || category?.label || 'Transaction'}</strong>
-              <br><span style="color: #71717A; font-size: 12px;">${category?.label || ''} • ${account?.name || ''}</span>
+              <strong>${tx.description || categoryLabel || category?.label || 'Transaction'}</strong>
+              <br><span style="color: #71717A; font-size: 12px;">${categoryLabel || category?.label || ''} • ${account?.name || ''}</span>
             </td>
             <td style="padding: 12px 8px; border-bottom: 1px solid #27272A; text-align: right; color: ${amountColor}; font-weight: 600;">
               ${amountDisplay}
@@ -343,7 +348,8 @@ function generatePDFHTML(data: ExportData): string {
 export async function exportToPDF(
   transactions: Transaction[],
   accounts: Account[],
-  selectedMonth: Date
+  selectedMonth: Date,
+  getCategoryLabel?: (categoryId: string) => string | undefined
 ): Promise<void> {
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -373,6 +379,7 @@ export async function exportToPDF(
     totalIncome,
     totalExpense,
     totalBalance,
+    getCategoryLabel,
   });
   
   // Sauvegarder le fichier HTML (qui peut être ouvert comme PDF)
@@ -404,20 +411,21 @@ export async function exportToPDF(
 
 export async function exportToCSV(
   transactions: Transaction[],
-  accounts: Account[]
+  accounts: Account[],
+  getCategoryLabel?: (categoryId: string) => string | undefined
 ): Promise<void> {
   const headers = ['Date', 'Heure', 'Type', 'Catégorie', 'Montant', 'Description', 'Compte'];
   
   const rows = transactions.map(tx => {
     const account = accounts.find(a => a.id === tx.accountId);
-    const category = CATEGORIES.find(c => c.id === tx.category);
+    const categoryLabel = getCategoryLabel ? getCategoryLabel(tx.category) : CATEGORIES.find(c => c.id === tx.category)?.label;
     const txDate = parseISO(tx.date);
     
     return [
       format(txDate, 'dd/MM/yyyy'),
       format(txDate, 'HH:mm'),
       tx.type === 'income' ? 'Revenu' : tx.type === 'expense' ? 'Dépense' : 'Virement',
-      category?.label || tx.category,
+      categoryLabel || tx.category,
       tx.amount.toFixed(2),
       tx.description || '',
       account?.name || '',
