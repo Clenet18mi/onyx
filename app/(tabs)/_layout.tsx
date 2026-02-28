@@ -6,18 +6,19 @@
 import React from 'react';
 import { View, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
-import { 
-  LayoutDashboard, 
-  Wallet, 
-  Target, 
-  Receipt, 
+import {
+  LayoutDashboard,
+  Wallet,
+  Target,
+  Receipt,
   BarChart3,
-  Settings 
+  Settings
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSettingsStore, useSubscriptionStore } from '@/stores';
-import { parseISO } from 'date-fns';
+import { safeParseISO } from '@/utils/format';
 import { startOfDay } from 'date-fns';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface TabIconProps {
   Icon: any;
@@ -47,9 +48,11 @@ export default function TabsLayout() {
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const subscriptions = useSubscriptionStore((state) => state.subscriptions);
   const today = startOfDay(new Date());
-  const overdueSubscriptionCount = subscriptions.filter(
-    (s) => s.isActive && startOfDay(parseISO(s.nextBillingDate)) < today
-  ).length;
+  const overdueSubscriptionCount = subscriptions.filter((s) => {
+    if (!s.isActive) return false;
+    const next = safeParseISO(s.nextBillingDate);
+    return next != null && startOfDay(next) < today;
+  }).length;
 
   const handleTabPress = () => {
     if (hapticEnabled) {
@@ -58,6 +61,7 @@ export default function TabsLayout() {
   };
 
   return (
+    <ErrorBoundary>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -155,5 +159,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </ErrorBoundary>
   );
 }

@@ -20,9 +20,9 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useAccountStore, useTransactionStore, useBudgetStore, useSettingsStore } from '@/stores';
-import { formatCurrency, formatPercentage, formatCompactCurrency, displayAmount } from '@/utils/format';
+import { formatCurrency, formatPercentage, formatCompactCurrency, displayAmount, safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
-import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 
 export function BalanceCard() {
   const totalBalance = useAccountStore((state) => state.getTotalBalance());
@@ -41,8 +41,8 @@ export function BalanceCard() {
   const monthEnd = endOfMonth(now);
   
   const thisMonthTx = transactions.filter((t) => {
-    const txDate = parseISO(t.date);
-    return isWithinInterval(txDate, { start: monthStart, end: monthEnd });
+    const txDate = safeParseISO(t.date);
+    return txDate != null && isWithinInterval(txDate, { start: monthStart, end: monthEnd });
   }).filter((t) => t.type !== 'transfer');
   
   const monthlyIncome = thisMonthTx
@@ -60,8 +60,8 @@ export function BalanceCard() {
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
   
   const lastMonthTx = transactions.filter((t) => {
-    const txDate = parseISO(t.date);
-    return isWithinInterval(txDate, { start: lastMonthStart, end: lastMonthEnd });
+    const txDate = safeParseISO(t.date);
+    return txDate != null && isWithinInterval(txDate, { start: lastMonthStart, end: lastMonthEnd });
   }).filter((t) => t.type !== 'transfer');
   
   const lastMonthExpense = lastMonthTx

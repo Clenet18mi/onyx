@@ -5,6 +5,17 @@
 import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+/** Parse une date ISO sans lever d'exception (retourne null si invalide). Utile après import. */
+export function safeParseISO(dateString: string | undefined | null): Date | null {
+  if (dateString == null || typeof dateString !== 'string') return null;
+  try {
+    const d = parseISO(dateString);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Formate un montant en devise
  */
@@ -54,10 +65,11 @@ export function formatCompactCurrency(
 }
 
 /**
- * Formate une date de manière relative ou absolue
+ * Formate une date de manière relative ou absolue (sûr : dates invalides → "—")
  */
-export function formatDate(dateString: string): string {
-  const date = parseISO(dateString);
+export function formatDate(dateString: string | undefined | null): string {
+  const date = safeParseISO(dateString);
+  if (!date) return '—';
   
   if (isToday(date)) {
     return `Aujourd'hui, ${format(date, 'HH:mm', { locale: fr })}`;
@@ -79,26 +91,29 @@ export function formatDate(dateString: string): string {
 }
 
 /**
- * Formate une date en format court
+ * Formate une date en format court (sûr)
  */
-export function formatShortDate(dateString: string): string {
-  const date = parseISO(dateString);
+export function formatShortDate(dateString: string | undefined | null): string {
+  const date = safeParseISO(dateString);
+  if (!date) return '—';
   return format(date, 'd MMM', { locale: fr });
 }
 
 /**
- * Formate une date en format long
+ * Formate une date en format long (sûr)
  */
-export function formatLongDate(dateString: string): string {
-  const date = parseISO(dateString);
+export function formatLongDate(dateString: string | undefined | null): string {
+  const date = safeParseISO(dateString);
+  if (!date) return '—';
   return format(date, 'EEEE d MMMM yyyy', { locale: fr });
 }
 
 /**
- * Formate un temps relatif (il y a X minutes/heures/jours)
+ * Formate un temps relatif (sûr)
  */
-export function formatRelativeTime(dateString: string): string {
-  const date = parseISO(dateString);
+export function formatRelativeTime(dateString: string | undefined | null): string {
+  const date = safeParseISO(dateString);
+  if (!date) return '—';
   return formatDistanceToNow(date, { addSuffix: true, locale: fr });
 }
 

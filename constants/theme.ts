@@ -192,8 +192,9 @@ const typography: ThemeTypography = {
 
 /** Thème complet (couleurs + tokens) pour un mode donné */
 export function getTheme(mode: ThemeMode): Theme {
+  const safeMode: ThemeMode = mode === 'dark' || mode === 'light' ? mode : 'dark';
   return {
-    colors: mode === 'dark' ? darkColors : lightColors,
+    colors: safeMode === 'dark' ? darkColors : lightColors,
     shadows,
     radius,
     spacing,

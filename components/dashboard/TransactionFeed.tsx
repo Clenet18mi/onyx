@@ -9,11 +9,11 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import { useTransactionStore, useAccountStore, useFilterStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency, displayAmount } from '@/utils/format';
+import { formatCurrency, displayAmount, safeParseISO } from '@/utils/format';
 import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 import { AdvancedFilters, SplitBillModal } from '@/components/transactions';
-import { format, parseISO, isToday, isYesterday, isThisWeek, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, isToday, isYesterday, isThisWeek, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 type FilterType = 'all' | 'income' | 'expense' | 'transfer';
@@ -102,7 +102,10 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete, privacyMode }
             {privacyMode ? displayAmount(transaction.amount, true, currency, locale) : `${amountPrefix}${formatCurrency(transaction.amount)}`}
           </Text>
           <Text className="text-onyx-500 text-xs">
-            {format(parseISO(transaction.date), 'HH:mm', { locale: fr })}
+            {(() => {
+              const d = safeParseISO(transaction.date);
+              return d ? format(d, 'HH:mm', { locale: fr }) : '—';
+            })()}
           </Text>
         </View>
       </View>
@@ -160,8 +163,8 @@ export function TransactionFeed() {
     if (activeFilter?.period) {
       const { start, end } = getDateRangeForPeriod(activeFilter.period);
       filtered = filtered.filter((t) => {
-        const d = parseISO(t.date);
-        return d >= start && d <= end;
+        const d = safeParseISO(t.date);
+        return d != null && d >= start && d <= end;
       });
     }
 
@@ -174,7 +177,11 @@ export function TransactionFeed() {
       );
     }
 
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return filtered.sort((a, b) => {
+      const ta = safeParseISO(a.date)?.getTime() ?? 0;
+      const tb = safeParseISO(b.date)?.getTime() ?? 0;
+      return tb - ta;
+    });
   }, [transactions, filter, activeFilter]);
 
   // Grouper par date
@@ -186,7 +193,8 @@ export function TransactionFeed() {
       : filteredTransactions.slice(0, 10);
     
     displayTransactions.forEach((transaction) => {
-      const date = parseISO(transaction.date);
+      const date = safeParseISO(transaction.date);
+      if (!date) return;
       let sectionTitle: string;
       
       if (isToday(date)) {
@@ -337,7 +345,8 @@ export function TransactionFeed() {
                   const { Alert } = require('react-native');
                   const cat = getCategoryById(t.category);
                   const desc = t.description || cat?.label || t.category || 'Transaction';
-                  const dateStr = format(parseISO(t.date), 'd MMM', { locale: fr });
+                  const d = safeParseISO(t.date);
+                  const dateStr = d ? format(d, 'd MMM', { locale: fr }) : '—';
                   const msg = t.type === 'transfer'
                     ? `Supprimer ce virement de ${formatCurrency(t.amount)} du ${dateStr} ?`
                     : `Supprimer cette ${t.type === 'income' ? 'entrée' : 'dépense'} de ${formatCurrency(t.amount)} — ${desc} du ${dateStr} ?`;

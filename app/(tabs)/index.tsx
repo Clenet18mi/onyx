@@ -32,6 +32,7 @@ import { PlannedTransactionCard } from '@/components/planned';
 import { CalendarClock } from 'lucide-react-native';
 import { format, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -149,7 +150,8 @@ export default function DashboardScreen() {
       className="flex-1"
     >
       <SafeAreaView className="flex-1" edges={['top']}>
-        {/* Toast Données mises à jour */}
+        <ErrorBoundary>
+          {/* Toast Données mises à jour */}
         {toastVisible && (
           <Animated.View
             style={{
@@ -300,6 +302,7 @@ export default function DashboardScreen() {
           {/* Bottom spacing */}
           <View className="h-24" />
         </ScrollView>
+        </ErrorBoundary>
         
         {/* Payday Modal */}
         <PaydayModal 

@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, View, StatusBar, Alert } from 'react-native';
+import { AppState, AppStateStatus, View, StatusBar, Alert, Text, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -28,6 +28,7 @@ setReminderNotificationHandler();
 function RootLayoutContent() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [storesHydrated, setStoresHydrated] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const hasShownLateAlert = useRef(false);
   const router = useRouter();
   const { theme } = useTheme();
@@ -112,7 +113,6 @@ function RootLayoutContent() {
         }, 3000);
       } catch (e) {
         console.error('[ONYX] Fatal initialization error:', e);
-        // Même en cas d'erreur, on continue pour afficher l'UI
         setStoresHydrated(true);
       } finally {
         setAppIsReady(true);
@@ -120,7 +120,13 @@ function RootLayoutContent() {
       }
     }
 
-    prepare();
+    const preparePromise = prepare();
+    // Forcer prêt à 10 s pour ne pas bloquer indéfiniment (l'écran de récupération à 5 s reste visible entre 5 et 10 s)
+    const forceReady = setTimeout(() => {
+      setAppIsReady(true);
+      setStoresHydrated(true);
+    }, 10000);
+    preparePromise.finally(() => clearTimeout(forceReady));
   }, []);
 
   useEffect(() => {
@@ -128,6 +134,14 @@ function RootLayoutContent() {
       SplashScreen.hideAsync();
     }
   }, [appIsReady, fontsLoaded]);
+
+  // Si on reste bloqué sur l'écran de chargement (ex. après import corrompu), proposer de réinitialiser
+  useEffect(() => {
+    const loading = !appIsReady || !fontsLoaded || !storesHydrated;
+    if (!loading) return;
+    const t = setTimeout(() => setShowRecovery(true), 5000);
+    return () => clearTimeout(t);
+  }, [appIsReady, fontsLoaded, storesHydrated]);
 
   // Alerte une fois par session : transactions prévues en retard
   useEffect(() => {
@@ -173,7 +187,43 @@ function RootLayoutContent() {
       <ErrorBoundary>
         <View className="flex-1" style={{ backgroundColor: bgColor }}>
           <StatusBar barStyle="light-content" backgroundColor={bgColor} />
-          <SplashLoader />
+          {showRecovery ? (
+            <View className="flex-1 justify-center items-center px-8" style={{ backgroundColor: '#0A0A0B' }}>
+              <Text className="text-white text-xl font-bold text-center mb-4">
+                L'application ne charge pas
+              </Text>
+              <Text className="text-white/80 text-center mb-6">
+                Après un import, les données peuvent bloquer le démarrage. Réinitialisez pour repartir de zéro.
+              </Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    const { storage } = await import('@/utils/storage');
+                    await storage.clearAll();
+                    const { useAuthStore } = await import('@/stores/authStore');
+                    useAuthStore.getState().resetAuth();
+                    setShowRecovery(false);
+                    setStoresHydrated(true);
+                    setAppIsReady(true);
+                    Alert.alert(
+                      'Données effacées',
+                      'Fermez complètement l\'application (la quitter), puis rouvrez-la.',
+                      [{ text: 'OK' }]
+                    );
+                  } catch (e) {
+                    console.error('[ONYX] Recovery reset failed:', e);
+                    Alert.alert('Erreur', 'Impossible d\'effacer les données.', [{ text: 'OK' }]);
+                  }
+                }}
+                className="py-4 px-6 rounded-xl"
+                style={{ backgroundColor: '#EF4444' }}
+              >
+                <Text className="text-white font-semibold">Réinitialiser les données</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <SplashLoader />
+          )}
         </View>
       </ErrorBoundary>
     );
@@ -211,7 +261,7 @@ function RootLayoutContent() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: bgColor },
+            contentStyle: { backgroundColor: bgColor ?? '#0A0A0F' },
             animation: 'fade',
           }}
         >
