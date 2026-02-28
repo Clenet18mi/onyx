@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore, useAutomationStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore, useAutomationStore, useBudgetStore } from '@/stores';
 import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
@@ -43,6 +43,9 @@ export default function AddTransactionScreen() {
   const lastUsedAccountId = useSettingsStore((state) => state.lastUsedAccountId);
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
   const rules = useAutomationStore((state) => state.rules);
+  const getBudgetByCategory = useBudgetStore((state) => state.getBudgetByCategory);
+  const getBudgetProgress = useBudgetStore((state) => state.getBudgetProgress);
+  const getCategoryById = useConfigStore((state) => state.getCategoryById);
 
   const [autoApplied, setAutoApplied] = useState(false);
   const [isPlanned, setIsPlanned] = useState(false);
@@ -58,6 +61,7 @@ export default function AddTransactionScreen() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const amountInputRef = React.useRef<TextInput>(null);
   const prefillAccountAppliedRef = React.useRef(false);
+  const wasOverBudgetRef = React.useRef(false);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [voiceNoteModalVisible, setVoiceNoteModalVisible] = useState(false);
@@ -93,6 +97,21 @@ export default function AddTransactionScreen() {
     if (params.amount != null) setAmount(params.amount);
     if (params.description != null) setDescription(params.description);
   }, [params.category, params.type, params.amount, params.description]);
+
+  // Haptic quand on dépasse le budget (dépense, catégorie avec budget)
+  React.useEffect(() => {
+    if (type !== 'expense' || !hapticEnabled) return;
+    const budget = getBudgetByCategory(category);
+    if (!budget) return;
+    const progress = getBudgetProgress(budget.id);
+    const amountNum = parseFloat(amount) || 0;
+    const overBudget = amountNum > 0 && progress.spent + amountNum > progress.limit;
+    if (overBudget && !wasOverBudgetRef.current) {
+      wasOverBudgetRef.current = true;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+    if (!overBudget) wasOverBudgetRef.current = false;
+  }, [type, category, amount, hapticEnabled, getBudgetByCategory, getBudgetProgress]);
 
   React.useEffect(() => {
     if (!params.prefill) return;
@@ -331,7 +350,7 @@ export default function AddTransactionScreen() {
           )}
 
           {/* Montant : tap pour ouvrir le clavier du téléphone */}
-          <View className="px-6 mb-8 items-center">
+          <View className="px-6 mb-4 items-center">
             <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
             <TouchableOpacity
               activeOpacity={1}
@@ -363,6 +382,36 @@ export default function AddTransactionScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Feedback budget en temps réel (dépense uniquement) */}
+          {type === 'expense' && (() => {
+            const budget = getBudgetByCategory(category);
+            if (!budget) return null;
+            const progress = getBudgetProgress(budget.id);
+            const amountNum = parseFloat(amount) || 0;
+            const projectedSpent = progress.spent + amountNum;
+            const overBudget = projectedSpent > progress.limit;
+            const catLabel = getCategoryById(category)?.label || category;
+            if (overBudget) {
+              return (
+                <View className="px-6 mb-6 py-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
+                  <Text className="text-accent-danger text-sm font-medium">
+                    🔴 Ce montant dépasse votre budget {catLabel}
+                  </Text>
+                  <Text className="text-onyx-500 text-xs mt-1">
+                    {formatCurrency(progress.spent)} + {formatCurrency(amountNum)} = {formatCurrency(projectedSpent)} / {formatCurrency(progress.limit)}
+                  </Text>
+                </View>
+              );
+            }
+            return (
+              <View className="px-6 mb-6 py-2">
+                <Text className="text-onyx-500 text-sm">
+                  💚 Budget {catLabel} : {formatCurrency(projectedSpent)} / {formatCurrency(progress.limit)}
+                </Text>
+              </View>
+            );
+          })()}
 
           {/* Account Selector */}
           <View className="px-6 mb-6">
