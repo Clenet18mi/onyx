@@ -119,8 +119,6 @@ export default function BudgetsScreen() {
   const totalSpent = budgetsWithProgress.reduce((sum, b) => sum + b.spent, 0);
   const totalPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-  const expenseCategories = CATEGORIES.filter((c) => c.type === 'expense' || c.type === 'both');
-
   const resetForm = () => {
     const first = expenseCategories[0];
     setCategory((first?.id as TransactionCategory) || 'food');
