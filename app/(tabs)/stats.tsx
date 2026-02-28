@@ -13,6 +13,8 @@ import { BarChart } from 'react-native-gifted-charts';
 import {
   startOfMonth,
   endOfMonth,
+  startOfYear,
+  endOfYear,
   subMonths,
   format,
   parseISO,
@@ -32,6 +34,7 @@ type CategoryModalType = 'expense' | 'income';
 
 export default function StatsScreen() {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [modalCategory, setModalCategory] = useState<{
     catId: string;
@@ -121,6 +124,56 @@ export default function StatsScreen() {
     return eachMonthOfInterval({ start, end }).reverse();
   }, []);
 
+  // Données annuelles (année en cours)
+  const currentYear = new Date().getFullYear();
+  const yearStart = startOfYear(new Date());
+  const yearEnd = endOfYear(new Date());
+  const yearTx = useMemo(
+    () =>
+      transactions.filter((tx) => {
+        const d = parseISO(tx.date);
+        return isWithinInterval(d, { start: yearStart, end: yearEnd });
+      }),
+    [transactions, yearStart, yearEnd]
+  );
+  const yearIncome = useMemo(
+    () => yearTx.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    [yearTx]
+  );
+  const yearExpenses = useMemo(
+    () => yearTx.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    [yearTx]
+  );
+  const yearSavingsRate = yearIncome > 0 ? ((yearIncome - yearExpenses) / yearIncome) * 100 : 0;
+  const byMonth = useMemo(() => {
+    const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
+    return months.map((monthStart) => {
+      const monthEnd = endOfMonth(monthStart);
+      const txInMonth = yearTx.filter((tx) => {
+        const d = parseISO(tx.date);
+        return isWithinInterval(d, { start: monthStart, end: monthEnd });
+      });
+      const inc = txInMonth.filter((t) => t.type !== 'transfer' && t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const exp = txInMonth.filter((t) => t.type !== 'transfer' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const savings = inc - exp;
+      return { monthStart, income: inc, expenses: exp, savings };
+    });
+  }, [yearTx, yearStart, yearEnd]);
+  const bestMonth = byMonth.length ? byMonth.reduce((best, m) => (m.savings > best.savings ? m : best), byMonth[0]) : null;
+  const worstMonth = byMonth.length ? byMonth.reduce((worst, m) => (m.expenses > worst.expenses ? m : worst), byMonth[0]) : null;
+  const yearChartData = useMemo(
+    () =>
+      byMonth.map((m) => ({
+        value: m.savings,
+        label: format(m.monthStart, 'MMM', { locale: fr }).slice(0, 3),
+        frontColor: m.savings >= 0 ? '#10B981' : '#EF4444',
+        topLabelComponent: () => (
+          <Text style={{ color: '#A1A1AA', fontSize: 9 }}>{formatCurrency(m.savings)}</Text>
+        ),
+      })),
+    [byMonth]
+  );
+
   return (
     <LinearGradient colors={['#0A0A0B', '#1F1F23', '#0A0A0B']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -132,6 +185,83 @@ export default function StatsScreen() {
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Mois | Année */}
+          <View className="px-6 mb-4">
+            <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              <TouchableOpacity
+                onPress={() => setViewMode('month')}
+                className="flex-1 py-2.5 rounded-xl"
+                style={{ backgroundColor: viewMode === 'month' ? '#6366F1' : 'transparent' }}
+              >
+                <Text className={`text-center font-semibold text-sm ${viewMode === 'month' ? 'text-white' : 'text-onyx-500'}`}>Mois</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode('year')}
+                className="flex-1 py-2.5 rounded-xl"
+                style={{ backgroundColor: viewMode === 'year' ? '#6366F1' : 'transparent' }}
+              >
+                <Text className={`text-center font-semibold text-sm ${viewMode === 'year' ? 'text-white' : 'text-onyx-500'}`}>Année</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {viewMode === 'year' ? (
+            <>
+              <View className="px-6 mb-4">
+                <Text className="text-white font-semibold mb-3">Année {currentYear}</Text>
+                <View className="flex-row" style={{ gap: 12 }}>
+                  <GlassCard className="flex-1">
+                    <Icons.TrendingUp size={18} color="#10B981" />
+                    <Text className="text-onyx-500 text-xs mt-1">Revenus</Text>
+                    <Text className="text-white font-bold" style={{ color: '#10B981' }}>{formatCurrency(yearIncome)}</Text>
+                  </GlassCard>
+                  <GlassCard className="flex-1">
+                    <Icons.TrendingDown size={18} color="#EF4444" />
+                    <Text className="text-onyx-500 text-xs mt-1">Dépenses</Text>
+                    <Text className="text-white font-bold" style={{ color: '#EF4444' }}>{formatCurrency(yearExpenses)}</Text>
+                  </GlassCard>
+                </View>
+                <View className="mt-3">
+                  <Text className="text-onyx-500 text-xs">Taux d'épargne</Text>
+                  <Text className="text-white text-lg font-bold">{formatPercentage(yearSavingsRate)}</Text>
+                </View>
+                {bestMonth && (
+                  <View className="mt-2 flex-row" style={{ gap: 12 }}>
+                    <Text className="text-onyx-500 text-xs">Meilleur mois : <Text className="text-accent-success">{format(bestMonth.monthStart, 'MMMM yyyy', { locale: fr })}</Text> (+{formatCurrency(bestMonth.savings)})</Text>
+                  </View>
+                )}
+                {worstMonth && (
+                  <View className="mt-0.5">
+                    <Text className="text-onyx-500 text-xs">Pire mois (dépenses) : <Text className="text-accent-danger">{format(worstMonth.monthStart, 'MMMM yyyy', { locale: fr })}</Text> (−{formatCurrency(worstMonth.expenses)})</Text>
+                  </View>
+                )}
+              </View>
+              {yearChartData.length > 0 && (
+                <View className="px-6 mb-6">
+                  <Text className="text-white font-semibold mb-3">Épargne par mois</Text>
+                  <GlassCard>
+                    <BarChart
+                      data={yearChartData}
+                      barWidth={Math.min(24, (width - 80) / 12 - 4)}
+                      spacing={4}
+                      roundedTop
+                      roundedBottom
+                      hideRules
+                      xAxisColor="transparent"
+                      yAxisColor="rgba(255,255,255,0.1)"
+                      yAxisTextStyle={{ color: '#71717A', fontSize: 9 }}
+                      noOfSections={4}
+                      maxValue={Math.max(...yearChartData.map((d) => Math.abs(d.value)), 1) * 1.2}
+                      showVerticalLines={false}
+                      initialSpacing={4}
+                      endSpacing={4}
+                    />
+                  </GlassCard>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
           {/* Période + Comparer */}
           <View className="px-6 mb-4">
             <Text className="text-onyx-500 text-sm mb-2">Période</Text>
@@ -306,6 +436,8 @@ export default function StatsScreen() {
               <Text className="text-onyx-500 py-6 text-center">Aucun revenu sur cette période</Text>
             )}
           </View>
+            </>
+          )}
         </ScrollView>
 
         {/* Modal liste des transactions de la catégorie */}
