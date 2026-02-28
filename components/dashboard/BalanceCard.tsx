@@ -90,11 +90,15 @@ export function BalanceCard() {
       easing: Easing.bezier(0, 0, 0.2, 1),
     });
   }, [totalBalance, privacyMode, currency, locale]);
-  
+
+  const updateDisplayFromBalance = (value: number) => {
+    setDisplayBalance(displayAmount(value, privacyMode, currency, locale));
+  };
+
   useAnimatedReaction(
     () => animatedBalance.value,
     (v) => {
-      runOnJS(setDisplayBalance)(displayAmount(Math.round(v), privacyMode, currency, locale));
+      runOnJS(updateDisplayFromBalance)(Math.round(v));
     },
     [totalBalance, privacyMode, currency, locale]
   );

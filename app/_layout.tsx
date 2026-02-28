@@ -26,6 +26,9 @@ SplashScreen.preventAutoHideAsync();
 // Afficher les notifications de rappels même quand l'app est au premier plan
 setReminderNotificationHandler();
 
+// Installer la capture d'erreurs globales AVANT tout rendu (pour capter le crash après import)
+initDebugLogger();
+
 /** Écran minimal (aucun store ni thème) si une erreur a été enregistrée au lancement précédent */
 function CrashReportScreen({
   error,

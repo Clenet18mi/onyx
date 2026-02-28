@@ -5,6 +5,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { setLastError } from '@/utils/debugLogger';
 
 interface Props {
   children: ReactNode;
@@ -37,7 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ONYX] ErrorBoundary caught an error:', error, errorInfo);
     try {
-      const { setLastError } = require('@/utils/debugLogger');
       setLastError(error, { componentStack: errorInfo?.componentStack });
     } catch (_) {}
     this.setState({

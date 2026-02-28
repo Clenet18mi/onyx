@@ -7,6 +7,24 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@onyx_debug_last_error';
+const DEBUG_MODE_KEY = '@onyx_debug_mode';
+
+/** Active/désactive le mode debug (persisté). Quand actif, l'erreur est conservée pour affichage au prochain lancement. */
+export async function setDebugMode(on: boolean): Promise<void> {
+  try {
+    if (on) await AsyncStorage.setItem(DEBUG_MODE_KEY, '1');
+    else await AsyncStorage.removeItem(DEBUG_MODE_KEY);
+  } catch {}
+}
+
+export async function getDebugMode(): Promise<boolean> {
+  try {
+    const v = await AsyncStorage.getItem(DEBUG_MODE_KEY);
+    return v === '1';
+  } catch {
+    return false;
+  }
+}
 
 export interface CapturedError {
   message: string;
