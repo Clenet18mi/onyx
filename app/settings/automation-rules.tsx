@@ -8,10 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAutomationStore, useConfigStore } from '@/stores';
+import { useAutomationStore, useConfigStore, useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import * as Haptics from 'expo-haptics';
 import type { AutomationRule, Trigger, Action } from '@/types/automation';
 
 export default function AutomationRulesScreen() {
@@ -24,6 +25,7 @@ export default function AutomationRulesScreen() {
 
   const getCategoryById = useConfigStore((s) => s.getCategoryById);
   const expenseCategoriesForPicker = useConfigStore((s) => s.getVisibleCategories('expense'));
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
@@ -73,7 +75,10 @@ export default function AutomationRulesScreen() {
   const handleDelete = (r: { id: string; name: string }) => {
     Alert.alert('Supprimer', `Supprimer la règle « ${r.name} » ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteRule(r.id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => {
+        if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        deleteRule(r.id);
+      } },
     ]);
   };
 

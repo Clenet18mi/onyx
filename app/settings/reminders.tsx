@@ -8,10 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useReminderStore } from '@/stores';
+import { useReminderStore, useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 import { fr } from 'date-fns/locale';
 import type { ReminderRecurrence } from '@/types/reminder';
 import {
@@ -35,6 +36,7 @@ export default function RemindersScreen() {
   const getUpcoming = useReminderStore((s) => s.getUpcoming);
   const completeReminder = useReminderStore((s) => s.completeReminder);
   const upcoming = getUpcoming(20);
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
@@ -104,6 +106,7 @@ export default function RemindersScreen() {
         text: 'Supprimer',
         style: 'destructive',
         onPress: () => {
+          if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           cancelReminderNotification(r.id).catch(() => {});
           deleteReminder(r.id);
         },

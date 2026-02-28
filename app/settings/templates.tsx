@@ -8,11 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTemplateStore, useAccountStore, useConfigStore } from '@/stores';
+import { useTemplateStore, useAccountStore, useConfigStore, useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatCurrency } from '@/utils/format';
+import * as Haptics from 'expo-haptics';
 import type { TransactionCategory } from '@/types';
 import type { TransactionTemplate } from '@/types/template';
 
@@ -25,6 +26,7 @@ export default function TemplatesScreen() {
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
   const getCategoryById = useConfigStore((s) => s.getCategoryById);
   const getVisibleCategories = useConfigStore((s) => s.getVisibleCategories);
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<TransactionTemplate | null>(null);
@@ -108,7 +110,10 @@ export default function TemplatesScreen() {
   const handleDelete = (t: { id: string; name: string }) => {
     Alert.alert('Supprimer', `Supprimer le template « ${t.name} » ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteTemplate(t.id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => {
+        if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        deleteTemplate(t.id);
+      } },
     ]);
   };
 

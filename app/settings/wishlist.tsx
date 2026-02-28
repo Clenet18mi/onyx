@@ -8,8 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useWishlistStore } from '@/stores';
+import { useWishlistStore, useSettingsStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
+import * as Haptics from 'expo-haptics';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -25,6 +26,7 @@ export default function WishlistScreen() {
   const deleteItem = useWishlistStore((s) => s.deleteItem);
   const markPurchased = useWishlistStore((s) => s.markPurchased);
   const getTotalValue = useWishlistStore((s) => s.getTotalValue);
+  const hapticEnabled = useSettingsStore((s) => s.hapticEnabled);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
@@ -72,7 +74,10 @@ export default function WishlistScreen() {
   const handleDelete = (item: { id: string; name: string; price: number }) => {
     Alert.alert('Supprimer', `Retirer « ${item.name} » (${formatCurrency(item.price)}) de la liste ?`, [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => deleteItem(item.id) },
+      { text: 'Supprimer', style: 'destructive', onPress: () => {
+        if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        deleteItem(item.id);
+      } },
     ]);
   };
 
