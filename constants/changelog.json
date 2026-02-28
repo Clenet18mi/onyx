@@ -1,12 +1,14 @@
 {
   "appVersion": "1.0.0",
-  "buildNumber": "143",
-  "generatedAt": "2026-02-28T21:33:47.319Z",
+  "buildNumber": "145",
+  "generatedAt": "2026-02-28T21:43:25.195Z",
   "entries": [
     {
       "version": "1.0.0",
       "date": "2026-02-28",
       "logs": [
+        "feat: update dependencies and enhance error handling with new reset data functionality",
+        "changelog",
         "fix: allow changing date for planned transactions (picker on card + custom date when adding)",
         "feat: access log for unlock attempts (PIN and biometric), show last 10 in security",
         "feat: forgot PIN flow in 3 steps (alert, type EFFACER, wipe data)",
@@ -84,9 +86,7 @@
         "feat: enhance data import/export functionality with new JSON handling and permissions for photo library access",
         "feat: restart Gradle daemons to apply new JVM arguments for improved memory management",
         "feat: add fresh prebuild command and enhance unlock script for better error handling",
-        "chore: update Android prebuild scripts for improved clarity and organization",
-        "feat: add Android prebuild unlock script and safe prebuild command",
-        "feat: improve JSON export functionality with platform-specific sharing support"
+        "chore: update Android prebuild scripts for improved clarity and organization"
       ]
     }
   ]
