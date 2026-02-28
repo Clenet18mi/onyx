@@ -4,18 +4,21 @@
 // ============================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
 import { formatCurrency, formatDate, displayAmount, safeParseISO } from '@/utils/format';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { addMonths, startOfDay, differenceInDays, isToday, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const SUBSCRIPTION_ICONS = [
   'Tv', 'Music', 'Film', 'Gamepad2', 'Cloud', 'Newspaper',
@@ -31,6 +34,8 @@ export default function MoreScreen() {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
+  const [nextBillingDate, setNextBillingDate] = useState<Date>(() => addMonths(startOfDay(new Date()), 1));
+  const [showBillingDatePicker, setShowBillingDatePicker] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [icon, setIcon] = useState('Tv');
   const [color, setColor] = useState(AVAILABLE_COLORS[0]);
@@ -65,6 +70,7 @@ export default function MoreScreen() {
     setName('');
     setAmount('');
     setFrequency('monthly');
+    setNextBillingDate(addMonths(startOfDay(new Date()), 1));
     setAccountId(accounts[0]?.id || '');
     setIcon('Tv');
     setColor(AVAILABLE_COLORS[0]);
@@ -81,6 +87,7 @@ export default function MoreScreen() {
     setName(subscription.name);
     setAmount(subscription.amount.toString());
     setFrequency(subscription.frequency);
+    setNextBillingDate(safeParseISO(subscription.nextBillingDate) ?? addMonths(startOfDay(new Date()), 1));
     setAccountId(subscription.accountId);
     setIcon(subscription.icon);
     setColor(subscription.color);
@@ -107,7 +114,7 @@ export default function MoreScreen() {
       category: 'subscriptions' as const,
       accountId,
       frequency,
-      nextBillingDate: addMonths(new Date(), 1).toISOString(),
+      nextBillingDate: startOfDay(nextBillingDate).toISOString(),
       icon,
       color,
       isActive: true,
@@ -553,6 +560,49 @@ export default function MoreScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+
+                {/* Date de prélèvement */}
+                <View className="mb-6">
+                  <Text className="text-onyx-500 text-sm mb-2">Date de prélèvement</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowBillingDatePicker(true)}
+                    className="flex-row items-center bg-onyx-100 px-4 py-3 rounded-xl"
+                  >
+                    <Icons.Calendar size={20} color="#71717A" />
+                    <Text className="text-white ml-3 text-base">
+                      {format(nextBillingDate, 'EEEE d MMMM yyyy', { locale: fr })}
+                    </Text>
+                  </TouchableOpacity>
+                  {showBillingDatePicker && (
+                    <>
+                      {Platform.OS === 'ios' && (
+                        <View className="mt-2 flex-row justify-end gap-2">
+                          <TouchableOpacity onPress={() => setShowBillingDatePicker(false)} className="py-2 px-4">
+                            <Text className="text-onyx-500">Annuler</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setShowBillingDatePicker(false);
+                            }}
+                            className="py-2 px-4"
+                          >
+                            <Text className="text-accent-primary font-semibold">OK</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      <DateTimePicker
+                        value={nextBillingDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(_event, selected) => {
+                          if (Platform.OS === 'android') setShowBillingDatePicker(false);
+                          if (selected) setNextBillingDate(startOfDay(selected));
+                        }}
+                        locale="fr-FR"
+                      />
+                    </>
+                  )}
                 </View>
 
                 {/* Compte */}
