@@ -16,3 +16,4 @@ export { BalanceForecast } from './BalanceForecast';
 export { MonthlyRecapModal } from './MonthlyRecapModal';
 export { HealthScore } from './HealthScore';
 export { SpendingTrends } from './SpendingTrends';
+export { NextSubscriptionWidget } from './NextSubscriptionWidget';

@@ -26,6 +26,7 @@ import {
   MonthlyRecapModal,
   HealthScore,
   SpendingTrends,
+  NextSubscriptionWidget,
 } from '@/components/dashboard';
 import { PlannedTransactionCard } from '@/components/planned';
 import { CalendarClock } from 'lucide-react-native';
@@ -178,7 +179,10 @@ export default function DashboardScreen() {
 
           {/* Quick Accounts */}
           <QuickAccounts />
-          
+
+          {/* Prochain abonnement */}
+          <NextSubscriptionWidget />
+
           {/* Score de santé financière */}
           <View className="mb-6">
             <HealthScore />
