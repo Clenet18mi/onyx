@@ -29,6 +29,7 @@ const defaultSettings: Settings = {
   notificationsEnabled: true,
   duplicateAlertEnabled: true,
   ignoredDuplicateSignatures: [],
+  privacyMode: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(

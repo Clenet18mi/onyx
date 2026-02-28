@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Settings, Bell, Banknote } from 'lucide-react-native';
+import { Settings, Bell, Banknote, Eye, EyeOff } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore, useReminderStore } from '@/stores';
@@ -47,6 +47,7 @@ export default function DashboardScreen() {
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const lastPaydayModal = useSettingsStore((state) => state.lastPaydayModal);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const profile = useConfigStore((state) => state.profile);
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
@@ -177,6 +178,17 @@ export default function DashboardScreen() {
           </View>
           
           <View className="flex-row" style={{ gap: 12 }}>
+            {/* Mode discret */}
+            <TouchableOpacity
+              onPress={() => {
+                if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                updateSettings({ privacyMode: !privacyMode });
+              }}
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+            >
+              {privacyMode ? <EyeOff size={20} color="#71717A" /> : <Eye size={20} color="#71717A" />}
+            </TouchableOpacity>
             {/* Bouton Payday */}
             <TouchableOpacity
               onPress={handlePayday}

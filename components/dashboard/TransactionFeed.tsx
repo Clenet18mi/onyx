@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import { useTransactionStore, useAccountStore, useFilterStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, displayAmount } from '@/utils/format';
 import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
 import { AdvancedFilters, SplitBillModal } from '@/components/transactions';
@@ -23,9 +23,10 @@ interface TransactionItemProps {
   onSplit?: (tx: Transaction) => void;
   onEdit?: (tx: Transaction) => void;
   onDelete?: (tx: Transaction) => void;
+  privacyMode: boolean;
 }
 
-function TransactionItem({ transaction, onSplit, onEdit, onDelete }: TransactionItemProps) {
+function TransactionItem({ transaction, onSplit, onEdit, onDelete, privacyMode }: TransactionItemProps) {
   const router = useRouter();
   const account = useAccountStore((state) => state.getAccount(transaction.accountId));
   const toAccount = transaction.toAccountId
@@ -33,6 +34,8 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete }: Transaction
     : null;
   const category = useConfigStore((s) => s.getCategoryById(transaction.category));
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
+  const currency = useSettingsStore((s) => s.currency);
+  const locale = useSettingsStore((s) => s.locale);
 
   const isIncome = transaction.type === 'income';
   const isTransfer = transaction.type === 'transfer';
@@ -96,7 +99,7 @@ function TransactionItem({ transaction, onSplit, onEdit, onDelete }: Transaction
         )}
         <View>
           <Text className="text-base font-semibold" style={{ color: amountColor }}>
-            {amountPrefix}{formatCurrency(transaction.amount)}
+            {privacyMode ? displayAmount(transaction.amount, true, currency, locale) : `${amountPrefix}${formatCurrency(transaction.amount)}`}
           </Text>
           <Text className="text-onyx-500 text-xs">
             {format(parseISO(transaction.date), 'HH:mm', { locale: fr })}
@@ -137,6 +140,9 @@ export function TransactionFeed() {
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
 
   const transactions = useTransactionStore((state) => state.transactions);
   const activeFilter = useFilterStore((state) => state.activeFilter);
@@ -316,7 +322,7 @@ export function TransactionFeed() {
               className="text-sm font-semibold"
               style={{ color: section.total >= 0 ? '#10B981' : '#EF4444' }}
             >
-              {section.total >= 0 ? '+' : ''}{formatCurrency(section.total)}
+              {section.total >= 0 ? '+' : ''}{displayAmount(section.total, privacyMode, currency, locale)}
             </Text>
           </View>
           
@@ -325,6 +331,7 @@ export function TransactionFeed() {
             <View key={transaction.id}>
               <TransactionItem
                 transaction={transaction}
+                privacyMode={privacyMode}
                 onSplit={setSplitTransaction}
                 onDelete={(t) => {
                   const { Alert } = require('react-native');

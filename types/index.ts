@@ -180,6 +180,8 @@ export interface Settings {
   lastPaydayModal?: string;
   /** Dernier compte utilisé pour une transaction (présélection à l'ajout) */
   lastUsedAccountId?: string;
+  /** Mode discret : masque les montants (••••• €) */
+  privacyMode?: boolean;
 }
 
 // ============================================

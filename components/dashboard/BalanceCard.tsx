@@ -7,37 +7,33 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  Eye, 
-  EyeOff, 
   TrendingUp, 
   TrendingDown, 
   Sparkles,
-  ChevronRight,
 } from 'lucide-react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
-  withSpring,
-  withSequence,
   withTiming,
   useAnimatedReaction,
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
-import { useAccountStore, useTransactionStore, useBudgetStore } from '@/stores';
-import { formatCurrency, formatPercentage, formatCompactCurrency } from '@/utils/format';
+import { useAccountStore, useTransactionStore, useBudgetStore, useSettingsStore } from '@/stores';
+import { formatCurrency, formatPercentage, formatCompactCurrency, displayAmount } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
 
 export function BalanceCard() {
-  const [isHidden, setIsHidden] = useState(false);
-  
   const totalBalance = useAccountStore((state) => state.getTotalBalance());
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const transactions = useTransactionStore((state) => state.transactions);
   const budgetsAtRisk = useBudgetStore((state) => 
     state.getAllBudgetsProgress().filter(b => b.percentage >= 80)
   );
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
   
   // Calculer les stats du mois
   const now = new Date();
@@ -84,35 +80,26 @@ export function BalanceCard() {
   
   useEffect(() => {
     if (totalBalance === 0) {
-      setDisplayBalance(formatCurrency(0));
+      setDisplayBalance(displayAmount(0, privacyMode, currency, locale));
       return;
     }
     animatedBalance.value = 0;
-    setDisplayBalance(formatCurrency(0));
+    setDisplayBalance(displayAmount(0, privacyMode, currency, locale));
     animatedBalance.value = withTiming(totalBalance, {
       duration: 800,
       easing: Easing.bezier(0, 0, 0.2, 1),
     });
-  }, [totalBalance]);
+  }, [totalBalance, privacyMode, currency, locale]);
   
   useAnimatedReaction(
     () => animatedBalance.value,
     (v) => {
-      runOnJS(setDisplayBalance)(formatCurrency(Math.round(v)));
+      runOnJS(setDisplayBalance)(displayAmount(Math.round(v), privacyMode, currency, locale));
     },
-    [totalBalance]
+    [totalBalance, privacyMode, currency, locale]
   );
 
-  // Animation pour le montant (scale au toggle visibilité)
   const scale = useSharedValue(1);
-  
-  const handleToggleVisibility = () => {
-    scale.value = withSequence(
-      withTiming(0.95, { duration: 100 }),
-      withSpring(1)
-    );
-    setIsHidden(!isHidden);
-  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -143,11 +130,11 @@ export function BalanceCard() {
               className="text-white text-4xl font-bold mt-1"
               style={{ color: totalBalance >= 0 ? '#fff' : '#EF4444' }}
             >
-              {isHidden ? '••••••' : displayBalance}
+              {displayBalance}
             </Text>
           </Animated.View>
           {/* Indicateur de tendance vs il y a 30 jours */}
-          {!isHidden && (() => {
+          {!privacyMode && (() => {
             const balance30DaysAgo = totalBalance - monthlyChange;
             const ref = Math.abs(balance30DaysAgo) || 1;
             const pct = (monthlyChange / ref) * 100;
@@ -171,17 +158,7 @@ export function BalanceCard() {
           })()}
         </View>
         
-        <TouchableOpacity
-          onPress={handleToggleVisibility}
-          className="p-2 rounded-full"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-        >
-          {isHidden ? (
-            <EyeOff size={20} color="#71717A" />
-          ) : (
-            <Eye size={20} color="#71717A" />
-          )}
-        </TouchableOpacity>
+        {/* Toggle mode discret : géré par le header du dashboard */}
       </View>
       
       {/* Nombre de comptes */}
@@ -190,7 +167,7 @@ export function BalanceCard() {
       </Text>
       
       {/* Stats du mois */}
-      <View 
+        <View 
         className="flex-row rounded-2xl p-3 mb-4"
         style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
       >
@@ -201,7 +178,7 @@ export function BalanceCard() {
             <Text className="text-onyx-500 text-xs ml-1">Revenus</Text>
           </View>
           <Text className="text-accent-success font-semibold">
-            {isHidden ? '••••' : `+${formatCompactCurrency(monthlyIncome)}`}
+            {privacyMode ? '••••' : `+${formatCompactCurrency(monthlyIncome)}`}
           </Text>
         </View>
         
@@ -212,7 +189,7 @@ export function BalanceCard() {
             <Text className="text-onyx-500 text-xs ml-1">Dépenses</Text>
           </View>
           <Text className="text-accent-danger font-semibold">
-            {isHidden ? '••••' : `-${formatCompactCurrency(monthlyExpense)}`}
+            {privacyMode ? '••••' : `-${formatCompactCurrency(monthlyExpense)}`}
           </Text>
         </View>
         
@@ -223,7 +200,7 @@ export function BalanceCard() {
             className="font-semibold"
             style={{ color: isPositive ? '#10B981' : '#EF4444' }}
           >
-            {isHidden ? '••••' : `${isPositive ? '+' : ''}${formatCompactCurrency(monthlyChange)}`}
+            {privacyMode ? '••••' : `${isPositive ? '+' : ''}${formatCompactCurrency(monthlyChange)}`}
           </Text>
         </View>
       </View>
@@ -248,7 +225,7 @@ export function BalanceCard() {
               className="ml-1 font-semibold text-sm"
               style={{ color: expenseTrend <= 0 ? '#10B981' : '#EF4444' }}
             >
-              {isHidden ? '••' : `${expenseTrend > 0 ? '+' : ''}${formatPercentage(expenseTrend)}`}
+              {privacyMode ? '••' : `${expenseTrend > 0 ? '+' : ''}${formatPercentage(expenseTrend)}`}
             </Text>
           </View>
           <Text className="text-onyx-500 text-sm ml-2">vs mois dernier</Text>

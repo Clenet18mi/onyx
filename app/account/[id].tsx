@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useAccountStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, displayAmount } from '@/utils/format';
 import { Transaction, ACCOUNT_TYPES } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SwipeableTransactionRow } from '@/components/ui/SwipeableTransactionRow';
@@ -24,6 +24,9 @@ export default function AccountDetailScreen() {
   const getTransactionsByAccount = useTransactionStore((state) => state.getTransactionsByAccount);
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -91,7 +94,7 @@ export default function AccountDetailScreen() {
     }
 
     const description = item.description || category?.label || 'Transaction';
-    const deleteLabel = `Supprimer « ${description} » (${amountPrefix}${formatCurrency(item.amount)}) ?`;
+    const deleteLabel = `Supprimer « ${description} » (${amountPrefix}${displayAmount(item.amount, privacyMode, currency, locale)}) ?`;
 
     return (
       <SwipeableTransactionRow
@@ -121,7 +124,7 @@ export default function AccountDetailScreen() {
             className="text-base font-semibold"
             style={{ color: amountColor }}
           >
-            {amountPrefix}{formatCurrency(item.amount)}
+            {amountPrefix}{displayAmount(item.amount, privacyMode, currency, locale)}
           </Text>
         </View>
       </SwipeableTransactionRow>
@@ -213,7 +216,7 @@ export default function AccountDetailScreen() {
                   className="text-4xl font-bold"
                   style={{ color: account.balance >= 0 ? '#fff' : '#EF4444' }}
                 >
-                  {formatCurrency(account.balance)}
+                  {displayAmount(account.balance, privacyMode, currency, locale)}
                 </Text>
               </View>
             </GlassCard>
@@ -227,7 +230,7 @@ export default function AccountDetailScreen() {
                 <Text className="text-onyx-500 text-sm ml-2">Entrées</Text>
               </View>
               <Text className="text-accent-success text-lg font-semibold">
-                +{formatCurrency(stats.income)}
+                {privacyMode ? displayAmount(stats.income, true, currency, locale) : `+${formatCurrency(stats.income)}`}
               </Text>
             </View>
             
@@ -237,7 +240,7 @@ export default function AccountDetailScreen() {
                 <Text className="text-onyx-500 text-sm ml-2">Sorties</Text>
               </View>
               <Text className="text-accent-danger text-lg font-semibold">
-                -{formatCurrency(stats.expenses)}
+                {privacyMode ? displayAmount(stats.expenses, true, currency, locale) : `-${formatCurrency(stats.expenses)}`}
               </Text>
             </View>
           </View>
@@ -251,7 +254,7 @@ export default function AccountDetailScreen() {
                 <Text className="text-onyx-500 text-sm">
                   {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}  •{' '}
                   <Text className={summaryNet >= 0 ? 'text-accent-success' : 'text-accent-danger'}>
-                    {summaryNet >= 0 ? '+' : ''}{formatCurrency(summaryNet)}
+                    {summaryNet >= 0 ? '+' : ''}{displayAmount(summaryNet, privacyMode, currency, locale)}
                   </Text>
                 </Text>
               </View>

@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useBudgetStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
-import { formatCurrency, formatPercentage } from '@/utils/format';
+import { formatCurrency, formatPercentage, displayAmount } from '@/utils/format';
 import { TransactionCategory, Budget, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -25,6 +25,9 @@ interface BudgetGaugeProps {
 
 function BudgetGauge({ budget, spent, percentage }: BudgetGaugeProps) {
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
   const category = getCategoryById(budget.category);
   const Icon = category ? (Icons as any)[category.icon] : Icons.CircleDot;
   
@@ -57,9 +60,9 @@ function BudgetGauge({ budget, spent, percentage }: BudgetGaugeProps) {
             className="text-lg font-bold"
             style={{ color: isOverBudget ? '#EF4444' : '#fff' }}
           >
-            {formatCurrency(spent)}
+            {displayAmount(spent, privacyMode, currency, locale)}
           </Text>
-          <Text className="text-onyx-500 text-sm">sur {formatCurrency(budget.limit)}</Text>
+          <Text className="text-onyx-500 text-sm">sur {displayAmount(budget.limit, privacyMode, currency, locale)}</Text>
         </View>
       </View>
       
@@ -88,8 +91,8 @@ function BudgetGauge({ budget, spent, percentage }: BudgetGaugeProps) {
           style={{ color: isOverBudget ? '#EF4444' : '#10B981' }}
         >
           {isOverBudget 
-            ? `Dépassé de ${formatCurrency(spent - budget.limit)}`
-            : `Reste ${formatCurrency(remaining)}`
+            ? `Dépassé de ${displayAmount(spent - budget.limit, privacyMode, currency, locale)}`
+            : `Reste ${displayAmount(remaining, privacyMode, currency, locale)}`
           }
         </Text>
       </View>
@@ -111,6 +114,9 @@ export default function BudgetsScreen() {
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
   const expenseCategories = getVisibleCategories('expense');
   const budgetsWithProgress = getAllBudgetsProgress();
   
@@ -176,7 +182,7 @@ export default function BudgetsScreen() {
       const catLabel = getCategoryById(editingBudget.category)?.label ?? editingBudget.category;
       Alert.alert(
         'Supprimer le budget',
-        `Supprimer le budget ${catLabel} (limite : ${formatCurrency(editingBudget.limit)}) ?`,
+        `Supprimer le budget ${catLabel} (limite : ${displayAmount(editingBudget.limit, privacyMode, currency, locale)}) ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {
@@ -219,7 +225,7 @@ export default function BudgetsScreen() {
                 className="text-2xl font-bold"
                 style={{ color: totalPercentage >= 100 ? '#EF4444' : '#fff' }}
               >
-                {formatCurrency(totalSpent)} / {formatCurrency(totalBudget)}
+                {displayAmount(totalSpent, privacyMode, currency, locale)} / {displayAmount(totalBudget, privacyMode, currency, locale)}
               </Text>
             </View>
             

@@ -8,13 +8,16 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore } from '@/stores';
-import { formatCurrency } from '@/utils/format';
+import { useAccountStore, useSettingsStore } from '@/stores';
+import { displayAmount } from '@/utils/format';
 import { ACCOUNT_TYPES } from '@/types';
 
 export function QuickAccounts() {
   const router = useRouter();
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
 
   const getIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName];
@@ -61,7 +64,7 @@ export function QuickAccounts() {
                 {account.name}
               </Text>
               <Text className="text-white text-lg font-semibold">
-                {formatCurrency(account.balance, account.currency)}
+                {displayAmount(account.balance, privacyMode, account.currency, locale)}
               </Text>
             </TouchableOpacity>
           );

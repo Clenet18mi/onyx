@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { useAuthStore } from '@/stores';
+import { useSettingsStore } from '@/stores';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { PinPad } from '@/components/auth/PinPad';
 import { PinDots } from '@/components/auth/PinDots';
@@ -29,6 +30,9 @@ export default function SecurityScreen() {
     autoLockDelay,
     setAutoLockDelay,
   } = useAuthStore();
+
+  const privacyMode = useSettingsStore((s) => s.privacyMode ?? false);
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
 
   const [step, setStep] = useState<Step>('menu');
   const [currentPin, setCurrentPin] = useState('');
@@ -202,6 +206,18 @@ export default function SecurityScreen() {
               <Switch
                 value={biometricEnabled}
                 onValueChange={enableBiometric}
+                trackColor={{ false: '#3F3F46', true: '#6366F1' }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View className="flex-row items-center justify-between p-4 border-b border-onyx-200/10">
+              <View>
+                <Text className="text-white font-medium">Mode discret</Text>
+                <Text className="text-onyx-500 text-sm">Masquer les montants (••••• €)</Text>
+              </View>
+              <Switch
+                value={privacyMode}
+                onValueChange={(v) => updateSettings({ privacyMode: v })}
                 trackColor={{ false: '#3F3F46', true: '#6366F1' }}
                 thumbColor="#fff"
               />

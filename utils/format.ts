@@ -22,6 +22,19 @@ export function formatCurrency(
 }
 
 /**
+ * Affiche un montant ou le masque en mode discret (••••• €)
+ */
+export function displayAmount(
+  amount: number,
+  privacyMode: boolean,
+  currency: string = 'EUR',
+  locale: string = 'fr-FR'
+): string {
+  if (privacyMode) return '••••• €';
+  return formatCurrency(amount, currency, locale);
+}
+
+/**
  * Formate un montant de manière compacte (ex: 1.2K, 3.5M)
  */
 export function formatCompactCurrency(

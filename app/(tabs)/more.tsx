@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Icons from 'lucide-react-native';
 import { useSubscriptionStore, useAccountStore, useTransactionStore, useAuthStore, useSettingsStore, useGamificationStore } from '@/stores';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { formatCurrency, formatDate, displayAmount } from '@/utils/format';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
@@ -49,7 +49,11 @@ export default function MoreScreen() {
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const transactions = useTransactionStore((state) => state.transactions);
   const { lock, biometricEnabled, enableBiometric } = useAuthStore();
-  const { hapticEnabled, toggleHaptic } = useSettingsStore();
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const toggleHaptic = useSettingsStore((state) => state.toggleHaptic);
+  const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
+  const currency = useSettingsStore((state) => state.currency);
+  const locale = useSettingsStore((state) => state.locale);
   
   const monthlyTotal = getTotalMonthlySubscriptions();
   const yearlyTotal = getTotalYearlySubscriptions();
@@ -124,7 +128,7 @@ export default function MoreScreen() {
       const freqLabel = editingSubscription.frequency === 'monthly' ? 'mois' : editingSubscription.frequency === 'yearly' ? 'an' : editingSubscription.frequency === 'weekly' ? 'semaine' : 'jour';
       Alert.alert(
         'Supprimer l\'abonnement',
-        `Supprimer l'abonnement ${editingSubscription.name} (${formatCurrency(editingSubscription.amount)}/${freqLabel}) ?`,
+        `Supprimer l'abonnement ${editingSubscription.name} (${displayAmount(editingSubscription.amount, privacyMode, currency, locale)}/${freqLabel}) ?`,
         [
           { text: 'Annuler', style: 'cancel' },
           {
@@ -201,7 +205,7 @@ export default function MoreScreen() {
                 <View>
                   <Text className="text-onyx-500 text-sm">Coût mensuel</Text>
                   <Text className="text-white text-2xl font-bold">
-                    {formatCurrency(monthlyTotal)}
+                    {displayAmount(monthlyTotal, privacyMode, currency, locale)}
                   </Text>
                 </View>
               </View>
@@ -242,7 +246,7 @@ export default function MoreScreen() {
                           </View>
                         </View>
                         <View className="items-end mr-2">
-                          <Text className="text-accent-danger font-semibold">{formatCurrency(sub.amount)}</Text>
+                          <Text className="text-accent-danger font-semibold">{displayAmount(sub.amount, privacyMode, currency, locale)}</Text>
                           <Text className="text-onyx-500 text-xs">{daysLabel}</Text>
                         </View>
                       </TouchableOpacity>
@@ -250,7 +254,7 @@ export default function MoreScreen() {
                   })}
                   <View className="px-4 py-3 border-t border-onyx-200/10">
                     <Text className="text-onyx-500 text-sm">
-                      Total abonnements : {formatCurrency(monthlyTotal)}/mois
+                      Total abonnements : {displayAmount(monthlyTotal, privacyMode, currency, locale)}/mois
                     </Text>
                   </View>
                 </GlassCard>
@@ -260,7 +264,7 @@ export default function MoreScreen() {
             {subscriptions.filter((s) => s.isActive).length > 0 && (
               <View className="mb-4 px-1">
                 <Text className="text-onyx-500 text-sm">
-                  📊 Coût annuel de vos abonnements : {formatCurrency(yearlyTotal)}
+                  📊 Coût annuel de vos abonnements : {displayAmount(yearlyTotal, privacyMode, currency, locale)}
                 </Text>
               </View>
             )}
@@ -310,7 +314,7 @@ export default function MoreScreen() {
                         
                         <View className="items-end mr-3">
                           <Text className="text-white font-semibold">
-                            {formatCurrency(sub.amount)}
+                            {displayAmount(sub.amount, privacyMode, currency, locale)}
                           </Text>
                           <Text className="text-onyx-500 text-xs">
                             /{sub.frequency === 'monthly' ? 'mois' : 
