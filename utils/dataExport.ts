@@ -472,7 +472,7 @@ export async function exportDataAsJSON(): Promise<void> {
           await StorageAccessFramework.writeAsStringAsync(fileUri, content, {
             encoding: legacy.EncodingType?.UTF8 ?? 'utf8',
           });
-          Alert.alert('Export réussi', 'Le fichier a été enregistré dans Téléchargements.');
+          Alert.alert('Export réussi', `Fichier enregistré : ${filename}`);
           return;
         }
       } catch (e) {
@@ -503,7 +503,7 @@ export async function exportDataAsJSON(): Promise<void> {
     step.current = 'finalisation';
     Alert.alert(
       'Export réussi',
-      Platform.OS === 'android' ? 'Le fichier a été enregistré (stockage de l’app).' : 'Le fichier a été enregistré.',
+      `Fichier : ${filename}${Platform.OS === 'android' ? ' (stockage de l’app)' : ''}`,
       [{ text: 'OK' }]
     );
   } catch (error) {

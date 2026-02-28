@@ -89,7 +89,7 @@ export default function DataManagementScreen() {
         try {
           const downloadUri = StorageAccessFramework.getUriForDirectoryInRoot('Download');
           const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync(downloadUri);
-          if (permissions.granted && permissions.directoryUri) {
+            if (permissions.granted && permissions.directoryUri) {
             const fileUri = await StorageAccessFramework.createFileAsync(
               permissions.directoryUri,
               baseName,
@@ -98,7 +98,7 @@ export default function DataManagementScreen() {
             await StorageAccessFramework.writeAsStringAsync(fileUri, jsonData, {
               encoding: legacy.EncodingType?.UTF8 ?? 'utf8',
             });
-            Alert.alert('Export réussi', 'Le fichier a été enregistré dans Téléchargements.');
+            Alert.alert('Export réussi', `Fichier enregistré : ${fileName}`);
             return;
           }
         } catch (e) {
@@ -112,7 +112,7 @@ export default function DataManagementScreen() {
       await legacy.writeAsStringAsync(filePath, jsonData, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
       Alert.alert(
         'Export réussi',
-        Platform.OS === 'android' ? 'Le fichier a été enregistré (stockage de l’app).' : 'Le fichier a été enregistré.'
+        `Fichier : ${fileName}${Platform.OS === 'android' ? ' (stockage de l’app)' : ''}`
       );
     } catch (error) {
       console.error('[ONYX] export error:', error);
