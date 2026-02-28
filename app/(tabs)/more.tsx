@@ -3,7 +3,7 @@
 // Menu : abonnements, outils, paramètres (export/import dans Gestion des données)
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { Subscription, CATEGORIES, AVAILABLE_COLORS, RecurrenceFrequency } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
+import { addMonths, parseISO, startOfDay, differenceInDays, isToday, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
 
 const SUBSCRIPTION_ICONS = [
   'Tv', 'Music', 'Film', 'Gamepad2', 'Cloud', 'Newspaper',
@@ -41,6 +42,8 @@ export default function MoreScreen() {
     deleteSubscription,
     toggleSubscription,
     getTotalMonthlySubscriptions,
+    getTotalYearlySubscriptions,
+    getSubscriptionsThisMonth,
   } = useSubscriptionStore();
   
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
@@ -49,6 +52,7 @@ export default function MoreScreen() {
   const { hapticEnabled, toggleHaptic } = useSettingsStore();
   
   const monthlyTotal = getTotalMonthlySubscriptions();
+  const subscriptionsThisMonth = getSubscriptionsThisMonth();
   const { streak, levelData, updateStreak } = useGamificationStore();
   React.useEffect(() => { updateStreak(); }, [transactions.length, updateStreak]);
 
@@ -201,6 +205,56 @@ export default function MoreScreen() {
                 </View>
               </View>
             </GlassCard>
+
+            {/* Ce mois-ci : abonnements triés par nextBillingDate */}
+            {subscriptionsThisMonth.length > 0 && (
+              <View className="mb-4">
+                <Text className="text-white font-semibold mb-3">Ce mois-ci</Text>
+                <GlassCard variant="light" noPadding>
+                  {subscriptionsThisMonth.map((sub) => {
+                    const SubIcon = getIcon(sub.icon);
+                    const account = accounts.find((a) => a.id === sub.accountId);
+                    const AccountIcon = account ? getIcon(account.icon) : Icons.Wallet;
+                    const billingDate = parseISO(sub.nextBillingDate);
+                    const today = startOfDay(new Date());
+                    const days = differenceInDays(billingDate, today);
+                    let daysLabel = '';
+                    if (isToday(billingDate)) daysLabel = "aujourd'hui ⚠️";
+                    else if (days === 1) daysLabel = 'demain';
+                    else daysLabel = `dans ${days} jours`;
+                    return (
+                      <TouchableOpacity
+                        key={sub.id}
+                        onPress={() => openEditModal(sub)}
+                        className="flex-row items-center justify-between px-4 py-3 border-b border-onyx-200/10 last:border-b-0"
+                      >
+                        <View className="flex-row items-center flex-1">
+                          <View className="w-10 h-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: `${sub.color}20` }}>
+                            <SubIcon size={20} color={sub.color} />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-white font-medium">{sub.name}</Text>
+                            <View className="flex-row items-center mt-0.5">
+                              <AccountIcon size={14} color="#71717A" />
+                              <Text className="text-onyx-500 text-xs ml-1">{account?.name ?? '—'}</Text>
+                            </View>
+                          </View>
+                        </View>
+                        <View className="items-end mr-2">
+                          <Text className="text-accent-danger font-semibold">{formatCurrency(sub.amount)}</Text>
+                          <Text className="text-onyx-500 text-xs">{daysLabel}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <View className="px-4 py-3 border-t border-onyx-200/10">
+                    <Text className="text-onyx-500 text-sm">
+                      Total abonnements : {formatCurrency(monthlyTotal)}/mois
+                    </Text>
+                  </View>
+                </GlassCard>
+              </View>
+            )}
 
             {/* Liste des abonnements */}
             {subscriptions.length === 0 ? (

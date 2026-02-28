@@ -9,7 +9,7 @@ import { zustandStorage } from '@/utils/storage';
 import { Subscription, RecurrenceFrequency } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useTransactionStore } from './transactionStore';
-import { addDays, addWeeks, addMonths, addYears, isBefore, parseISO, startOfDay } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, isBefore, parseISO, startOfDay, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 interface SubscriptionState {
   subscriptions: Subscription[];
@@ -27,6 +27,10 @@ interface SubscriptionState {
   getActiveSubscriptions: () => Subscription[];
   getTotalMonthlySubscriptions: () => number;
   getUpcomingSubscriptions: (days: number) => Subscription[];
+  /** Total annuel (mensuel×12, annuel×1, hebdo×52, trimestriel×4) */
+  getTotalYearlySubscriptions: () => number;
+  /** Abonnements actifs dont nextBillingDate est dans le mois en cours, triés par date */
+  getSubscriptionsThisMonth: () => Subscription[];
   /** Remplace tous les abonnements (import sauvegarde JSON) */
   setSubscriptionsForImport: (subscriptions: Subscription[]) => void;
 }
@@ -46,6 +50,22 @@ function getNextBillingDate(currentDate: string, frequency: RecurrenceFrequency)
       return addYears(date, 1).toISOString();
     default:
       return addMonths(date, 1).toISOString();
+  }
+}
+
+// Convertir en montant annuel
+function toYearlyAmount(amount: number, frequency: RecurrenceFrequency): number {
+  switch (frequency) {
+    case 'daily':
+      return amount * 365;
+    case 'weekly':
+      return amount * 52;
+    case 'monthly':
+      return amount * 12;
+    case 'yearly':
+      return amount;
+    default:
+      return amount * 12;
   }
 }
 
@@ -164,6 +184,27 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           .subscriptions
           .filter((sub) => sub.isActive)
           .reduce((total, sub) => total + toMonthlyAmount(sub.amount, sub.frequency), 0);
+      },
+
+      getTotalYearlySubscriptions: () => {
+        return get()
+          .subscriptions
+          .filter((sub) => sub.isActive)
+          .reduce((total, sub) => total + toYearlyAmount(sub.amount, sub.frequency), 0);
+      },
+
+      getSubscriptionsThisMonth: () => {
+        const now = new Date();
+        const start = startOfMonth(now);
+        const end = endOfMonth(now);
+        return get()
+          .subscriptions
+          .filter((sub) => {
+            if (!sub.isActive) return false;
+            const d = parseISO(sub.nextBillingDate);
+            return isWithinInterval(d, { start, end });
+          })
+          .sort((a, b) => parseISO(a.nextBillingDate).getTime() - parseISO(b.nextBillingDate).getTime());
       },
 
       // Abonnements à venir dans les X prochains jours
