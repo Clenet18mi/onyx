@@ -36,6 +36,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ONYX] ErrorBoundary caught an error:', error, errorInfo);
+    try {
+      const { setLastError } = require('@/utils/debugLogger');
+      setLastError(error, { componentStack: errorInfo?.componentStack });
+    } catch (_) {}
     this.setState({
       error,
       errorInfo,
@@ -113,6 +117,22 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.state.errorInfo && (
                   <Text style={{ color: '#9CA3AF', fontSize: 10, fontFamily: 'monospace', marginTop: 10 }}>
                     {this.state.errorInfo.componentStack}
+                  </Text>
+                )}
+              </View>
+            )}
+            {/* Toujours afficher le message d'erreur pour pouvoir déboguer après import */}
+            {this.state.error && (
+              <View style={{ backgroundColor: '#1F1F23', padding: 15, borderRadius: 8, marginBottom: 20 }}>
+                <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>
+                  Erreur :
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'monospace' }} selectable>
+                  {this.state.error.message}
+                </Text>
+                {this.state.error.stack && (
+                  <Text style={{ color: '#9CA3AF', fontSize: 10, fontFamily: 'monospace', marginTop: 8 }} selectable>
+                    {this.state.error.stack.slice(0, 500)}
                   </Text>
                 )}
               </View>

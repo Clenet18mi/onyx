@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, View, StatusBar, Alert, Text, TouchableOpacity } from 'react-native';
+import { AppState, AppStateStatus, View, StatusBar, Alert, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,6 +17,7 @@ import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
 import { setReminderNotificationHandler, syncReminderNotifications } from '@/utils/reminderNotifications';
+import { initDebugLogger, getLastError, clearLastError, type CapturedError } from '@/utils/debugLogger';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
@@ -24,6 +25,54 @@ SplashScreen.preventAutoHideAsync();
 
 // Afficher les notifications de rappels même quand l'app est au premier plan
 setReminderNotificationHandler();
+
+/** Écran minimal (aucun store ni thème) si une erreur a été enregistrée au lancement précédent */
+function CrashReportScreen({
+  error,
+  onContinue,
+  onReset,
+}: {
+  error: CapturedError;
+  onContinue: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#0A0A0B', padding: 20 }}>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0B" />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 24 }}>
+        <Text style={{ color: '#EF4444', fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>
+          Erreur au dernier lancement
+        </Text>
+        <Text style={{ color: '#A1A1AA', fontSize: 14, marginBottom: 16 }}>
+          L'app a planté (souvent après un import). Réinitialisez les données ou réessayez.
+        </Text>
+        <View style={{ backgroundColor: '#1F1F23', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'monospace' }} selectable>
+            {error.message}
+          </Text>
+          {error.stack ? (
+            <Text style={{ color: '#71717A', fontSize: 11, fontFamily: 'monospace', marginTop: 8 }} selectable>
+              {error.stack.slice(0, 600)}
+              {error.stack.length > 600 ? '…' : ''}
+            </Text>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          onPress={onReset}
+          style={{ backgroundColor: '#EF4444', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Réinitialiser les données</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onContinue}
+          style={{ backgroundColor: '#6366F1', padding: 16, borderRadius: 12, alignItems: 'center' }}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Continuer quand même</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
 
 function RootLayoutContent() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -202,6 +251,8 @@ function RootLayoutContent() {
                     await storage.clearAll();
                     const { useAuthStore } = await import('@/stores/authStore');
                     useAuthStore.getState().resetAuth();
+                    const { clearLastError } = await import('@/utils/debugLogger');
+                    await clearLastError();
                     setShowRecovery(false);
                     setStoresHydrated(true);
                     setAppIsReady(true);
@@ -215,10 +266,25 @@ function RootLayoutContent() {
                     Alert.alert('Erreur', 'Impossible d\'effacer les données.', [{ text: 'OK' }]);
                   }
                 }}
-                className="py-4 px-6 rounded-xl"
+                className="py-4 px-6 rounded-xl mb-3"
                 style={{ backgroundColor: '#EF4444' }}
               >
                 <Text className="text-white font-semibold">Réinitialiser les données</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  const { getLastError } = await import('@/utils/debugLogger');
+                  const err = await getLastError();
+                  if (err) {
+                    Alert.alert('Dernière erreur enregistrée', err.message + (err.stack ? '\n\n' + err.stack.slice(0, 400) : ''), [{ text: 'OK' }]);
+                  } else {
+                    Alert.alert('Info', 'Aucune erreur enregistrée.');
+                  }
+                }}
+                className="py-3 px-6 rounded-xl"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <Text className="text-white font-medium">Voir la dernière erreur</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -324,6 +390,49 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  const [lastError, setLastError] = useState<CapturedError | null>(null);
+  const [errorCheckDone, setErrorCheckDone] = useState(false);
+
+  useEffect(() => {
+    initDebugLogger();
+    getLastError().then((e) => {
+      setLastError(e ?? null);
+      setErrorCheckDone(true);
+    });
+  }, []);
+
+  if (!errorCheckDone) {
+    return null;
+  }
+  if (lastError) {
+    return (
+      <CrashReportScreen
+        error={lastError}
+        onContinue={async () => {
+          await clearLastError();
+          setLastError(null);
+        }}
+        onReset={async () => {
+          try {
+            const { storage } = await import('@/utils/storage');
+            await storage.clearAll();
+            const { useAuthStore } = await import('@/stores/authStore');
+            useAuthStore.getState().resetAuth();
+            await clearLastError();
+            setLastError(null);
+            Alert.alert(
+              'Données effacées',
+              'Fermez complètement l\'application (la quitter), puis rouvrez-la.',
+              [{ text: 'OK' }]
+            );
+          } catch (e) {
+            Alert.alert('Erreur', 'Impossible d\'effacer les données.');
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <ErrorBoundary>
       <RootLayoutContent />
