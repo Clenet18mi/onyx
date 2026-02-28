@@ -3,8 +3,8 @@
 // Détail d'un compte avec transactions
 // ============================================
 
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +24,8 @@ export default function AccountDetailScreen() {
   const getTransactionsByAccount = useTransactionStore((state) => state.getTransactionsByAccount);
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const transactions = useMemo(() => {
     if (!id) return [];
@@ -31,6 +33,21 @@ export default function AccountDetailScreen() {
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [id, getTransactionsByAccount]);
+
+  const filteredTransactions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return transactions;
+    return transactions.filter((t) => {
+      const desc = (t.description || '').toLowerCase();
+      if (desc.includes(q)) return true;
+      const amountStr = t.amount.toString();
+      const amountFormatted = formatCurrency(t.amount).replace(/\s/g, '');
+      if (amountStr.includes(q) || amountFormatted.replace(',', '.').includes(q)) return true;
+      const num = parseFloat(q.replace(',', '.'));
+      if (!isNaN(num) && (t.amount === num || amountStr.startsWith(q))) return true;
+      return false;
+    });
+  }, [transactions, searchQuery]);
 
   if (!account) {
     return (
@@ -111,18 +128,18 @@ export default function AccountDetailScreen() {
     );
   };
 
-  // Calculer les statistiques (virements exclus des totaux revenus/dépenses)
+  // Calculer les statistiques sur la liste filtrée
   const stats = useMemo(() => {
-    const income = transactions
+    const income = filteredTransactions
       .filter((t) => t.type !== 'transfer' && t.type === 'income' && t.accountId === id)
       .reduce((sum, t) => sum + t.amount, 0);
     
-    const expenses = transactions
+    const expenses = filteredTransactions
       .filter((t) => t.type !== 'transfer' && t.type === 'expense' && t.accountId === id)
       .reduce((sum, t) => sum + t.amount, 0);
     
     return { income, expenses };
-  }, [transactions, id]);
+  }, [filteredTransactions, id]);
 
   const summaryNet = stats.income - stats.expenses;
 
@@ -141,14 +158,43 @@ export default function AccountDetailScreen() {
           >
             <Icons.ChevronLeft size={24} color="#fff" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold flex-1">{account.name}</Text>
-          <TouchableOpacity 
-            onPress={() => router.push(`/transaction/add?accountId=${id}`)}
-            className="w-10 h-10 rounded-full items-center justify-center"
-            style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}
-          >
-            <Icons.Plus size={24} color="#6366F1" />
-          </TouchableOpacity>
+          {!searchVisible ? (
+            <>
+              <Text className="text-white text-xl font-bold flex-1">{account.name}</Text>
+              <TouchableOpacity 
+                onPress={() => setSearchVisible(true)}
+                className="w-10 h-10 rounded-full items-center justify-center mr-2"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              >
+                <Icons.Search size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => router.push(`/transaction/add?accountId=${id}`)}
+                className="w-10 h-10 rounded-full items-center justify-center"
+                style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}
+              >
+                <Icons.Plus size={24} color="#6366F1" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Description ou montant..."
+                placeholderTextColor="#71717A"
+                className="flex-1 bg-onyx-100 text-white px-4 py-2 rounded-xl mr-2"
+                autoFocus
+              />
+              <TouchableOpacity 
+                onPress={() => { setSearchQuery(''); setSearchVisible(false); }}
+                className="w-10 h-10 rounded-full items-center justify-center"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              >
+                <Icons.X size={22} color="#fff" />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -200,10 +246,10 @@ export default function AccountDetailScreen() {
           <View className="px-6">
             <Text className="text-white text-lg font-semibold mb-4">Historique</Text>
             
-            {transactions.length > 0 && (
+            {filteredTransactions.length > 0 && (
               <View className="flex-row items-center justify-between mb-3 py-2 px-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                 <Text className="text-onyx-500 text-sm">
-                  {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}  •{' '}
+                  {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}  •{' '}
                   <Text className={summaryNet >= 0 ? 'text-accent-success' : 'text-accent-danger'}>
                     {summaryNet >= 0 ? '+' : ''}{formatCurrency(summaryNet)}
                   </Text>
@@ -211,15 +257,15 @@ export default function AccountDetailScreen() {
               </View>
             )}
             
-            {transactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <View className="items-center py-12">
                 <Icons.Receipt size={48} color="#3F3F46" />
                 <Text className="text-onyx-500 text-base mt-4 text-center">
-                  Aucune transaction
+                  {searchQuery.trim() ? 'Aucun résultat' : 'Aucune transaction'}
                 </Text>
               </View>
             ) : (
-              transactions.map((transaction) => (
+              filteredTransactions.map((transaction) => (
                 <View key={transaction.id}>
                   {renderTransaction({ item: transaction })}
                 </View>
