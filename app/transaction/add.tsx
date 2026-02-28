@@ -261,7 +261,41 @@ export default function AddTransactionScreen() {
               <Text className="text-onyx-400 text-sm">Duplicata — modifiez si besoin avant d'enregistrer</Text>
             </View>
           )}
-          {/* Type Toggle */}
+
+          {/* Montant style calculatrice : très grand en haut, centré */}
+          <View className="px-6 pt-2 pb-4 items-center">
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => amountInputRef.current?.focus()}
+              className="flex-row items-center justify-center min-h-[88px]"
+            >
+              <Text
+                className="text-5xl font-bold mr-1"
+                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444' }}
+              >
+                {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
+              </Text>
+              <TextInput
+                ref={amountInputRef}
+                value={amount}
+                onChangeText={handleAmountChange}
+                placeholder="0"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="decimal-pad"
+                className="text-5xl font-bold text-center px-2 py-1"
+                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444', minWidth: 120 }}
+                selectTextOnFocus
+              />
+              <Text
+                className="text-5xl font-bold ml-1"
+                style={{ color: type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444' }}
+              >
+                {' '}€
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Pills type : Dépense / Revenu / Virement */}
           <View className="px-6 mb-6">
             <View 
               className="flex-row rounded-2xl p-1"
@@ -271,7 +305,7 @@ export default function AddTransactionScreen() {
                 onPress={() => setType('expense')}
                 className={`flex-1 py-3 rounded-xl ${type === 'expense' ? 'bg-accent-danger' : ''}`}
               >
-                <Text className={`text-center font-semibold ${type === 'expense' ? 'text-white' : 'text-onyx-500'}`}>
+                <Text className={`text-center font-semibold text-sm ${type === 'expense' ? 'text-white' : 'text-onyx-500'}`}>
                   Dépense
                 </Text>
               </TouchableOpacity>
@@ -279,16 +313,27 @@ export default function AddTransactionScreen() {
                 onPress={() => setType('income')}
                 className={`flex-1 py-3 rounded-xl ${type === 'income' ? 'bg-accent-success' : ''}`}
               >
-                <Text className={`text-center font-semibold ${type === 'income' ? 'text-white' : 'text-onyx-500'}`}>
+                <Text className={`text-center font-semibold text-sm ${type === 'income' ? 'text-white' : 'text-onyx-500'}`}>
                   Revenu
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setType('transfer')}
+                className={`flex-1 py-3 rounded-xl ${type === 'transfer' ? 'bg-accent-primary' : ''}`}
+              >
+                <Text className={`text-center font-semibold text-sm ${type === 'transfer' ? 'text-white' : 'text-onyx-500'}`}>
+                  Virement
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Ajouter maintenant / Prévoir (masqué pour virement) */}
+          {/* GlassCard scrollable : compte, catégorie, date, description, budget, actions */}
+          <View className="px-6 mb-8">
+            <GlassCard variant="light" className="overflow-hidden">
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {type !== 'transfer' && (
-            <View className="px-6 mb-6">
+            <View className="px-4 mb-6">
               <Text className="text-onyx-500 text-sm mb-2">Quand ?</Text>
               <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
                 <TouchableOpacity
@@ -349,40 +394,6 @@ export default function AddTransactionScreen() {
             </View>
           )}
 
-          {/* Montant : tap pour ouvrir le clavier du téléphone */}
-          <View className="px-6 mb-4 items-center">
-            <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => amountInputRef.current?.focus()}
-              className="flex-row items-center justify-center min-h-[72px]"
-            >
-              <Text
-                className="text-4xl font-bold mr-1"
-                style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
-              >
-                {type === 'income' ? '+' : '-'}
-              </Text>
-              <TextInput
-                ref={amountInputRef}
-                value={amount}
-                onChangeText={handleAmountChange}
-                placeholder="0"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                keyboardType="decimal-pad"
-                className="text-4xl font-bold text-center px-2 py-1"
-                style={{ color: type === 'income' ? '#10B981' : '#EF4444', minWidth: 100 }}
-                selectTextOnFocus
-              />
-              <Text
-                className="text-4xl font-bold ml-1"
-                style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}
-              >
-                {' '}€
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Feedback budget en temps réel (dépense uniquement) */}
           {type === 'expense' && (() => {
             const budget = getBudgetByCategory(category);
@@ -394,7 +405,7 @@ export default function AddTransactionScreen() {
             const catLabel = getCategoryById(category)?.label || category;
             if (overBudget) {
               return (
-                <View className="px-6 mb-6 py-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
+                <View className="px-4 mb-6 py-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
                   <Text className="text-accent-danger text-sm font-medium">
                     🔴 Ce montant dépasse votre budget {catLabel}
                   </Text>
@@ -405,7 +416,7 @@ export default function AddTransactionScreen() {
               );
             }
             return (
-              <View className="px-6 mb-6 py-2">
+              <View className="px-4 mb-6 py-2">
                 <Text className="text-onyx-500 text-sm">
                   💚 Budget {catLabel} : {formatCurrency(projectedSpent)} / {formatCurrency(progress.limit)}
                 </Text>
@@ -414,7 +425,7 @@ export default function AddTransactionScreen() {
           })()}
 
           {/* Account Selector */}
-          <View className="px-6 mb-6">
+          <View className="px-4 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View className="flex-row" style={{ gap: 8 }}>
@@ -447,7 +458,7 @@ export default function AddTransactionScreen() {
           </View>
 
           {/* Category Selector */}
-          <View className="px-6 mb-6">
+          <View className="px-4 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Catégorie</Text>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {filteredCategories.map((cat) => {
@@ -478,7 +489,7 @@ export default function AddTransactionScreen() {
           </View>
 
           {/* Description */}
-          <View className="px-6 mb-6">
+          <View className="px-4 mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Description (optionnel)</Text>
             <TextInput
               value={description}
@@ -493,7 +504,7 @@ export default function AddTransactionScreen() {
           </View>
 
           {/* Ticket + Note vocale */}
-          <View className="px-6 mb-6 flex-row" style={{ gap: 12 }}>
+          <View className="px-4 mb-6 flex-row" style={{ gap: 12 }}>
             <TouchableOpacity
               onPress={() => setReceiptModalVisible(true)}
               className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
@@ -512,6 +523,21 @@ export default function AddTransactionScreen() {
               <Text className="text-onyx-500 ml-2">Note vocale</Text>
               {voiceNoteUri && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
             </TouchableOpacity>
+          </View>
+
+          {/* Save Button */}
+          <View className="px-4 mb-6">
+            <Button
+              title="Enregistrer"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onPress={handleSave}
+              icon={<Icons.Check size={20} color="white" />}
+            />
+          </View>
+              </ScrollView>
+            </GlassCard>
           </View>
 
           <Modal visible={receiptModalVisible} transparent animationType="slide">
@@ -571,17 +597,6 @@ export default function AddTransactionScreen() {
             }}
           />
 
-          {/* Save Button */}
-          <View className="px-6 mb-8">
-            <Button
-              title="Enregistrer"
-              variant="primary"
-              size="lg"
-              fullWidth
-              onPress={handleSave}
-              icon={<Icons.Check size={20} color="white" />}
-            />
-          </View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
