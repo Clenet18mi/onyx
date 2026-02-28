@@ -22,17 +22,23 @@ export default function TransferScreen() {
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransfer = useTransactionStore((state) => state.addTransfer);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
 
-  // Sélectionner les premiers comptes par défaut
+  // Sélectionner les premiers comptes par défaut ; réinitialiser si les comptes sélectionnés n'existent plus
   React.useEffect(() => {
+    const fromExists = accounts.some((a) => a.id === fromAccountId);
+    const toExists = accounts.some((a) => a.id === toAccountId);
     if (accounts.length >= 2) {
-      setFromAccountId(accounts[0].id);
-      setToAccountId(accounts[1].id);
+      if (!fromExists) setFromAccountId(accounts[0].id);
+      if (!toExists) setToAccountId(accounts[1].id);
     } else if (accounts.length === 1) {
-      setFromAccountId(accounts[0].id);
+      if (!fromExists) setFromAccountId(accounts[0].id);
+      setToAccountId('');
+    } else {
+      setFromAccountId('');
+      setToAccountId('');
     }
   }, [accounts]);
 

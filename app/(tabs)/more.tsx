@@ -42,7 +42,7 @@ export default function MoreScreen() {
     getTotalMonthlySubscriptions,
   } = useSubscriptionStore();
   
-  const accounts = useAccountStore((state) => state.getActiveAccounts());
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const transactions = useTransactionStore((state) => state.transactions);
   const { lock, biometricEnabled, enableBiometric } = useAuthStore();
   const { hapticEnabled, toggleHaptic } = useSettingsStore();
@@ -166,10 +166,20 @@ export default function MoreScreen() {
           <View className="mb-6">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-white text-lg font-semibold">Abonnements</Text>
-              <TouchableOpacity onPress={openAddModal}>
-                <Icons.Plus size={24} color="#6366F1" />
-              </TouchableOpacity>
+              {accounts.length > 0 ? (
+                <TouchableOpacity onPress={openAddModal}>
+                  <Icons.Plus size={24} color="#6366F1" />
+                </TouchableOpacity>
+              ) : (
+                <Text className="text-onyx-500 text-sm">Créez un compte d'abord</Text>
+              )}
             </View>
+            
+            {accounts.length === 0 && (
+              <View className="mb-4 p-3 rounded-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }}>
+                <Text className="text-amber-400 text-sm">Créez au moins un compte (onglet Comptes) pour ajouter des abonnements.</Text>
+              </View>
+            )}
             
             {/* Résumé */}
             <GlassCard variant="light" className="mb-4">
@@ -192,16 +202,20 @@ export default function MoreScreen() {
             {/* Liste des abonnements */}
             {subscriptions.length === 0 ? (
               <TouchableOpacity
-                onPress={openAddModal}
+                onPress={accounts.length > 0 ? openAddModal : undefined}
+                disabled={accounts.length === 0}
                 className="p-4 rounded-2xl items-center"
                 style={{ 
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   borderWidth: 2,
                   borderColor: 'rgba(255, 255, 255, 0.1)',
                   borderStyle: 'dashed',
+                  opacity: accounts.length === 0 ? 0.6 : 1,
                 }}
               >
-                <Text className="text-onyx-500">Ajouter votre premier abonnement</Text>
+                <Text className="text-onyx-500">
+                  {accounts.length === 0 ? 'Créez d\'abord un compte' : 'Ajouter votre premier abonnement'}
+                </Text>
               </TouchableOpacity>
             ) : (
               subscriptions.map((sub) => {
