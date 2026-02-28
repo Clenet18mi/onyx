@@ -3,7 +3,7 @@
 // Carte affichant le patrimoine total améliorée
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -20,6 +20,9 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
+  useAnimatedReaction,
+  runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 import { useAccountStore, useTransactionStore, useBudgetStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatCompactCurrency } from '@/utils/format';
@@ -75,7 +78,32 @@ export function BalanceCard() {
   
   const isPositive = monthlyChange >= 0;
 
-  // Animation pour le montant
+  // Compteur animé du solde total au chargement (0 → totalBalance en 800ms)
+  const animatedBalance = useSharedValue(0);
+  const [displayBalance, setDisplayBalance] = useState(() => formatCurrency(0));
+  
+  useEffect(() => {
+    if (totalBalance === 0) {
+      setDisplayBalance(formatCurrency(0));
+      return;
+    }
+    animatedBalance.value = 0;
+    setDisplayBalance(formatCurrency(0));
+    animatedBalance.value = withTiming(totalBalance, {
+      duration: 800,
+      easing: Easing.bezier(0, 0, 0.2, 1),
+    });
+  }, [totalBalance]);
+  
+  useAnimatedReaction(
+    () => animatedBalance.value,
+    (v) => {
+      runOnJS(setDisplayBalance)(formatCurrency(Math.round(v)));
+    },
+    [totalBalance]
+  );
+
+  // Animation pour le montant (scale au toggle visibilité)
   const scale = useSharedValue(1);
   
   const handleToggleVisibility = () => {
@@ -115,7 +143,7 @@ export function BalanceCard() {
               className="text-white text-4xl font-bold mt-1"
               style={{ color: totalBalance >= 0 ? '#fff' : '#EF4444' }}
             >
-              {isHidden ? '••••••' : formatCurrency(totalBalance)}
+              {isHidden ? '••••••' : displayBalance}
             </Text>
           </Animated.View>
         </View>
