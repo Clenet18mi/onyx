@@ -4,20 +4,16 @@
 // ============================================
 
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Icons from 'lucide-react-native';
-import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
+import { useTransactionStore, useAccountStore, useConfigStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { Transaction } from '@/types';
 import { GlassCard } from '../ui/GlassCard';
+import { SwipeableTransactionRow } from '../ui/SwipeableTransactionRow';
 
-interface TransactionItemProps {
-  transaction: Transaction;
-  onPress: () => void;
-}
-
-function TransactionItem({ transaction, onPress }: TransactionItemProps) {
+function TransactionRowContent({ transaction }: { transaction: Transaction }) {
   const account = useAccountStore((state) => state.getAccount(transaction.accountId));
   const toAccount = transaction.toAccountId 
     ? useAccountStore((state) => state.getAccount(transaction.toAccountId))
@@ -31,10 +27,7 @@ function TransactionItem({ transaction, onPress }: TransactionItemProps) {
   const amountPrefix = isIncome ? '+' : isTransfer ? '' : '-';
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      className="flex-row items-center py-3"
-    >
+    <View className="flex-row items-center py-3">
       <View 
         className="w-12 h-12 rounded-2xl items-center justify-center mr-3"
         style={{ backgroundColor: `${category?.color || '#71717A'}20` }}
@@ -65,13 +58,16 @@ function TransactionItem({ transaction, onPress }: TransactionItemProps) {
           {formatDate(transaction.date)}
         </Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 export function RecentTransactions() {
   const router = useRouter();
   const transactions = useTransactionStore((state) => state.transactions);
+  const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const getCategoryById = useConfigStore((s) => s.getCategoryById);
   
   // Prendre les 5 dernières transactions (tri par date décroissante)
   const recentTransactions = [...transactions]
@@ -115,17 +111,27 @@ export function RecentTransactions() {
       </View>
       
       <View className="px-4">
-        {recentTransactions.map((transaction, index) => (
-          <View key={transaction.id}>
-            <TransactionItem
-              transaction={transaction}
-              onPress={() => router.push(`/transaction/${transaction.id}`)}
-            />
-            {index < recentTransactions.length - 1 && (
-              <View className="h-px bg-onyx-200/10" />
-            )}
-          </View>
-        ))}
+        {recentTransactions.map((transaction, index) => {
+          const category = getCategoryById(transaction.category);
+          const desc = transaction.description || category?.label || transaction.category || 'Transaction';
+          const prefix = transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '' : '-';
+          const deleteLabel = `Supprimer « ${desc} » (${prefix}${formatCurrency(transaction.amount)}) ?`;
+          return (
+            <View key={transaction.id}>
+              <SwipeableTransactionRow
+                onPress={() => router.push(`/transaction/${transaction.id}`)}
+                onDelete={() => deleteTransaction(transaction.id)}
+                deleteLabel={deleteLabel}
+                hapticEnabled={hapticEnabled}
+              >
+                <TransactionRowContent transaction={transaction} />
+              </SwipeableTransactionRow>
+              {index < recentTransactions.length - 1 && (
+                <View className="h-px bg-onyx-200/10" />
+              )}
+            </View>
+          );
+        })}
       </View>
       
       <TouchableOpacity

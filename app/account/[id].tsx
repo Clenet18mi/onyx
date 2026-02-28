@@ -9,10 +9,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, useTransactionStore, useConfigStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { Transaction, ACCOUNT_TYPES } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { SwipeableTransactionRow } from '@/components/ui/SwipeableTransactionRow';
 
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,6 +22,8 @@ export default function AccountDetailScreen() {
   const account = useAccountStore((state) => state.getAccount(id || ''));
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const getTransactionsByAccount = useTransactionStore((state) => state.getTransactionsByAccount);
+  const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
+  const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   
   const transactions = useMemo(() => {
     if (!id) return [];
@@ -70,31 +73,41 @@ export default function AccountDetailScreen() {
       amountPrefix = isOutgoing ? '-' : '+';
     }
 
+    const description = item.description || category?.label || 'Transaction';
+    const deleteLabel = `Supprimer « ${description} » (${amountPrefix}${formatCurrency(item.amount)}) ?`;
+
     return (
-      <View className="flex-row items-center py-3 border-b border-onyx-200/10">
-        <View 
-          className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-          style={{ backgroundColor: `${category?.color || '#71717A'}20` }}
-        >
-          <CategoryIcon size={20} color={category?.color || '#71717A'} />
-        </View>
-        
-        <View className="flex-1">
-          <Text className="text-white text-base font-medium" numberOfLines={1}>
-            {item.description || category?.label || 'Transaction'}
+      <SwipeableTransactionRow
+        onPress={() => router.push(`/transaction/${item.id}`)}
+        onDelete={() => deleteTransaction(item.id)}
+        deleteLabel={deleteLabel}
+        hapticEnabled={hapticEnabled}
+      >
+        <View className="flex-row items-center py-3 border-b border-onyx-200/10">
+          <View 
+            className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+            style={{ backgroundColor: `${category?.color || '#71717A'}20` }}
+          >
+            <CategoryIcon size={20} color={category?.color || '#71717A'} />
+          </View>
+          
+          <View className="flex-1">
+            <Text className="text-white text-base font-medium" numberOfLines={1}>
+              {description}
+            </Text>
+            <Text className="text-onyx-500 text-sm">
+              {formatDate(item.date)}
+            </Text>
+          </View>
+          
+          <Text 
+            className="text-base font-semibold"
+            style={{ color: amountColor }}
+          >
+            {amountPrefix}{formatCurrency(item.amount)}
           </Text>
-          <Text className="text-onyx-500 text-sm">
-            {formatDate(item.date)}
-          </Text>
         </View>
-        
-        <Text 
-          className="text-base font-semibold"
-          style={{ color: amountColor }}
-        >
-          {amountPrefix}{formatCurrency(item.amount)}
-        </Text>
-      </View>
+      </SwipeableTransactionRow>
     );
   };
 
