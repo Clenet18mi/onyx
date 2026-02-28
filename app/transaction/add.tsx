@@ -40,6 +40,7 @@ export default function AddTransactionScreen() {
   const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
   const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
   const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
+  const lastUsedAccountId = useSettingsStore((state) => state.lastUsedAccountId);
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
   const rules = useAutomationStore((state) => state.rules);
 
@@ -63,9 +64,19 @@ export default function AddTransactionScreen() {
 
   // Sélectionner le premier compte si aucun n'est sélectionné ; appliquer params template ; pré-remplir compte depuis prefill quand les comptes sont chargés
   React.useEffect(() => {
-    if (!accountId && accounts.length > 0) {
-      setAccountId(params.accountId || accounts[0].id);
+    if (!accounts.length) return;
+    if (params.accountId && accounts.some((a) => a.id === params.accountId)) {
+      setAccountId(params.accountId);
+      return;
     }
+    setAccountId((current) => {
+      if (current && accounts.some((a) => a.id === current)) return current;
+      return lastUsedAccountId && accounts.some((a) => a.id === lastUsedAccountId)
+        ? lastUsedAccountId
+        : accounts[0].id;
+    });
+  }, [accounts, params.accountId, lastUsedAccountId]);
+  React.useEffect(() => {
     if (params.prefill && accounts.length > 0 && !prefillAccountAppliedRef.current) {
       try {
         const p = JSON.parse(params.prefill) as { accountId?: string };
@@ -75,7 +86,7 @@ export default function AddTransactionScreen() {
         }
       } catch (_) {}
     }
-  }, [accounts, params.accountId, params.prefill]);
+  }, [accounts, params.prefill]);
   React.useEffect(() => {
     if (params.category) setCategory(params.category as TransactionCategory);
     if (params.type) setType(params.type as TransactionType);

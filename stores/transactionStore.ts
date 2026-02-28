@@ -9,6 +9,7 @@ import { zustandStorage } from '@/utils/storage';
 import { Transaction, TransactionType, TransactionCategory } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore } from './accountStore';
+import { useSettingsStore } from './settingsStore';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 
 interface TransactionState {
@@ -65,6 +66,7 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [newTransaction, ...state.transactions],
         }));
+        useSettingsStore.getState().setLastUsedAccountId(transactionData.accountId);
         return id;
       },
 
@@ -94,6 +96,7 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [transfer, ...state.transactions],
         }));
+        useSettingsStore.getState().setLastUsedAccountId(fromAccountId);
       },
 
       // Mettre à jour une transaction (et ajuster les soldes)

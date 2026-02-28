@@ -176,6 +176,8 @@ export interface Settings {
   ignoredDuplicateSignatures?: string[];
   /** Dernier mois pour lequel le bilan a été affiché (YYYY-MM) */
   lastBilanMonth?: string;
+  /** Dernier compte utilisé pour une transaction (présélection à l'ajout) */
+  lastUsedAccountId?: string;
 }
 
 // ============================================

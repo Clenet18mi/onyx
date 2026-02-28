@@ -18,6 +18,7 @@ interface SettingsState extends Settings {
   addIgnoredDuplicateSignature: (signature: string) => void;
   removeIgnoredDuplicateSignature: (signature: string) => void;
   clearIgnoredDuplicateSignatures: () => void;
+  setLastUsedAccountId: (accountId: string) => void;
 }
 
 const defaultSettings: Settings = {
@@ -71,6 +72,9 @@ export const useSettingsStore = create<SettingsState>()(
   },
   clearIgnoredDuplicateSignatures: () => {
     set({ ignoredDuplicateSignatures: [] });
+  },
+  setLastUsedAccountId: (accountId: string) => {
+    set({ lastUsedAccountId: accountId });
   },
 }),
     {
