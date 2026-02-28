@@ -146,6 +146,29 @@ export function BalanceCard() {
               {isHidden ? '••••••' : displayBalance}
             </Text>
           </Animated.View>
+          {/* Indicateur de tendance vs il y a 30 jours */}
+          {!isHidden && (() => {
+            const balance30DaysAgo = totalBalance - monthlyChange;
+            const ref = Math.abs(balance30DaysAgo) || 1;
+            const pct = (monthlyChange / ref) * 100;
+            if (pct >= -1 && pct <= 1) {
+              return (
+                <Text className="text-onyx-500 text-sm mt-1">= Stable ce mois-ci</Text>
+              );
+            }
+            if (monthlyChange > 0) {
+              return (
+                <Text className="text-accent-success text-sm mt-1">
+                  ↑ +{formatCurrency(monthlyChange)} ce mois-ci
+                </Text>
+              );
+            }
+            return (
+              <Text className="text-accent-danger text-sm mt-1">
+                ↓ {formatCurrency(monthlyChange)} ce mois-ci
+              </Text>
+            );
+          })()}
         </View>
         
         <TouchableOpacity
