@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore, useAutomationStore } from '@/stores';
 import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/duplicateDetector';
@@ -40,7 +40,9 @@ export default function AddTransactionScreen() {
   const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
   const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
+  const rules = useAutomationStore((state) => state.rules);
 
+  const [autoApplied, setAutoApplied] = useState(false);
   const [isPlanned, setIsPlanned] = useState(false);
   const [plannedDate, setPlannedDate] = useState(() => {
     const d = new Date();
@@ -158,6 +160,28 @@ export default function AddTransactionScreen() {
     if (parts.length > 2) return;
     if (parts[1] != null && parts[1].length > 2) return;
     setAmount(cleaned);
+  };
+
+  const handleDescriptionChange = (text: string) => {
+    setDescription(text);
+    if (type === 'transfer') return;
+    const note = text.trim().toLowerCase();
+    if (!note) return;
+    const enabledRules = rules.filter((r) => r.enabled);
+    for (const rule of enabledRules) {
+      const trigger = rule.triggers.find((t) => t.type === 'note_contains');
+      if (!trigger || trigger.value == null) continue;
+      const keyword = String(trigger.value).toLowerCase();
+      if (!keyword || !note.includes(keyword)) continue;
+      const action = rule.actions.find((a) => a.type === 'set_category');
+      if (!action || action.value == null) continue;
+      const targetCategory = String(action.value);
+      if (filteredCategories.some((c) => c.id === targetCategory) && targetCategory !== category) {
+        setCategory(targetCategory as TransactionCategory);
+        setAutoApplied(true);
+      }
+      break;
+    }
   };
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
@@ -341,9 +365,9 @@ export default function AddTransactionScreen() {
                 const CatIcon = getIcon(cat.icon);
                 const isSelected = category === cat.id;
                 return (
-                  <TouchableOpacity
+                    <TouchableOpacity
                     key={cat.id}
-                    onPress={() => setCategory(cat.id)}
+                    onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
                     className={`px-3 py-2 rounded-xl flex-row items-center ${
                       isSelected ? 'border' : ''
                     }`}
@@ -369,11 +393,14 @@ export default function AddTransactionScreen() {
             <Text className="text-onyx-500 text-sm mb-2">Description (optionnel)</Text>
             <TextInput
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               placeholder="Ex: Courses supermarché"
               placeholderTextColor="#52525B"
               className="bg-onyx-100 text-white px-4 py-3 rounded-xl text-base"
             />
+            {autoApplied && (
+              <Text className="text-onyx-500 text-xs mt-1">✦ Catégorie appliquée automatiquement</Text>
+            )}
           </View>
 
           {/* Ticket + Note vocale */}
