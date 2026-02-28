@@ -1,6 +1,6 @@
 // ============================================
 // ONYX - Balance Forecast
-// Projection du solde sur 30 jours
+// Projection du solde sur 30 jours (abonnements + prévus + salaire)
 // ============================================
 
 import React, { useMemo } from 'react';
@@ -9,7 +9,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { useAccountStore, useTransactionStore, useConfigStore, useSubscriptionStore, usePlannedTransactionStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { addDays, parseISO, differenceInDays, getDate, startOfDay } from 'date-fns';
+import { addDays, parseISO, differenceInDays, getDate, startOfDay, isWithinInterval } from 'date-fns';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +21,8 @@ export function BalanceForecast() {
   const plannedTransactions = usePlannedTransactionStore((s) => s.plannedTransactions);
 
   const now = new Date();
+  const todayStart = startOfDay(now);
+  const end30 = addDays(todayStart, 30);
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const daysElapsed = differenceInDays(now, thisMonthStart) + 1;
   const thisMonthExpenses = transactions
@@ -33,19 +35,67 @@ export function BalanceForecast() {
   const salaryDay = profile.salaryDay;
   const salaryAmount = profile.defaultSalaryAmount ?? 0;
 
+  const { projectedBalance, expectedIncomes, expectedExpenses, salaryIn30, plannedIncomeCount, plannedExpenseCount, subCountIn30 } = useMemo(() => {
+    const pending = plannedTransactions.filter((pt) => pt.status === 'pending');
+    const plannedIn30 = pending.filter((pt) => {
+      const d = startOfDay(parseISO(pt.plannedDate));
+      return isWithinInterval(d, { start: todayStart, end: end30 });
+    });
+    const plannedIncome = plannedIn30.filter((pt) => pt.type === 'income').reduce((s, pt) => s + pt.amount, 0);
+    const plannedExpense = plannedIn30.filter((pt) => pt.type === 'expense').reduce((s, pt) => s + pt.amount, 0);
+    const plannedIncomeN = plannedIn30.filter((pt) => pt.type === 'income').length;
+    const plannedExpenseN = plannedIn30.filter((pt) => pt.type === 'expense').length;
+
+    let subTotal = 0;
+    let subCount = 0;
+    subscriptions.forEach((sub) => {
+      const next = startOfDay(parseISO(sub.nextBillingDate));
+      if (isWithinInterval(next, { start: todayStart, end: end30 })) {
+        subTotal += sub.amount;
+        subCount += 1;
+      }
+    });
+
+    const hasSalaryThisMonth = transactions.some(
+      (t) => t.type === 'income' && t.category === 'salary' && isWithinInterval(parseISO(t.date), { start: thisMonthStart, end: now })
+    );
+    let salaryIn30Amount = 0;
+    for (let i = 0; i <= 30; i++) {
+      const d = addDays(now, i);
+      if (salaryDay != null && getDate(d) === salaryDay && salaryAmount > 0 && !hasSalaryThisMonth) {
+        salaryIn30Amount = salaryAmount;
+        break;
+      }
+    }
+
+    const expectedIncomes = salaryIn30Amount + plannedIncome;
+    const expectedExpenses = subTotal + plannedExpense;
+    const projected = totalBalance + expectedIncomes - expectedExpenses;
+
+    return {
+      projectedBalance: projected,
+      expectedIncomes,
+      expectedExpenses,
+      salaryIn30: salaryIn30Amount,
+      plannedIncomeCount: plannedIncomeN,
+      plannedExpenseCount: plannedExpenseN,
+      subCountIn30: subCount,
+    };
+  }, [totalBalance, transactions, profile, subscriptions, plannedTransactions, todayStart, end30, thisMonthStart, now, salaryDay, salaryAmount]);
+
   // Recompute when balance, transactions or planned change
   const chartData = useMemo(() => {
     const points: { value: number; label: string; dataPointText?: string }[] = [];
     let balance = totalBalance;
-    const todayStart = startOfDay(now);
     for (let i = 0; i <= 30; i++) {
       const d = addDays(now, i);
       if (i > 0) {
         balance -= dailyAvg;
         if (salaryDay != null && getDate(d) === salaryDay && salaryAmount > 0) balance += salaryAmount;
         subscriptions.forEach((sub) => {
-          const next = parseISO(sub.nextBillingDate);
-          if (differenceInDays(next, d) === 0) balance -= sub.amount;
+          const next = startOfDay(parseISO(sub.nextBillingDate));
+          const diff = differenceInDays(next, todayStart);
+          if (diff === i) balance -= sub.amount;
         });
         plannedTransactions
           .filter((pt) => pt.status === 'pending')
@@ -65,11 +115,13 @@ export function BalanceForecast() {
       });
     }
     return points;
-  }, [totalBalance, dailyAvg, salaryDay, salaryAmount, subscriptions, transactions.length, plannedTransactions]);
+  }, [totalBalance, dailyAvg, salaryDay, salaryAmount, subscriptions, transactions.length, plannedTransactions, now, todayStart]);
 
   const minBalance = Math.min(...chartData.map((p) => p.value));
   const maxBalance = Math.max(...chartData.map((p) => p.value));
   const hasNegative = minBalance < 0;
+  const projectedNegative = projectedBalance < 0;
+  const projectedLow = totalBalance > 0 && projectedBalance < totalBalance * 0.2;
 
   return (
     <View className="mb-6">
@@ -79,6 +131,34 @@ export function BalanceForecast() {
       </View>
       <GlassCard>
         <Text className="text-onyx-500 text-sm mb-2">Prochaines 30 jours</Text>
+        <View className="mb-3">
+          <Text className="text-onyx-500 text-xs">Dans 30 jours</Text>
+          <Text
+            className={`text-2xl font-bold ${projectedNegative ? 'text-accent-danger' : projectedLow ? 'text-amber-400' : 'text-white'}`}
+          >
+            {formatCurrency(projectedBalance)}
+          </Text>
+        </View>
+        {(expectedIncomes > 0 || expectedExpenses > 0) && (
+          <View className="mb-3 gap-1">
+            {expectedIncomes > 0 && (
+              <Text className="text-accent-success text-xs">
+                ↑ +{formatCurrency(expectedIncomes)} attendus
+                {salaryIn30 > 0 && plannedIncomeCount > 0 && ` (salaire + ${plannedIncomeCount} transaction(s))`}
+                {salaryIn30 > 0 && plannedIncomeCount === 0 && ' (salaire)'}
+                {salaryIn30 === 0 && plannedIncomeCount > 0 && ` (${plannedIncomeCount} transaction(s))`}
+              </Text>
+            )}
+            {expectedExpenses > 0 && (
+              <Text className="text-accent-danger text-xs">
+                ↓ -{formatCurrency(expectedExpenses)} prévus
+                {subCountIn30 > 0 && plannedExpenseCount > 0 && ` (${subCountIn30} abonnement(s) + ${plannedExpenseCount} transaction(s))`}
+                {subCountIn30 > 0 && plannedExpenseCount === 0 && ` (${subCountIn30} abonnement(s))`}
+                {subCountIn30 === 0 && plannedExpenseCount > 0 && ` (${plannedExpenseCount} transaction(s))`}
+              </Text>
+            )}
+          </View>
+        )}
         <View style={{ paddingVertical: 8 }}>
           <LineChart
             data={chartData}
@@ -127,6 +207,16 @@ export function BalanceForecast() {
           <View className="mt-2 flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-accent-danger" />
             <Text className="text-accent-danger text-xs ml-2">Solde négatif prévu sur la période</Text>
+          </View>
+        )}
+        {projectedNegative && (
+          <View className="mt-2 flex-row items-center">
+            <Text className="text-accent-danger text-xs font-medium">⚠️ Solde négatif prévu</Text>
+          </View>
+        )}
+        {!projectedNegative && projectedLow && (
+          <View className="mt-2 flex-row items-center">
+            <Text className="text-amber-400 text-xs font-medium">Attention au solde</Text>
           </View>
         )}
       </GlassCard>
