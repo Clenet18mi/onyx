@@ -15,6 +15,8 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isWithinInt
 interface TransactionState {
   transactions: Transaction[];
   hasHydrated: boolean;
+  /** Dernière transaction ajoutée (mémoire, non persisté) pour "Répéter" */
+  lastTransaction: Transaction | null;
   
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => string;
@@ -44,6 +46,7 @@ export const useTransactionStore = create<TransactionState>()(
     (set, get) => ({
       transactions: [],
       hasHydrated: false,
+      lastTransaction: null,
 
       // Ajouter une transaction
       addTransaction: (transactionData) => {
@@ -65,6 +68,7 @@ export const useTransactionStore = create<TransactionState>()(
         
         set((state) => ({
           transactions: [newTransaction, ...state.transactions],
+          lastTransaction: newTransaction,
         }));
         useSettingsStore.getState().setLastUsedAccountId(transactionData.accountId);
         return id;
@@ -95,6 +99,7 @@ export const useTransactionStore = create<TransactionState>()(
         
         set((state) => ({
           transactions: [transfer, ...state.transactions],
+          lastTransaction: transfer,
         }));
         useSettingsStore.getState().setLastUsedAccountId(fromAccountId);
       },
@@ -260,6 +265,7 @@ export const useTransactionStore = create<TransactionState>()(
     {
       name: 'onyx-transactions',
       storage: createJSONStorage(() => zustandStorage),
+      partialize: (state) => ({ transactions: state.transactions, hasHydrated: state.hasHydrated }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

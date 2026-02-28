@@ -35,6 +35,7 @@ export default function AddTransactionScreen() {
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const transactions = useTransactionStore((state) => state.transactions);
+  const lastTransaction = useTransactionStore((state) => state.lastTransaction);
   const addPlannedTransaction = usePlannedTransactionStore((state) => state.addPlannedTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
@@ -260,6 +261,30 @@ export default function AddTransactionScreen() {
             <View className="mx-6 mb-4 px-4 py-2 rounded-lg bg-onyx-200/30 border border-onyx-200/50">
               <Text className="text-onyx-400 text-sm">Duplicata — modifiez si besoin avant d'enregistrer</Text>
             </View>
+          )}
+
+          {/* Répéter la dernière transaction (même type) */}
+          {lastTransaction && lastTransaction.type !== 'transfer' && lastTransaction.type === type && (
+            <TouchableOpacity
+              onPress={() => {
+                setAmount(String(lastTransaction.amount));
+                setCategory(lastTransaction.category);
+                setDescription(lastTransaction.description || '');
+                if (accounts.some((a) => a.id === lastTransaction.accountId)) {
+                  setAccountId(lastTransaction.accountId);
+                }
+              }}
+              className="mx-6 mb-4 px-4 py-3 rounded-xl flex-row items-center justify-between"
+              style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' }}
+            >
+              <View className="flex-1">
+                <Text className="text-onyx-400 text-xs mb-1">↩ Répéter</Text>
+                <Text className="text-white font-medium" numberOfLines={1}>
+                  {lastTransaction.description || getCategoryById(lastTransaction.category)?.label || lastTransaction.category} • {formatCurrency(lastTransaction.amount)}
+                </Text>
+              </View>
+              <Text className="text-accent-primary font-semibold">Utiliser</Text>
+            </TouchableOpacity>
           )}
 
           {/* Montant style calculatrice : très grand en haut, centré */}
