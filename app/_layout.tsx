@@ -12,6 +12,7 @@ import { useAuthStore, useSubscriptionStore, usePlannedTransactionStore, useRemi
 import { useTheme } from '@/hooks/useTheme';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { SplashLoader } from '@/components/ui/SplashLoader';
 import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
@@ -154,7 +155,12 @@ export default function RootLayout() {
   }, []);
 
   if (!appIsReady || !fontsLoaded || !storesHydrated) {
-    return null;
+    return (
+      <View className="flex-1" style={{ backgroundColor: bgColor }}>
+        <StatusBar barStyle="light-content" backgroundColor={bgColor} />
+        <SplashLoader />
+      </View>
+    );
   }
 
   // Premier lancement - Configuration du PIN
