@@ -9,7 +9,6 @@ import { zustandStorage } from '@/utils/storage';
 import { Transaction, TransactionType, TransactionCategory } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore } from './accountStore';
-import { useSettingsStore } from './settingsStore';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 
 interface TransactionState {
@@ -17,6 +16,8 @@ interface TransactionState {
   hasHydrated: boolean;
   /** Dernière transaction ajoutée (mémoire, non persisté) pour "Répéter" */
   lastTransaction: Transaction | null;
+  /** Dernier compte utilisé pour pré-sélection dans add */
+  lastUsedAccountId: string | null;
   
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => string;
@@ -47,6 +48,7 @@ export const useTransactionStore = create<TransactionState>()(
       transactions: [],
       hasHydrated: false,
       lastTransaction: null,
+      lastUsedAccountId: null,
 
       // Ajouter une transaction
       addTransaction: (transactionData) => {
@@ -69,8 +71,8 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [newTransaction, ...state.transactions],
           lastTransaction: newTransaction,
+          lastUsedAccountId: transactionData.accountId,
         }));
-        useSettingsStore.getState().setLastUsedAccountId(transactionData.accountId);
         return id;
       },
 
@@ -100,8 +102,8 @@ export const useTransactionStore = create<TransactionState>()(
         set((state) => ({
           transactions: [transfer, ...state.transactions],
           lastTransaction: transfer,
+          lastUsedAccountId: fromAccountId,
         }));
-        useSettingsStore.getState().setLastUsedAccountId(fromAccountId);
       },
 
       // Mettre à jour une transaction (et ajuster les soldes)
@@ -265,7 +267,7 @@ export const useTransactionStore = create<TransactionState>()(
     {
       name: 'onyx-transactions',
       storage: createJSONStorage(() => zustandStorage),
-      partialize: (state) => ({ transactions: state.transactions, hasHydrated: state.hasHydrated }),
+      partialize: (state) => ({ transactions: state.transactions, hasHydrated: state.hasHydrated, lastUsedAccountId: state.lastUsedAccountId }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true;

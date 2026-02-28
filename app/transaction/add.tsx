@@ -42,7 +42,7 @@ export default function AddTransactionScreen() {
   const duplicateAlertEnabled = useSettingsStore((state) => state.duplicateAlertEnabled ?? true);
   const ignoredDuplicateSignatures = useSettingsStore((state) => state.ignoredDuplicateSignatures ?? []);
   const addIgnoredDuplicateSignature = useSettingsStore((state) => state.addIgnoredDuplicateSignature);
-  const lastUsedAccountId = useSettingsStore((state) => state.lastUsedAccountId);
+  const lastUsedAccountId = useTransactionStore((state) => state.lastUsedAccountId);
   const getVisibleCategories = useConfigStore((state) => state.getVisibleCategories);
   const rules = useAutomationStore((state) => state.rules);
   const getBudgetByCategory = useBudgetStore((state) => state.getBudgetByCategory);
