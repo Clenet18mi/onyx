@@ -174,6 +174,8 @@ export interface Settings {
   duplicateAlertEnabled?: boolean;
   /** Signatures "ne plus alerter" (type|catégorie|tranche montant) */
   ignoredDuplicateSignatures?: string[];
+  /** Dernier mois pour lequel le bilan a été affiché (YYYY-MM) */
+  lastBilanMonth?: string;
 }
 
 // ============================================

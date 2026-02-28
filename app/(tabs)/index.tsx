@@ -3,7 +3,7 @@
 // Écran principal avec vue d'ensemble complète
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,22 +23,33 @@ import {
   FinancialInsights,
   BalanceForecast,
   MerchantAnalysis,
+  MonthlyRecapModal,
+  HealthScore,
 } from '@/components/dashboard';
 import { PlannedTransactionCard } from '@/components/planned';
 import { CalendarClock } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [paydayModalVisible, setPaydayModalVisible] = useState(false);
+  const [bilanModalVisible, setBilanModalVisible] = useState(false);
   
   const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
   const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
+
+  useEffect(() => {
+    const prevMonthKey = format(subMonths(new Date(), 1), 'yyyy-MM');
+    if (lastBilanMonth !== prevMonthKey) {
+      setBilanModalVisible(true);
+    }
+  }, [lastBilanMonth]);
   
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -160,6 +171,11 @@ export default function DashboardScreen() {
           {/* Quick Accounts */}
           <QuickAccounts />
           
+          {/* Score de santé financière */}
+          <View className="mb-6">
+            <HealthScore />
+          </View>
+
           {/* Smart Insights */}
           <SmartInsights />
 
@@ -213,6 +229,12 @@ export default function DashboardScreen() {
         <PaydayModal 
           visible={paydayModalVisible}
           onClose={() => setPaydayModalVisible(false)}
+        />
+        
+        {/* Bilan de fin de mois (mois précédent) */}
+        <MonthlyRecapModal
+          visible={bilanModalVisible}
+          onClose={() => setBilanModalVisible(false)}
         />
       </SafeAreaView>
     </LinearGradient>
