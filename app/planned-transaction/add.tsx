@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type PlannedType = 'expense' | 'income';
 
@@ -22,6 +23,7 @@ const QUICK_DATES = [
   { label: 'Demain', get: () => addDays(new Date(), 1) },
   { label: 'Dans 7 j', get: () => addDays(new Date(), 7) },
   { label: 'Dans 30 j', get: () => addDays(new Date(), 30) },
+  { label: 'Autre date', get: null as unknown as () => Date },
 ];
 
 export default function AddPlannedTransactionScreen() {
@@ -39,6 +41,7 @@ export default function AddPlannedTransactionScreen() {
   const [note, setNote] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<'weekly' | 'monthly'>('monthly');
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   React.useEffect(() => {
     if (accounts.length && !accountId) setAccountId(accounts[0].id);
@@ -124,7 +127,19 @@ export default function AddPlannedTransactionScreen() {
             <Text className="text-onyx-500 text-sm mb-2">Date prévue</Text>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {QUICK_DATES.map(({ label, get }) => {
-                const d = get();
+                if (label === 'Autre date') {
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      onPress={() => setShowCustomDatePicker(true)}
+                      className="px-4 py-3 rounded-xl"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+                    >
+                      <Text className="text-onyx-500">Autre date</Text>
+                    </TouchableOpacity>
+                  );
+                }
+                const d = get!();
                 const selected = format(d, 'yyyy-MM-dd') === format(plannedDate, 'yyyy-MM-dd');
                 return (
                   <TouchableOpacity
@@ -142,6 +157,54 @@ export default function AddPlannedTransactionScreen() {
               {format(plannedDate, "EEEE d MMMM yyyy", { locale: fr })}
             </Text>
           </View>
+
+          {showCustomDatePicker && (
+            <>
+              {Platform.OS === 'ios' ? (
+                <Modal visible transparent animationType="slide">
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowCustomDatePicker(false)}
+                    className="flex-1 justify-end"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                  >
+                    <View className="bg-onyx p-4 rounded-t-2xl">
+                      <View className="flex-row justify-between items-center mb-4">
+                        <TouchableOpacity onPress={() => setShowCustomDatePicker(false)}>
+                          <Text className="text-onyx-500">Annuler</Text>
+                        </TouchableOpacity>
+                        <Text className="text-white font-semibold">Choisir la date</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setShowCustomDatePicker(false);
+                          }}
+                        >
+                          <Text className="text-accent-primary font-semibold">OK</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <DateTimePicker
+                        value={plannedDate}
+                        mode="date"
+                        display="spinner"
+                        onChange={(_, d) => d && setPlannedDate(d)}
+                        locale="fr-FR"
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
+              ) : (
+                <DateTimePicker
+                  value={plannedDate}
+                  mode="date"
+                  display="default"
+                  onChange={(_, d) => {
+                    if (d) setPlannedDate(d);
+                    setShowCustomDatePicker(false);
+                  }}
+                />
+              )}
+            </>
+          )}
 
           <View className="mb-6">
             <Text className="text-onyx-500 text-sm mb-2">Compte</Text>

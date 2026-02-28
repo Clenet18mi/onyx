@@ -2,8 +2,8 @@
 // ONYX - Carte transaction prévue
 // ============================================
 
-import React from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
 import * as Icons from 'lucide-react-native';
 import type { PlannedTransaction } from '@/types';
 import { usePlannedTransactionStore } from '@/stores/plannedTransactionStore';
@@ -11,6 +11,7 @@ import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { parseISO, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Props {
   planned: PlannedTransaction;
@@ -20,6 +21,9 @@ interface Props {
 export function PlannedTransactionCard({ planned, overdue }: Props) {
   const realizePlannedTransaction = usePlannedTransactionStore((s) => s.realizePlannedTransaction);
   const cancelPlannedTransaction = usePlannedTransactionStore((s) => s.cancelPlannedTransaction);
+  const updatePlannedTransaction = usePlannedTransactionStore((s) => s.updatePlannedTransaction);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState(() => parseISO(planned.plannedDate));
 
   const handleRealize = () => {
     Alert.alert(
@@ -41,6 +45,25 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
         { text: 'Oui', style: 'destructive', onPress: () => cancelPlannedTransaction(planned.id) },
       ]
     );
+  };
+
+  const handleChangeDate = () => {
+    setPickerDate(parseISO(planned.plannedDate));
+    setShowDatePicker(true);
+  };
+
+  const onDatePickerChange = (_event: unknown, selected?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selected) {
+      const dateOnly = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
+      updatePlannedTransaction(planned.id, { plannedDate: dateOnly.toISOString() });
+    }
+  };
+
+  const confirmDatePicker = () => {
+    const dateOnly = new Date(pickerDate.getFullYear(), pickerDate.getMonth(), pickerDate.getDate());
+    updatePlannedTransaction(planned.id, { plannedDate: dateOnly.toISOString() });
+    setShowDatePicker(false);
   };
 
   const dateStr = format(parseISO(planned.plannedDate), 'EEEE d MMM yyyy', { locale: fr });
@@ -68,6 +91,14 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
       </View>
       <View className="flex-row" style={{ gap: 8 }}>
         <TouchableOpacity
+          onPress={handleChangeDate}
+          className="flex-1 py-2.5 rounded-xl items-center"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+        >
+          <Icons.Calendar size={18} color="#71717A" />
+          <Text className="text-onyx-500 text-sm font-semibold mt-1">Changer la date</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handleRealize}
           className="flex-1 py-2.5 rounded-xl items-center"
           style={{ backgroundColor: 'rgba(99, 102, 241, 0.3)' }}
@@ -84,6 +115,47 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
           <Text className="text-onyx-500 text-sm font-semibold mt-1">Annuler</Text>
         </TouchableOpacity>
       </View>
+
+      {showDatePicker && (
+        <>
+          {Platform.OS === 'ios' ? (
+            <Modal visible transparent animationType="slide">
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowDatePicker(false)}
+                className="flex-1 justify-end"
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+              >
+                <View className="bg-onyx p-4 rounded-t-2xl">
+                  <View className="flex-row justify-between items-center mb-4">
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Text className="text-onyx-500">Annuler</Text>
+                    </TouchableOpacity>
+                    <Text className="text-white font-semibold">Nouvelle date</Text>
+                    <TouchableOpacity onPress={confirmDatePicker}>
+                      <Text className="text-accent-primary font-semibold">OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={pickerDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={(_, d) => d && setPickerDate(d)}
+                    locale="fr-FR"
+                  />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={pickerDate}
+              mode="date"
+              display="default"
+              onChange={onDatePickerChange}
+            />
+          )}
+        </>
+      )}
     </GlassCard>
   );
 }
