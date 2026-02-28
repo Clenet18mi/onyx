@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useGoalStore } from '@/stores';
+import { useGoalStore, useAccountStore } from '@/stores';
 import { formatCurrency, formatPercentage } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 
@@ -18,6 +18,8 @@ export default function GoalDetailScreen() {
   const router = useRouter();
   
   const goal = useGoalStore((state) => state.getGoal(id || ''));
+  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
+  const hasNoLinkedAccount = !goal || !goal.accountId || !accounts.find((a) => a.id === goal.accountId);
 
   if (!goal) {
     return (
@@ -58,6 +60,20 @@ export default function GoalDetailScreen() {
           </TouchableOpacity>
           <Text className="text-white text-xl font-bold flex-1">{goal.name}</Text>
         </View>
+
+        {hasNoLinkedAccount && (
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/goals')}
+            className="mx-6 mb-4 flex-row items-center px-4 py-3 rounded-xl"
+            style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }}
+          >
+            <Icons.AlertTriangle size={20} color="#F59E0B" />
+            <Text className="text-amber-500 text-sm flex-1 ml-3">
+              Aucun compte lié — la progression ne sera pas mise à jour automatiquement.
+            </Text>
+            <Text className="text-amber-400 text-sm font-semibold">Lier un compte</Text>
+          </TouchableOpacity>
+        )}
 
         <View className="flex-1 px-6">
           <GlassCard variant="light" className="items-center py-8">

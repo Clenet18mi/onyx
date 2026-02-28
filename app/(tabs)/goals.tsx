@@ -23,11 +23,13 @@ const GOAL_ICONS = [
 
 interface GoalCardProps {
   goal: SavingsGoal;
+  accounts: { id: string }[];
   onPress: () => void;
   onContribute: () => void;
 }
 
-function GoalCard({ goal, onPress, onContribute }: GoalCardProps) {
+function GoalCard({ goal, accounts, onPress, onContribute }: GoalCardProps) {
+  const hasNoLinkedAccount = !goal.accountId || !accounts.find((a) => a.id === goal.accountId);
   const Icon = (Icons as any)[goal.icon] || Icons.Target;
   const percentage = goal.targetAmount > 0 
     ? (goal.currentAmount / goal.targetAmount) * 100 
@@ -37,6 +39,19 @@ function GoalCard({ goal, onPress, onContribute }: GoalCardProps) {
   return (
     <TouchableOpacity onPress={onPress}>
       <GlassCard className="mb-4">
+        {hasNoLinkedAccount && (
+          <TouchableOpacity
+            onPress={onPress}
+            className="flex-row items-center mb-4 px-3 py-2 rounded-lg"
+            style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }}
+          >
+            <Icons.AlertTriangle size={18} color="#F59E0B" />
+            <Text className="text-amber-500 text-xs flex-1 ml-2">
+              Aucun compte lié — la progression ne sera pas mise à jour automatiquement.
+            </Text>
+            <Text className="text-amber-400 text-xs font-semibold">Lier un compte</Text>
+          </TouchableOpacity>
+        )}
         <View className="flex-row items-start mb-4">
           <View 
             className="w-14 h-14 rounded-2xl items-center justify-center mr-4"
@@ -301,6 +316,7 @@ export default function GoalsScreen() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  accounts={accounts}
                   onPress={() => openEditModal(goal)}
                   onContribute={() => openContributeModal(goal)}
                 />
@@ -316,6 +332,7 @@ export default function GoalsScreen() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  accounts={accounts}
                   onPress={() => openEditModal(goal)}
                   onContribute={() => {}}
                 />
