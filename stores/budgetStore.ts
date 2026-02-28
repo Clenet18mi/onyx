@@ -95,6 +95,7 @@ export const useBudgetStore = create<BudgetState>()(
 
         switch (budget.period) {
           case 'weekly':
+            // Fenêtre calendaire lundi–dimanche (ISO)
             startDate = startOfWeek(now, { weekStartsOn: 1 });
             endDate = endOfWeek(now, { weekStartsOn: 1 });
             break;
