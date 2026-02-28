@@ -1,12 +1,20 @@
 {
   "appVersion": "1.0.0",
-  "buildNumber": "85",
-  "generatedAt": "2026-02-07T14:28:50.558Z",
+  "buildNumber": "93",
+  "generatedAt": "2026-02-28T18:59:53.711Z",
   "entries": [
     {
       "version": "1.0.0",
-      "date": "2026-02-07",
+      "date": "2026-02-28",
       "logs": [
+        "chore: remove obsolete report and analysis markdown files",
+        "feat(settings): add PDF/HTML monthly statement export to data management",
+        "docs: add DOC_APP_ONYX full app documentation for handover",
+        "ux: show exported filename in success alert",
+        "fix: disable subscriptions when no accounts, reset transfer account selection when list changes",
+        "fix: use getCategoryById and getVisibleCategories for custom categories everywhere",
+        "chore(assets): remove unused icon images",
+        "Update BUILD_GUIDE.md and README.md with recommended npm commands for building APKs and added useful npm scripts. Update changelog.json with new build number and entry for notification handling feature.",
         "feat(reminders): enhance notification handling and permissions management",
         "feat(settings): add changelog screen and version display",
         "chore(assets): update adaptive and icon images",
@@ -78,15 +86,7 @@
         "Create transaction add screen",
         "Build account management screens",
         "Add cashflow chart and account quick view",
-        "Create dashboard balance card and quick actions",
-        "Set up Expo Router navigation",
-        "Implement subscription and settings stores",
-        "Add budget and savings goal stores",
-        "Create transaction store with analytics",
-        "Implement account management store",
-        "Add reusable UI components",
-        "Build PIN pad and lock screen components",
-        "Create authentication store with PIN logic"
+        "Create dashboard balance card and quick actions"
       ]
     }
   ]
