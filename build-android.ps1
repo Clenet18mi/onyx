@@ -17,6 +17,14 @@ function Step([string]$Message) {
 # Definir NODE_ENV
 $env:NODE_ENV = if ($BuildType -eq "debug") { "development" } else { "production" }
 Write-Host "[INFO] NODE_ENV = $env:NODE_ENV" -ForegroundColor Yellow
+
+# Le bundler Metro peut manquer de mémoire sur Windows pendant le bundle release.
+if ([string]::IsNullOrWhiteSpace($env:NODE_OPTIONS)) {
+    $env:NODE_OPTIONS = "--max-old-space-size=8192"
+} elseif ($env:NODE_OPTIONS -notmatch '--max-old-space-size') {
+    $env:NODE_OPTIONS = "--max-old-space-size=8192 $env:NODE_OPTIONS"
+}
+Write-Host "[INFO] NODE_OPTIONS = $env:NODE_OPTIONS" -ForegroundColor Yellow
 Write-Host ""
 
 $androidStudioJbr = Join-Path $env:ProgramFiles "Android\Android Studio\jbr"
@@ -45,7 +53,7 @@ Write-Host ""
 
 Push-Location $androidDir
 try {
-    $gradleArgs = @("--build-cache", "--parallel", "--max-workers=4", "--console=plain")
+    $gradleArgs = @("--build-cache", "--max-workers=1", "--console=plain")
     if ($BuildType -eq "debug") {
         .\gradlew.bat assembleDebug @gradleArgs
     } else {
