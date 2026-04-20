@@ -4,11 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, useTransactionStore, useConfigStore, useSettingsStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useConfigStore, useSettingsStore, usePlannedTransactionStore } from '@/stores';
 import { formatCurrency, formatDate, displayAmount, safeParseISO } from '@/utils/format';
 import { Transaction, ACCOUNT_TYPES } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SwipeableTransactionRow } from '@/components/ui/SwipeableTransactionRow';
+import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function AccountDetailScreen() {
@@ -20,6 +21,8 @@ export default function AccountDetailScreen() {
   const getCategoryById = useConfigStore((state) => state.getCategoryById);
   const getTransactionsByAccount = useTransactionStore((state) => state.getTransactionsByAccount);
   const deleteTransaction = useTransactionStore((state) => state.deleteTransaction);
+  const deleteAccount = useAccountStore((state) => state.deleteAccount);
+  const plannedTransactions = usePlannedTransactionStore((state) => state.plannedTransactions);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
   const currency = useSettingsStore((state) => state.currency);
@@ -37,6 +40,26 @@ export default function AccountDetailScreen() {
   const getIcon = (iconName: string) => (Icons as any)[iconName] || Icons.Wallet;
   const AccountIcon = getIcon(account.icon);
   const accountType = ACCOUNT_TYPES.find((t) => t.id === account.type);
+  const linkedPlanned = plannedTransactions.filter((p) => p.accountId === account.id && p.status === 'pending');
+
+  const handleDeleteAccount = () => {
+    const linkedTransactions = transactions.length;
+    if (linkedPlanned.length > 0) {
+      Alert.alert('Impossible de supprimer', `Ce compte est encore utilisé par ${linkedPlanned.length} transaction(s) prévue(s).`, [{ text: 'Annuler', style: 'cancel' }]);
+      return;
+    }
+
+    Alert.alert(
+      'Supprimer le compte',
+      linkedTransactions > 0
+        ? `Ce compte contient ${linkedTransactions} transaction(s). Voulez-vous vraiment le supprimer ?`
+        : `Supprimer le compte "${account.name}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => { deleteAccount(account.id); router.back(); } },
+      ],
+    );
+  };
   const renderTransaction = ({ item }: { item: Transaction }) => { const category = getCategoryById(item.category); const CategoryIcon = category ? (Icons as any)[category.icon] : Icons.CircleDot; const isIncome = item.type === 'income'; const isTransfer = item.type === 'transfer'; const isOutgoing = item.accountId === id && isTransfer; let amountColor = isIncome ? colors.accent.success : colors.accent.danger; let amountPrefix = isIncome ? '+' : '-'; if (isTransfer) { amountColor = isOutgoing ? colors.accent.danger : colors.accent.success; amountPrefix = isOutgoing ? '-' : '+'; } const description = item.description || category?.label || 'Transaction'; const deleteLabel = `Supprimer « ${description} » (${amountPrefix}${displayAmount(item.amount, privacyMode, currency, locale)}) ?`; return (<SwipeableTransactionRow onPress={() => router.push(`/transaction/${item.id}`)} onDelete={() => deleteTransaction(item.id)} deleteLabel={deleteLabel} hapticEnabled={hapticEnabled}><View className="flex-row items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.background.tertiary }}><View className="w-10 h-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: `${category?.color || colors.text.secondary}20` }}><CategoryIcon size={20} color={category?.color || colors.text.secondary} /></View><View className="flex-1"><Text style={{ color: colors.text.primary, fontSize: 16, fontWeight: '600' }} numberOfLines={1}>{description}</Text><Text className="text-sm" style={{ color: colors.text.secondary }}>{formatDate(item.date)}</Text></View><Text className="text-base font-semibold" style={{ color: amountColor }}>{amountPrefix}{displayAmount(item.amount, privacyMode, currency, locale)}</Text></View></SwipeableTransactionRow>); };
   const stats = useMemo(() => { const income = filteredTransactions.filter((t) => t.type !== 'transfer' && t.type === 'income' && t.accountId === id).reduce((sum, t) => sum + t.amount, 0); const expenses = filteredTransactions.filter((t) => t.type !== 'transfer' && t.type === 'expense' && t.accountId === id).reduce((sum, t) => sum + t.amount, 0); return { income, expenses }; }, [filteredTransactions, id]);
   const summaryNet = stats.income - stats.expenses;
@@ -51,6 +74,7 @@ export default function AccountDetailScreen() {
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View className="px-6 mb-6"><GlassCard variant="light"><View className="items-center py-4"><View className="w-16 h-16 rounded-2xl items-center justify-center mb-4" style={{ backgroundColor: `${account.color}22`, borderWidth: 1, borderColor: `${account.color}24` }}><AccountIcon size={32} color={account.color} /></View><Text className="text-sm mb-1" style={{ color: colors.text.secondary }}>{accountType?.label || 'Compte'}</Text><Text className="text-xs mb-3" style={{ color: colors.text.secondary }}>{account.bankLabel || account.bank || 'Banque non renseignée'}</Text><Text className="text-4xl font-bold" style={{ color: account.balance >= 0 ? colors.text.primary : colors.accent.danger }}>{displayAmount(account.balance, privacyMode, currency, locale)}</Text></View></GlassCard></View>
+          <View className="px-6 mb-6"><Button title="Supprimer ce compte" variant="danger" fullWidth onPress={handleDeleteAccount} icon={<Icons.Trash2 size={18} color="white" />} /></View>
           <View className="px-6 mb-6 flex-row" style={{ gap: 12 }}><View className="flex-1 p-4 rounded-2xl" style={{ backgroundColor: `${colors.accent.success}14`, borderWidth: 1, borderColor: `${colors.accent.success}24` }}><View className="flex-row items-center mb-2"><Icons.TrendingUp size={16} color={colors.accent.success} /><Text className="text-sm ml-2" style={{ color: colors.text.secondary }}>Entrées</Text></View><Text className="text-lg font-semibold" style={{ color: colors.accent.success }}>{privacyMode ? displayAmount(stats.income, true, currency, locale) : `+${formatCurrency(stats.income)}`}</Text></View><View className="flex-1 p-4 rounded-2xl" style={{ backgroundColor: `${colors.accent.danger}14`, borderWidth: 1, borderColor: `${colors.accent.danger}24` }}><View className="flex-row items-center mb-2"><Icons.TrendingDown size={16} color={colors.accent.danger} /><Text className="text-sm ml-2" style={{ color: colors.text.secondary }}>Sorties</Text></View><Text className="text-lg font-semibold" style={{ color: colors.accent.danger }}>{privacyMode ? displayAmount(stats.expenses, true, currency, locale) : `-${formatCurrency(stats.expenses)}`}</Text></View></View>
 
           <View className="px-6"><Text className="text-lg font-semibold mb-4" style={{ color: colors.text.primary }}>Historique</Text>{filteredTransactions.length > 0 ? (<View className="flex-row items-center justify-between mb-3 py-2 px-3 rounded-xl" style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary }}><Text className="text-sm" style={{ color: colors.text.secondary }}>{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} • <Text style={{ color: summaryNet >= 0 ? colors.accent.success : colors.accent.danger }}>{summaryNet >= 0 ? '+' : ''}{displayAmount(summaryNet, privacyMode, currency, locale)}</Text></Text></View>) : null}{filteredTransactions.length === 0 ? (<View className="items-center py-12"><Icons.Receipt size={48} color={colors.text.tertiary} /><Text className="text-base mt-4 text-center" style={{ color: colors.text.secondary }}>{searchQuery.trim() ? 'Aucun résultat' : 'Aucune transaction'}</Text></View>) : filteredTransactions.map((transaction) => (<View key={transaction.id}>{renderTransaction({ item: transaction })}</View>))}</View>
