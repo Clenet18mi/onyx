@@ -85,7 +85,7 @@ export default function BankImportScreen() {
       const reconciliation = buildBankImportReconciliation(currentBalance, finalPreview.newRows ? finalPreview.typeBreakdown.income - finalPreview.typeBreakdown.expense : 0, targetBalance);
       Alert.alert(
         'Import terminé',
-        `${finalPreview.newRows} nouvelles transaction(s) ajoutée(s), ${finalPreview.duplicateRows} doublon(s), ${finalPreview.ignoredRows} ignorée(s).${targetBalanceInput.trim() ? `\nÉcart de réconciliation: ${formatCurrency(reconciliation.adjustment)}.` : ''}`,
+        `${finalPreview.newRows} nouvelles transaction(s) ajoutée(s), ${finalPreview.duplicateRows} doublon(s), ${finalPreview.ignoredRows} ignorée(s).${targetBalanceInput.trim() ? `\nUne transaction de réconciliation peut être créée pour corriger l'écart de ${formatCurrency(reconciliation.adjustment)}.` : ''}`,
         [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (error) {
@@ -134,7 +134,7 @@ export default function BankImportScreen() {
           <GlassCard className="mb-4">
             <Text className="text-white font-semibold mb-2">Solde du compte après import</Text>
             <Text className="text-onyx-500 text-sm mb-4">
-              Si tu connais le solde exact du compte maintenant, saisis-le pour vérifier l'écart après import.
+              Si tu connais le solde exact du compte maintenant, saisis-le pour que l’app puisse créer une transaction de réconciliation si besoin.
             </Text>
             <TextInput
               value={targetBalanceInput}

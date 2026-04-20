@@ -1,10 +1,18 @@
 import * as Crypto from 'expo-crypto';
 import { File } from 'expo-file-system';
-import type { Transaction, TransactionCategory, TransactionType, BankImportMetadata } from '@/types';
+import type { Transaction, BankImportMetadata } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore, useTransactionStore } from '@/stores';
 import { safeParseISO } from '@/utils/format';
-export { parseBankCsvRaw, summarizeBankRows, suggestBankImportAccountId, buildBankImportReconciliation } from './bankCsvImportCore';
+import {
+  parseBankCsvRaw,
+  summarizeBankRows,
+  suggestBankImportAccountId,
+  buildBankImportReconciliation,
+  type BankCsvRow,
+} from './bankCsvImportCore';
+
+export { parseBankCsvRaw, summarizeBankRows, suggestBankImportAccountId, buildBankImportReconciliation, type BankCsvRow };
 
 export interface BankImportPreview {
   fileName: string;
@@ -14,14 +22,14 @@ export interface BankImportPreview {
   newRows: number;
   duplicateRows: number;
   ignoredRows: number;
-  typeBreakdown: Record<TransactionType, number>;
-  categoryBreakdown: Array<{ category: TransactionCategory; count: number; amount: number }>;
+  typeBreakdown: Record<'income' | 'expense' | 'transfer', number>;
+  categoryBreakdown: Array<{ category: string; count: number; amount: number }>;
   sampleRows: Array<{
     date: string;
     label: string;
     amount: number;
-    type: TransactionType;
-    category: TransactionCategory;
+    type: 'income' | 'expense' | 'transfer';
+    category: string;
     status: 'new' | 'duplicate' | 'ignored';
   }>;
 }
@@ -29,13 +37,6 @@ export interface BankImportPreview {
 export interface BankImportBatch {
   transactions: Transaction[];
   preview: BankImportPreview;
-}
-
-export interface BankImportReconciliation {
-  currentBalance: number;
-  importedNet: number;
-  targetBalance: number;
-  adjustment: number;
 }
 
 function normalizeText(value: string | undefined | null): string {
@@ -51,8 +52,7 @@ async function hashRowSignature(signature: string): Promise<string> {
 async function readTextFile(fileUri: string): Promise<string> {
   try {
     const file = new File(fileUri);
-    const text = await file.text();
-    return text;
+    return await file.text();
   } catch {
     throw new Error('Impossible de lire le fichier CSV');
   }
@@ -63,35 +63,28 @@ function transactionIdentity(tx: Transaction): string {
   if (importMeta?.rowHash) return `${tx.accountId}|${importMeta.rowHash}`;
   return [
     tx.accountId,
-    normalizeKey(tx.date),
+    normalizeText(tx.date).toLowerCase(),
     tx.type,
     tx.category,
     tx.amount.toFixed(2),
-    normalizeKey(tx.description),
-    normalizeKey(tx.toAccountId),
+    normalizeText(tx.description).toLowerCase(),
+    normalizeText(tx.toAccountId).toLowerCase(),
   ].join('|');
 }
 
-export function suggestBankImportAccountId(accounts: Array<{ id: string; type: string; isArchived?: boolean }>, lastBankImportAccountId?: string | null): string {
-  const activeAccounts = accounts.filter((account) => !account.isArchived);
-  if (!activeAccounts.length) return '';
-  if (lastBankImportAccountId && activeAccounts.some((account) => account.id === lastBankImportAccountId)) return lastBankImportAccountId;
-  return activeAccounts.find((account) => account.type === 'checking')?.id ?? activeAccounts[0].id;
-}
-
-export function buildBankImportReconciliation(currentBalance: number, importedNet: number, targetBalance?: number): BankImportReconciliation {
-  const computedTarget = targetBalance ?? currentBalance;
-  return {
-    currentBalance,
-    importedNet,
-    targetBalance: computedTarget,
-    adjustment: computedTarget - (currentBalance + importedNet),
-  };
-}
-
 function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, rowHash: string): Transaction | null {
-  const type = mapTransactionType(row);
-  const category = mapCategory(row, type);
+  const type = row.credit > 0 ? 'income' : row.debit > 0 ? 'expense' : row.operationType.toLowerCase().includes('virement') ? 'transfer' : 'expense';
+  const category = type === 'transfer'
+    ? 'transfer'
+    : row.category.toLowerCase().includes('alimentation')
+      ? 'food'
+      : row.category.toLowerCase().includes('transport')
+        ? 'transport'
+        : row.category.toLowerCase().includes('sante')
+          ? 'health'
+          : row.category.toLowerCase().includes('revenus') || row.category.toLowerCase().includes('rentrees')
+            ? 'salary'
+            : 'other';
   const amount = row.credit > 0 ? row.credit : row.debit > 0 ? row.debit : 0;
   if (!amount || amount <= 0) return null;
 
@@ -130,16 +123,19 @@ function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, 
   };
 }
 
-export async function previewBankCsvRows(rows: BankCsvRow[], bankAccount: { id: string; name: string; balance?: number; type?: string }, fileName = 'releve.csv'): Promise<BankImportBatch> {
-  if (!bankAccount?.id) throw new Error('Compte cible introuvable');
+export async function previewBankCsvImport(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportBatch> {
+  const raw = (await readTextFile(fileUri)).replace(/^\uFEFF/, '').trim();
+  const rows = parseBankCsvRaw(raw);
+  const account = useAccountStore.getState().getAccount(accountId);
+  if (!account) throw new Error('Compte cible introuvable');
 
-  const existing = useTransactionStore.getState().getTransactionsByAccount(bankAccount.id);
+  const existing = useTransactionStore.getState().getTransactionsByAccount(accountId);
   const existingIds = new Set(existing.map(transactionIdentity));
   const existingHashes = new Set(
     existing
       .map((tx) => tx.bankImport?.rowHash)
       .filter((value): value is string => Boolean(value))
-      .map((value) => `${bankAccount.id}|${value}`)
+      .map((value) => `${accountId}|${value}`)
   );
 
   const seenInFile = new Set<string>();
@@ -150,10 +146,22 @@ export async function previewBankCsvRows(rows: BankCsvRow[], bankAccount: { id: 
   const sampleRows: BankImportPreview['sampleRows'] = [];
 
   for (const { row, type, category, amount } of summary.normalizedRows) {
-    const signature = buildRowSignature(row, bankAccount.id);
+    const signature = [
+      accountId,
+      row.reference,
+      row.operationDate,
+      row.valueDate,
+      row.operationType,
+      row.category,
+      row.subCategory,
+      row.simplifiedLabel,
+      row.operationLabel,
+      row.debit.toFixed(2),
+      row.credit.toFixed(2),
+    ].join('|');
     const rowHash = await hashRowSignature(signature);
-    const key = `${bankAccount.id}|${rowHash}`;
-    const tx = rowToTransaction(row, bankAccount.id, fileName, rowHash);
+    const key = `${accountId}|${rowHash}`;
+    const tx = rowToTransaction(row, accountId, fileName, rowHash);
 
     if (!tx) {
       ignoredRows += 1;
@@ -210,8 +218,8 @@ export async function previewBankCsvRows(rows: BankCsvRow[], bankAccount: { id: 
     transactions,
     preview: {
       fileName,
-      accountId: bankAccount.id,
-      accountName: bankAccount.name,
+      accountId,
+      accountName: account.name,
       totalRows: rows.length,
       newRows: transactions.length,
       duplicateRows,
@@ -221,13 +229,6 @@ export async function previewBankCsvRows(rows: BankCsvRow[], bankAccount: { id: 
       sampleRows,
     },
   };
-}
-
-export async function previewBankCsvImport(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportBatch> {
-  const { rows } = await readBankCsv(fileUri);
-  const account = useAccountStore.getState().getAccount(accountId);
-  if (!account) throw new Error('Compte cible introuvable');
-  return await previewBankCsvRows(rows, account, fileName);
 }
 
 export async function importBankCsv(fileUri: string, accountId: string, fileName = 'releve.csv', options?: { targetBalance?: number; createReconciliationTransaction?: boolean }): Promise<BankImportPreview> {
