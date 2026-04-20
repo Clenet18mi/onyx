@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { useTheme } from '@/hooks/useTheme';
 
 interface PinDotsProps {
   length: 4 | 6;
@@ -24,6 +25,8 @@ interface PinDotsProps {
 export function PinDots({ length, filled, error = false, onErrorAnimationComplete }: PinDotsProps) {
   const shake = useSharedValue(0);
   const errorOpacity = useSharedValue(0);
+  const { theme } = useTheme();
+  const { colors } = theme;
 
   useEffect(() => {
     if (error) {
@@ -75,6 +78,8 @@ interface PinDotProps {
 function PinDot({ filled, error }: PinDotProps) {
   const scale = useSharedValue(1);
   const backgroundColor = useSharedValue('rgba(255, 255, 255, 0.2)');
+  const { theme } = useTheme();
+  const { colors } = theme;
 
   useEffect(() => {
     if (filled) {
@@ -82,12 +87,12 @@ function PinDot({ filled, error }: PinDotProps) {
         withSpring(1.3, { damping: 10 }),
         withSpring(1, { damping: 10 })
       );
-      backgroundColor.value = withTiming(error ? '#EF4444' : '#6366F1', { duration: 150 });
+      backgroundColor.value = withTiming(error ? colors.accent.danger : colors.accent.primary, { duration: 150 });
     } else {
       scale.value = withSpring(1);
-      backgroundColor.value = withTiming('rgba(255, 255, 255, 0.2)', { duration: 150 });
+      backgroundColor.value = withTiming(colors.background.tertiary, { duration: 150 });
     }
-  }, [filled, error]);
+  }, [filled, error, colors.accent.danger, colors.accent.primary, colors.background.tertiary]);
 
   const dotStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

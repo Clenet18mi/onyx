@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { Delete, Fingerprint } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSettingsStore } from '@/stores';
+import { useTheme } from '@/hooks/useTheme';
 
 const { width } = Dimensions.get('window');
 const BUTTON_SIZE = Math.min(width * 0.22, 80);
@@ -28,6 +29,8 @@ export function PinPad({
   disabled = false,
 }: PinPadProps) {
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
+  const { theme } = useTheme();
+  const { colors } = theme;
 
   const handlePress = (callback: () => void) => {
     if (disabled) return;
@@ -42,8 +45,8 @@ export function PinPad({
       if (!showBiometric) {
         return <View key={index} style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }} />;
       }
-      return (
-        <TouchableOpacity
+        return (
+          <TouchableOpacity
           key={index}
           onPress={() => handlePress(() => onBiometricPress?.())}
           disabled={disabled}
@@ -52,10 +55,10 @@ export function PinPad({
           style={{
             width: BUTTON_SIZE,
             height: BUTTON_SIZE,
-            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            backgroundColor: `${colors.accent.primary}20`,
           }}
         >
-          <Fingerprint size={32} color="#6366F1" />
+          <Fingerprint size={32} color={colors.accent.primary} />
         </TouchableOpacity>
       );
     }
@@ -71,10 +74,10 @@ export function PinPad({
           style={{
             width: BUTTON_SIZE,
             height: BUTTON_SIZE,
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: colors.background.secondary,
           }}
         >
-          <Delete size={28} color="#71717A" />
+          <Delete size={28} color={colors.text.secondary} />
         </TouchableOpacity>
       );
     }
@@ -89,10 +92,10 @@ export function PinPad({
         style={{
           width: BUTTON_SIZE,
           height: BUTTON_SIZE,
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          backgroundColor: colors.background.secondary,
         }}
       >
-        <Text className="text-white text-3xl font-semibold">{value}</Text>
+        <Text style={{ color: colors.text.primary, fontSize: 30, fontWeight: '600' }}>{value}</Text>
       </TouchableOpacity>
     );
   };
