@@ -14,7 +14,10 @@ function MoreRow({ icon, label, onPress, rightElement }: { icon: React.ReactNode
     <TouchableOpacity onPress={onPress} className="flex-row items-center justify-between px-4 py-4" style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.background.tertiary }}>
       <View className="flex-row items-center flex-1">
         {icon}
-        <Text className="ml-3 font-medium" style={{ color: theme.colors.text.primary }}>{label}</Text>
+        <View className="ml-3 flex-1">
+          <Text className="font-medium" style={{ color: theme.colors.text.primary }}>{label}</Text>
+          <Text className="text-xs mt-0.5" style={{ color: theme.colors.text.secondary }}>{onPress ? 'Ouvrir le détail' : 'Activer ou désactiver'}</Text>
+        </View>
       </View>
       {rightElement || (onPress ? <Icons.ChevronRight size={20} color={theme.colors.text.tertiary} /> : null)}
     </TouchableOpacity>
@@ -72,7 +75,7 @@ export default function MoreScreen() {
           </View>
 
           <View className="mb-6 items-center py-8">
-            <View className="w-16 h-16 rounded-2xl items-center justify-center mb-4" style={{ backgroundColor: `${colors.accent.primary}20` }}>
+            <View className="w-16 h-16 rounded-2xl items-center justify-center mb-4" style={{ backgroundColor: `${colors.accent.primary}22`, borderWidth: 1, borderColor: `${colors.accent.primary}24` }}>
               <Icons.Shield size={32} color={colors.accent.primary} />
             </View>
             <Text style={{ color: colors.text.primary, fontSize: 20, fontWeight: '700' }}>ONYX</Text>

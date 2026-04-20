@@ -81,7 +81,7 @@ export function GlassCard({
   const variants = {
     default: {
       borderWidth: 1,
-      borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)',
+      borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.12)',
       shadow: undefined as ViewStyle['shadowColor'],
       backgroundColor: colors.background.card,
     },
@@ -165,7 +165,7 @@ export function GlassCard({
           pointerEvents="none"
         />
       )}
-      <View style={{ padding: paddingValue, zIndex: 1 }}>{children}</View>
+      <View style={{ padding: paddingValue, zIndex: 1, backgroundColor: variant === 'elevated' ? colors.background.card : 'transparent' }}>{children}</View>
       {loading && (
         <View style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden' }]} pointerEvents="none">
           <Animated.View style={[styles.shimmer, shimmerAnimatedStyle]}>

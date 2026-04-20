@@ -19,7 +19,7 @@ import { fr } from 'date-fns/locale';
 import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatDate, safeParseISO } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { SpendingTrends } from '@/components/dashboard';
+import { SpendingTrends } from '@/components/dashboard/SpendingTrends';
 import type { Transaction } from '@/types';
 import { useTheme } from '@/hooks/useTheme';
 

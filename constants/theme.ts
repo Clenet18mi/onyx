@@ -93,8 +93,8 @@ const darkColors: ThemeColors = {
   background: {
     primary: '#0B0D12',
     secondary: '#131722',
-    tertiary: '#171B26',
-    card: 'rgba(19, 23, 34, 0.92)',
+    tertiary: '#1B2030',
+    card: 'rgba(16, 20, 31, 0.96)',
     overlay: 'rgba(0, 0, 0, 0.8)',
   },
   text: {
@@ -124,8 +124,8 @@ const lightColors: ThemeColors = {
   background: {
     primary: '#F7F8FC',
     secondary: '#FFFFFF',
-    tertiary: '#F2F5FB',
-    card: 'rgba(255, 255, 255, 0.94)',
+    tertiary: '#E8ECF5',
+    card: 'rgba(255, 255, 255, 0.98)',
     overlay: 'rgba(0, 0, 0, 0.5)',
   },
   text: {

@@ -16,10 +16,10 @@ export default function BankImportScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { colors } = theme;
-  const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
+  const allAccounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const lastBankImportAccountId = useSettingsStore((state) => state.lastBankImportAccountId);
   const setLastBankImportAccountId = useSettingsStore((state) => state.setLastBankImportAccountId);
-  const [selectedAccountId, setSelectedAccountId] = useState(suggestBankImportAccountId(accounts, lastBankImportAccountId));
+  const [selectedAccountId, setSelectedAccountId] = useState(suggestBankImportAccountId(allAccounts, lastBankImportAccountId));
   const [fileUri, setFileUri] = useState<string | null>(null);
   const [fileName, setFileName] = useState('releve.csv');
   const [preview, setPreview] = useState<BankImportPreview | null>(null);
@@ -27,8 +27,12 @@ export default function BankImportScreen() {
   const [importing, setImporting] = useState(false);
   const [targetBalanceInput, setTargetBalanceInput] = useState('');
 
-  const selectedAccount = useMemo(() => accounts.find((account) => account.id === selectedAccountId) ?? null, [accounts, selectedAccountId]);
-  useEffect(() => { const suggested = suggestBankImportAccountId(accounts, lastBankImportAccountId); if (suggested && suggested !== selectedAccountId) setSelectedAccountId(suggested); }, [accounts, lastBankImportAccountId, selectedAccountId]);
+  const selectedAccount = useMemo(() => allAccounts.find((account) => account.id === selectedAccountId) ?? null, [allAccounts, selectedAccountId]);
+  useEffect(() => {
+    if (selectedAccountId && allAccounts.some((account) => account.id === selectedAccountId)) return;
+    const suggested = suggestBankImportAccountId(allAccounts, lastBankImportAccountId);
+    if (suggested) setSelectedAccountId(suggested);
+  }, [allAccounts, lastBankImportAccountId, selectedAccountId]);
 
   const pickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/plain', 'application/vnd.ms-excel', '*/*'], copyToCacheDirectory: true, multiple: false });
@@ -41,7 +45,6 @@ export default function BankImportScreen() {
       setFileName(asset.name || 'releve.csv');
       const resultPreview = await previewBankCsvImport(asset.uri, selectedAccountId, asset.name || 'releve.csv');
       setPreview(resultPreview.preview);
-      setLastBankImportAccountId(selectedAccountId);
     } catch (error) {
       Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de lire le fichier');
     } finally {
@@ -57,6 +60,7 @@ export default function BankImportScreen() {
     setImporting(true);
     try {
       const finalPreview = await importBankCsv(fileUri, selectedAccountId, fileName, { targetBalance, createReconciliationTransaction: Number.isFinite(targetBalance ?? NaN) });
+      setLastBankImportAccountId(selectedAccountId);
       const currentBalance = selectedAccount?.balance ?? 0;
       const reconciliation = buildBankImportReconciliation(currentBalance, finalPreview.newRows ? finalPreview.typeBreakdown.income - finalPreview.typeBreakdown.expense : 0, targetBalance);
       Alert.alert('Import terminé', `${finalPreview.newRows} nouvelle(s) transaction(s), ${finalPreview.duplicateRows} doublon(s), ${finalPreview.ignoredRows} ignorée(s).${targetBalanceInput.trim() ? `\nÉcart de réconciliation: ${formatCurrency(reconciliation.adjustment)}.` : ''}`, [{ text: 'OK', onPress: () => router.back() }]);
@@ -104,8 +108,8 @@ export default function BankImportScreen() {
             <Text className="font-semibold mb-2" style={{ color: colors.text.primary }}>Compte cible</Text>
             <Text className="text-sm mb-4" style={{ color: colors.text.secondary }}>Sélectionne le compte correspondant à ce relevé avant l’import.</Text>
             <View style={{ gap: 8 }}>
-              {accounts.map((account) => (
-                <TouchableOpacity key={account.id} onPress={() => setSelectedAccountId(account.id)} className="px-4 py-3 rounded-2xl flex-row items-center justify-between" style={{ backgroundColor: selectedAccountId === account.id ? `${colors.accent.primary}18` : colors.background.secondary, borderWidth: 1, borderColor: selectedAccountId === account.id ? colors.accent.primary : colors.background.tertiary }}>
+              {allAccounts.map((account) => (
+                <TouchableOpacity key={account.id} onPress={() => setSelectedAccountId(account.id)} className="px-4 py-3 rounded-2xl flex-row items-center justify-between" style={{ backgroundColor: selectedAccountId === account.id ? `${colors.accent.primary}28` : colors.background.card, borderWidth: 1, borderColor: selectedAccountId === account.id ? colors.accent.primary : colors.background.tertiary, shadowColor: selectedAccountId === account.id ? colors.accent.primary : '#000', shadowOpacity: selectedAccountId === account.id ? 0.12 : 0.04, shadowRadius: 8, elevation: 0 }}>
                   <View>
                     <Text style={{ color: colors.text.primary, fontWeight: '600' }}>{account.name}</Text>
                     <Text className="text-xs" style={{ color: colors.text.secondary }}>{formatCurrency(account.balance)}</Text>
@@ -145,7 +149,7 @@ export default function BankImportScreen() {
             <GlassCard className="mb-4">
               <Text className="font-semibold mb-2" style={{ color: colors.text.primary }}>Aperçu</Text>
               <Text className="text-sm mb-3" style={{ color: colors.text.secondary }}>{preview.totalRows} lignes · {preview.newRows} nouvelles · {preview.duplicateRows} doublons · {preview.ignoredRows} ignorées</Text>
-              <View className="mb-3 p-3 rounded-2xl" style={{ backgroundColor: colors.background.secondary }}>
+              <View className="mb-3 p-3 rounded-2xl" style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary }}>
                 <Text className="text-sm font-medium mb-1" style={{ color: colors.text.primary }}>Répartition</Text>
                 <Text className="text-xs" style={{ color: colors.text.secondary }}>Revenus: {preview.typeBreakdown.income} · Dépenses: {preview.typeBreakdown.expense} · Virements: {preview.typeBreakdown.transfer}</Text>
               </View>
@@ -156,7 +160,7 @@ export default function BankImportScreen() {
                 </View>
               ) : null}
               <View style={{ gap: 6 }}>{preview.sampleRows.slice(0, 8).map((row, index) => (
-                <View key={`${row.label}-${index}`} className="flex-row justify-between items-center px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background.secondary }}>
+                <View key={`${row.label}-${index}`} className="flex-row justify-between items-center px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary }}>
                   <View className="flex-1 pr-3">
                     <Text className="text-sm" numberOfLines={1} style={{ color: colors.text.primary }}>{row.label}</Text>
                     <Text className="text-xs" style={{ color: colors.text.secondary }}>{row.date} · {row.category}</Text>

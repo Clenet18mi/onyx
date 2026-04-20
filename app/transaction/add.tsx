@@ -268,7 +268,8 @@ export default function AddTransactionScreen() {
           <TouchableOpacity
             activeOpacity={1}
             onPress={() => amountInputRef.current?.focus()}
-            className="flex-row items-center justify-center"
+            className="flex-row items-center justify-center px-5 py-4 rounded-3xl"
+            style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, elevation: 1 }}
           >
             <Text className="text-6xl font-bold mr-1" style={{ color: amountAccent }}>
               {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
@@ -376,10 +377,8 @@ export default function AddTransactionScreen() {
                     <TouchableOpacity
                     key={cat.id}
                     onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
-                    className={`px-3 py-2 rounded-xl flex-row items-center ${
-                      isSelected ? 'border' : ''
-                    }`}
-                    style={{ backgroundColor: isSelected ? `${cat.color}20` : colors.background.secondary, borderColor: isSelected ? cat.color : colors.background.tertiary }}
+                    className="px-3 py-2 rounded-xl flex-row items-center"
+                    style={{ backgroundColor: isSelected ? `${cat.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? cat.color : colors.background.tertiary, shadowColor: isSelected ? cat.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
                   >
                     <CatIcon size={16} color={isSelected ? cat.color : colors.text.secondary} />
                     <Text className="ml-2 text-sm font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
@@ -403,10 +402,8 @@ export default function AddTransactionScreen() {
                     <TouchableOpacity
                       key={account.id}
                       onPress={() => setAccountId(account.id)}
-                      className={`px-4 py-3 rounded-xl flex-row items-center ${
-                        isSelected ? 'border-2' : ''
-                      }`}
-                      style={{ backgroundColor: isSelected ? `${account.color}20` : colors.background.secondary, borderColor: isSelected ? account.color : colors.background.tertiary }}
+                      className="px-4 py-3 rounded-xl flex-row items-center"
+                      style={{ backgroundColor: isSelected ? `${account.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? account.color : colors.background.tertiary, shadowColor: isSelected ? account.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
                     >
                       <AccountIcon size={18} color={isSelected ? account.color : colors.text.secondary} />
                       <Text className="ml-2 font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
@@ -426,7 +423,7 @@ export default function AddTransactionScreen() {
                 <TouchableOpacity
                   onPress={() => setIsPlanned(false)}
                   className="flex-1 py-3 rounded-xl"
-                  style={{ backgroundColor: !isPlanned ? colors.accent.primary : 'transparent' }}
+                style={{ backgroundColor: !isPlanned ? colors.accent.primary : 'transparent', shadowColor: !isPlanned ? colors.accent.primary : '#000', shadowOpacity: !isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: !isPlanned ? 2 : 0 }}
                 >
                   <Text className="text-center font-semibold" style={{ color: !isPlanned ? '#FFFFFF' : colors.text.secondary }}>
                     Ajouter maintenant
@@ -435,7 +432,7 @@ export default function AddTransactionScreen() {
                 <TouchableOpacity
                   onPress={() => setIsPlanned(true)}
                   className="flex-1 py-3 rounded-xl"
-                  style={{ backgroundColor: isPlanned ? colors.accent.primary : 'transparent' }}
+                style={{ backgroundColor: isPlanned ? colors.accent.primary : 'transparent', shadowColor: isPlanned ? colors.accent.primary : '#000', shadowOpacity: isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: isPlanned ? 2 : 0 }}
                 >
                   <Text className="text-center font-semibold" style={{ color: isPlanned ? '#FFFFFF' : colors.text.secondary }}>
                     Prévoir pour plus tard
@@ -446,7 +443,7 @@ export default function AddTransactionScreen() {
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
                   className="mt-3 flex-row items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
+                  style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
                 >
                   <Text className="text-sm" style={{ color: colors.text.secondary }}>Date prévue</Text>
                   <View className="flex-row items-center">
@@ -505,7 +502,7 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               onPress={() => setReceiptModalVisible(true)}
               className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
+              style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
             >
               <Icons.Camera size={18} color={colors.text.secondary} />
               <Text className="ml-2" style={{ color: colors.text.secondary }}>Ticket</Text>
@@ -514,7 +511,7 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               onPress={() => setVoiceNoteModalVisible(true)}
               className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
+              style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
             >
               <Icons.Mic size={18} color={colors.text.secondary} />
               <Text className="ml-2" style={{ color: colors.text.secondary }}>Note vocale</Text>

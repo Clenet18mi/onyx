@@ -17,6 +17,7 @@ import { format, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useTheme } from '@/hooks/useTheme';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -84,12 +85,12 @@ export default function DashboardScreen() {
     return (
       <LinearGradient colors={theme.colors.gradients.card} className="flex-1">
         <SafeAreaView className="flex-1 justify-center items-center px-6" edges={['top']}>
-          <View className="w-24 h-24 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: 'rgba(109,124,255,0.16)' }}>
+          <View className="w-24 h-24 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: 'rgba(109,124,255,0.20)', borderWidth: 1, borderColor: 'rgba(109,124,255,0.22)' }}>
             <Banknote size={48} color={theme.colors.accent.primary} />
           </View>
-          <Text className="text-white text-2xl font-bold mb-2">Bienvenue sur ONYX</Text>
-          <Text className="text-onyx-500 text-center mb-8">Commencez par créer votre premier compte pour suivre vos finances.</Text>
-          <TouchableOpacity onPress={() => router.push('/accounts')} className="px-8 py-4 rounded-2xl" style={{ backgroundColor: theme.colors.accent.primary }}>
+          <Text style={{ color: theme.colors.text.primary, fontSize: 24, fontWeight: '700', marginBottom: 8 }}>Bienvenue sur ONYX</Text>
+          <Text style={{ color: theme.colors.text.secondary, textAlign: 'center', marginBottom: 24 }}>Commencez par créer votre premier compte pour suivre vos finances.</Text>
+          <TouchableOpacity onPress={() => router.push('/accounts')} className="px-8 py-4 rounded-2xl" style={{ backgroundColor: theme.colors.accent.primary, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', shadowColor: theme.colors.accent.primary, shadowOpacity: 0.22, shadowRadius: 12, elevation: 2 }}>
             <Text className="text-white font-semibold text-lg">Créer un compte</Text>
           </TouchableOpacity>
         </SafeAreaView>
@@ -103,27 +104,27 @@ export default function DashboardScreen() {
         <ErrorBoundary>
           {toastVisible && (
             <Animated.View style={{ position: 'absolute', top: 0, left: 24, right: 24, zIndex: 1000, transform: [{ translateY: toastAnim }] }}>
-              <View className="py-3 px-4 rounded-xl flex-row items-center justify-center" style={{ backgroundColor: 'rgba(45, 212, 161, 0.95)' }}>
-                <Text className="text-white font-medium">✓ Données mises à jour</Text>
+              <View className="py-3 px-4 rounded-xl flex-row items-center justify-center" style={{ backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.background.tertiary }}>
+                <Text style={{ color: theme.colors.text.primary, fontWeight: '600' }}>✓ Données mises à jour</Text>
               </View>
             </Animated.View>
           )}
 
           <View className="flex-row justify-between items-start px-6 py-4">
             <View className="flex-1 pr-3">
-              <Text className="text-onyx-500 text-sm">{capitalizedDate}</Text>
-              <Text className="text-white text-2xl font-bold leading-8 mt-1">{getGreeting()}</Text>
-              <Text className="text-onyx-500 text-sm mt-1">Votre suivi financier, simple et rapide.</Text>
+              <Text style={{ color: theme.colors.text.secondary, fontSize: 13 }}>{capitalizedDate}</Text>
+              <Text style={{ color: theme.colors.text.primary, fontSize: 26, fontWeight: '700', lineHeight: 32, marginTop: 4 }}>{getGreeting()}</Text>
+              <Text style={{ color: theme.colors.text.secondary, fontSize: 13, marginTop: 4 }}>Votre suivi financier, simple et rapide.</Text>
             </View>
 
             <View className="flex-row" style={{ gap: 12 }}>
-              <TouchableOpacity onPress={() => { if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateSettings({ privacyMode: !privacyMode }); }} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <TouchableOpacity onPress={() => { if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateSettings({ privacyMode: !privacyMode }); }} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.background.tertiary }}>
                 {privacyMode ? <EyeOff size={20} color={theme.colors.text.secondary} /> : <Eye size={20} color={theme.colors.text.secondary} />}
               </TouchableOpacity>
-              <TouchableOpacity onPress={handlePayday} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(45, 212, 161, 0.14)' }}>
+              <TouchableOpacity onPress={handlePayday} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(45, 212, 161, 0.12)', borderWidth: 1, borderColor: 'rgba(45, 212, 161, 0.22)' }}>
                 <Banknote size={20} color={theme.colors.accent.success} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/settings')} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <TouchableOpacity onPress={() => router.push('/settings')} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.background.tertiary }}>
                 <Settings size={20} color={theme.colors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -139,17 +140,17 @@ export default function DashboardScreen() {
               <View className="mb-6">
                 <View className="flex-row items-center mb-3">
                   <CalendarClock size={22} color={theme.colors.accent.primary} />
-                  <Text className="text-white text-lg font-semibold ml-2">Transactions prévues</Text>
+                  <Text style={{ color: theme.colors.text.primary, fontSize: 18, fontWeight: '700', marginLeft: 8 }}>Transactions prévues</Text>
                 </View>
                 {overduePlanned.length > 0 && (
-                  <View className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(248, 113, 113, 0.10)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.25)' }}>
-                    <Text className="text-red-300 font-semibold mb-2">{overduePlanned.length} en retard</Text>
+                  <View className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(248, 113, 113, 0.08)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.22)' }}>
+                    <Text style={{ color: theme.colors.accent.danger, fontWeight: '700', marginBottom: 8 }}>{overduePlanned.length} en retard</Text>
                     {overduePlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue />)}
                   </View>
                 )}
                 {upcomingPlanned.length > 0 && (
                   <View className="mb-4">
-                    <Text className="text-onyx-500 text-sm mb-2">Prochaines 7 jours</Text>
+                    <Text style={{ color: theme.colors.text.secondary, fontSize: 13, marginBottom: 8 }}>Prochains 7 jours</Text>
                     {upcomingPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} />)}
                   </View>
                 )}
