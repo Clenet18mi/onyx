@@ -19,6 +19,7 @@ interface SettingsState extends Settings {
   removeIgnoredDuplicateSignature: (signature: string) => void;
   clearIgnoredDuplicateSignatures: () => void;
   setLastUsedAccountId: (accountId: string) => void;
+  setLastBankImportAccountId: (accountId: string) => void;
 }
 
 const defaultSettings: Settings = {
@@ -30,6 +31,7 @@ const defaultSettings: Settings = {
   duplicateAlertEnabled: true,
   ignoredDuplicateSignatures: [],
   privacyMode: false,
+  lastBankImportAccountId: undefined,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -54,9 +56,9 @@ export const useSettingsStore = create<SettingsState>()(
         set({ currency });
       },
 
-  setTheme: (theme) => {
-    set({ theme });
-  },
+      setTheme: (theme) => {
+        set({ theme });
+      },
 
   // Doublons
   addIgnoredDuplicateSignature: (signature: string) => {
@@ -74,9 +76,12 @@ export const useSettingsStore = create<SettingsState>()(
   clearIgnoredDuplicateSignatures: () => {
     set({ ignoredDuplicateSignatures: [] });
   },
-  setLastUsedAccountId: (accountId: string) => {
-    set({ lastUsedAccountId: accountId });
-  },
+      setLastUsedAccountId: (accountId: string) => {
+        set({ lastUsedAccountId: accountId });
+      },
+      setLastBankImportAccountId: (accountId: string) => {
+        set({ lastBankImportAccountId: accountId });
+      },
 }),
     {
       name: 'onyx-settings',

@@ -29,6 +29,8 @@ export interface BankImportPreview {
   newRows: number;
   duplicateRows: number;
   ignoredRows: number;
+  typeBreakdown: Record<TransactionType, number>;
+  categoryBreakdown: Array<{ category: TransactionCategory; count: number; amount: number }>;
   sampleRows: Array<{
     date: string;
     label: string;
@@ -42,6 +44,13 @@ export interface BankImportPreview {
 export interface BankImportBatch {
   transactions: Transaction[];
   preview: BankImportPreview;
+}
+
+export interface BankImportReconciliation {
+  currentBalance: number;
+  importedNet: number;
+  targetBalance: number;
+  adjustment: number;
 }
 
 function normalizeText(value: string | undefined | null): string {
@@ -222,6 +231,16 @@ function transactionIdentity(tx: Transaction): string {
   ].join('|');
 }
 
+export function buildBankImportReconciliation(currentBalance: number, importedNet: number, targetBalance?: number): BankImportReconciliation {
+  const computedTarget = targetBalance ?? currentBalance;
+  return {
+    currentBalance,
+    importedNet,
+    targetBalance: computedTarget,
+    adjustment: computedTarget - (currentBalance + importedNet),
+  };
+}
+
 function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, rowHash: string): Transaction | null {
   const type = mapTransactionType(row);
   const category = mapCategory(row, type);
@@ -281,6 +300,8 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
   const transactions: Transaction[] = [];
   let duplicateRows = 0;
   let ignoredRows = 0;
+  const typeBreakdown: Record<TransactionType, number> = { income: 0, expense: 0, transfer: 0 };
+  const categoryAgg = new Map<TransactionCategory, { count: number; amount: number }>();
   const sampleRows: BankImportPreview['sampleRows'] = [];
 
   for (const row of rows) {
@@ -322,6 +343,11 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
 
     seenInFile.add(key);
     transactions.push(tx);
+    typeBreakdown[tx.type] += 1;
+    const entry = categoryAgg.get(tx.category) ?? { count: 0, amount: 0 };
+    entry.count += 1;
+    entry.amount += tx.amount;
+    categoryAgg.set(tx.category, entry);
     if (sampleRows.length < 20) {
       sampleRows.push({
         date: tx.date,
@@ -350,6 +376,10 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
       newRows: transactions.length,
       duplicateRows,
       ignoredRows,
+      typeBreakdown,
+      categoryBreakdown: [...categoryAgg.entries()]
+        .map(([category, value]) => ({ category, count: value.count, amount: value.amount }))
+        .sort((a, b) => b.count - a.count || b.amount - a.amount),
       sampleRows,
     },
   };
@@ -358,7 +388,7 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
 export async function importBankCsv(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportPreview> {
   const { transactions, preview } = await previewBankCsvImport(fileUri, accountId, fileName);
   if (transactions.length) {
-    useTransactionStore.getState().addTransactionsForImport(transactions);
+    useTransactionStore.getState().addTransactionsForImport(transactions, { applyBalanceChanges: true });
   }
   return preview;
 }
