@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
-import { useAccountStore, useTransactionStore, useSubscriptionStore, useGoalStore, usePlannedTransactionStore } from '@/stores';
+import { useAccountStore, useTransactionStore, usePlannedTransactionStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { Account, ACCOUNT_TYPES, AVAILABLE_COLORS } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -36,9 +36,6 @@ export default function AccountsScreen() {
   
   const { accounts, addAccount, updateAccount, deleteAccount, archiveAccount, getTotalBalance } = useAccountStore();
   const transactions = useTransactionStore((state) => state.transactions);
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
-  const updateSubscription = useSubscriptionStore((state) => state.updateSubscription);
-  const goals = useGoalStore((state) => state.goals);
   const plannedTransactions = usePlannedTransactionStore((state) => state.plannedTransactions);
   
   const activeAccounts = accounts.filter((a) => !a.isArchived);
@@ -96,8 +93,6 @@ export default function AccountsScreen() {
 
   const handleDelete = (account: Account) => {
     const accountId = account.id;
-    const linkedSubs = subscriptions.filter((s) => s.accountId === accountId && s.isActive);
-    const linkedGoals = goals.filter((g) => g.accountId === accountId);
     const linkedPlanned = plannedTransactions.filter(
       (p) => p.accountId === accountId && p.status === 'pending'
     );
@@ -105,12 +100,10 @@ export default function AccountsScreen() {
       (t) => t.accountId === accountId || t.toAccountId === accountId
     );
 
-    const hasDeps = linkedSubs.length > 0 || linkedGoals.length > 0 || linkedPlanned.length > 0;
+    const hasDeps = linkedPlanned.length > 0;
 
     if (hasDeps) {
       const lines: string[] = [];
-      if (linkedSubs.length > 0) lines.push(`${linkedSubs.length} abonnement(s) actif(s)`);
-      if (linkedGoals.length > 0) lines.push(`${linkedGoals.length} objectif(s) d'épargne`);
       if (linkedPlanned.length > 0) lines.push(`${linkedPlanned.length} transaction(s) prévue(s)`);
       const message = `Ce compte est encore utilisé par :\n• ${lines.join('\n• ')}\n\nSupprimez-les d'abord ou archivez le compte.`;
 
@@ -155,13 +148,8 @@ export default function AccountsScreen() {
 
   const handleArchive = (account: Account) => {
     const accountId = account.id;
-    const linkedSubs = subscriptions.filter((s) => s.accountId === accountId && s.isActive);
-    linkedSubs.forEach((s) => updateSubscription(s.id, { isActive: false }));
     archiveAccount(accountId);
     setModalVisible(false);
-    if (linkedSubs.length > 0) {
-      Alert.alert('Compte archivé', `Compte archivé. ${linkedSubs.length} abonnement(s) désactivé(s).`);
-    }
   };
 
   const getIcon = (iconName: string) => {

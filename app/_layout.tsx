@@ -8,7 +8,7 @@ import { AppState, AppStateStatus, View, StatusBar, Alert, Text, TouchableOpacit
 import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useAuthStore, useSubscriptionStore, usePlannedTransactionStore, useReminderStore } from '@/stores';
+import { useAuthStore, usePlannedTransactionStore } from '@/stores';
 import { useTheme } from '@/hooks/useTheme';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -16,15 +16,11 @@ import { SplashLoader } from '@/components/ui/SplashLoader';
 import { storageHelper } from '@/utils/storage';
 import { runMigrations } from '@/utils/migrations';
 import { startPersistOnChange, areAllStoresHydrated } from '@/utils/persistStores';
-import { setReminderNotificationHandler, syncReminderNotifications } from '@/utils/reminderNotifications';
 import { initDebugLogger, getLastError, clearLastError, type CapturedError } from '@/utils/debugLogger';
 import '../global.css';
 
 // Garder le splash screen visible pendant le chargement
 SplashScreen.preventAutoHideAsync();
-
-// Afficher les notifications de rappels même quand l'app est au premier plan
-setReminderNotificationHandler();
 
 // Installer la capture d'erreurs globales AVANT tout rendu (pour capter le crash après import)
 initDebugLogger();
@@ -85,7 +81,6 @@ function RootLayoutContent() {
   const router = useRouter();
   const { theme } = useTheme();
   const { isSetup, isAuthenticated } = useAuthStore();
-  const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
   const bgColor = theme.colors.background.primary;
   const isDark = theme.colors.background.primary === '#0A0A0F';
 
@@ -126,23 +121,11 @@ function RootLayoutContent() {
           try {
             if (areAllStoresHydrated()) {
               clearInterval(checkHydration);
-              hydrationChecked = true;
-              console.log('[ONYX] All stores hydrated');
-              setStoresHydrated(true);
-              try {
-                processSubscriptions();
-              } catch (subError) {
-                console.error('[ONYX] Process subscriptions error:', subError);
+                hydrationChecked = true;
+                console.log('[ONYX] All stores hydrated');
+                setStoresHydrated(true);
+              // Reminders/notifications restent gérés dans les stores de fond pour compat.
               }
-              try {
-                useReminderStore.getState().cleanOrphanReminders();
-              } catch (e) {
-                console.warn('[ONYX] cleanOrphanReminders', e);
-              }
-              syncReminderNotifications(useReminderStore.getState().reminders).catch((syncError) => {
-                console.warn('[ONYX] Reminder notifications sync error:', syncError);
-              });
-            }
           } catch (hydrationError) {
             console.error('[ONYX] Hydration check error:', hydrationError);
             clearInterval(checkHydration);
@@ -156,11 +139,6 @@ function RootLayoutContent() {
             clearInterval(checkHydration);
             console.warn('[ONYX] Hydration timeout, continuing anyway');
             setStoresHydrated(true);
-            try {
-              processSubscriptions();
-            } catch (subError) {
-              console.error('[ONYX] Process subscriptions error:', subError);
-            }
           }
         }, 3000);
       } catch (e) {
@@ -364,28 +342,12 @@ function RootLayoutContent() {
           }} 
         />
         <Stack.Screen 
-          name="goal/[id]" 
-          options={{ 
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }} 
-        />
-        <Stack.Screen 
-          name="subscription/[id]" 
-          options={{ 
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }} 
-        />
-        <Stack.Screen 
           name="settings" 
           options={{ 
             presentation: 'modal',
             animation: 'slide_from_bottom',
           }} 
         />
-        <Stack.Screen name="period-comparator" />
-        <Stack.Screen name="scenarios" />
       </Stack>
       </View>
     </ErrorBoundary>

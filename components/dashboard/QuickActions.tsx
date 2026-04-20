@@ -10,8 +10,7 @@ import {
   Plus, 
   ArrowLeftRight, 
   Banknote,
-  PiggyBank,
-  Receipt,
+  CalendarClock,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSettingsStore } from '@/stores';
@@ -88,10 +87,10 @@ export function QuickActions({ onPayday }: QuickActionsProps) {
       />
       
       <ActionButton
-        icon={<PiggyBank size={24} color="#EC4899" />}
-        label="Épargner"
-        color="#EC4899"
-        onPress={() => router.push('/goals')}
+        icon={<CalendarClock size={24} color="#8B5CF6" />}
+        label="Prévoir"
+        color="#8B5CF6"
+        onPress={() => router.push('/planned-transaction/add')}
       />
     </View>
   );

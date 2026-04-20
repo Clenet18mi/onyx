@@ -66,7 +66,28 @@ export interface Transaction {
   photoUris?: string[];
   /** URI ou base64 de la note vocale */
   voiceNoteUri?: string;
+  /** Métadonnées d'import bancaire (CSV, relevé, etc.) */
+  bankImport?: BankImportMetadata;
   createdAt: string;
+}
+
+export interface BankImportMetadata {
+  source: 'caisse-epargne-csv';
+  accountId: string;
+  rowHash: string;
+  reference?: string;
+  accountingDate?: string;
+  operationDate?: string;
+  valueDate?: string;
+  pointage?: string;
+  bankCategory?: string;
+  bankSubCategory?: string;
+  rawLabel?: string;
+  detailedLabel?: string;
+  additionalInfo?: string;
+  typeOperation?: string;
+  direction?: 'in' | 'out';
+  fileName?: string;
 }
 
 // ============================================

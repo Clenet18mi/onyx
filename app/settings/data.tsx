@@ -1,10 +1,10 @@
 // ============================================
 // ONYX - Data Management Screen
-// Gestion des données : sauvegarde, export, import
+// Export / import JSON only
 // ============================================
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,114 +12,19 @@ import * as Icons from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
-import { 
-  createBackup, 
-  restoreBackup, 
-  exportAllData, 
-  importData,
-  getStoredDataVersion,
-  CURRENT_DATA_VERSION,
-} from '@/utils/migrations';
-import { exportToPDF } from '@/utils/pdfExport';
-import { useTransactionStore, useAccountStore, useConfigStore } from '@/stores';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { exportDataAsJSON, importDataFromJSON } from '@/utils/dataExport';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function DataManagementScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [lastBackup, setLastBackup] = useState<string | null>(null);
-  const [dataVersion, setDataVersion] = useState<number>(0);
-
-  const transactions = useTransactionStore((s) => s.transactions);
-  const accounts = useAccountStore((s) => s.accounts.filter((a) => !a.isArchived));
-  const getCategoryById = useConfigStore((s) => s.getCategoryById);
-
-  useEffect(() => {
-    getStoredDataVersion().then(setDataVersion);
-  }, []);
-
-  const handleCreateBackup = async () => {
-    setLoading(true);
-    try {
-      const key = await createBackup();
-      setLastBackup(key ? new Date().toISOString() : null);
-      Alert.alert('Succès', 'Sauvegarde créée avec succès !');
-    } catch (error) {
-      console.error('[ONYX] createBackup error:', error);
-      Alert.alert('Erreur', 'Impossible de créer la sauvegarde. Réessayez.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRestoreBackup = () => {
-    Alert.alert(
-      'Restaurer la sauvegarde',
-      'Cela remplacera toutes vos données actuelles par la dernière sauvegarde. Continuer ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Restaurer',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const success = await restoreBackup();
-              if (success) {
-                Alert.alert('Succès', 'Données restaurées ! Redémarrez l\'application.');
-              } else {
-                Alert.alert('Erreur', 'Aucune sauvegarde trouvée');
-              }
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible de restaurer');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+  const { theme } = useTheme();
+  const { colors } = theme;
 
   const handleExportData = async () => {
     setLoading(true);
     try {
-      const jsonData = await exportAllData();
-      const baseName = `onyx_backup_${format(new Date(), 'yyyy-MM-dd_HH-mm')}`;
-      const fileName = `${baseName}.json`;
-      const legacy = await import('expo-file-system/legacy');
-      const { StorageAccessFramework } = legacy;
-
-      if (Platform.OS === 'android' && StorageAccessFramework?.requestDirectoryPermissionsAsync) {
-        try {
-          const downloadUri = StorageAccessFramework.getUriForDirectoryInRoot('Download');
-          const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync(downloadUri);
-            if (permissions.granted && permissions.directoryUri) {
-            const fileUri = await StorageAccessFramework.createFileAsync(
-              permissions.directoryUri,
-              baseName,
-              'application/json'
-            );
-            await StorageAccessFramework.writeAsStringAsync(fileUri, jsonData, {
-              encoding: legacy.EncodingType?.UTF8 ?? 'utf8',
-            });
-            Alert.alert('Export réussi', `Fichier enregistré : ${fileName}`);
-            return;
-          }
-        } catch (e) {
-          console.warn('[ONYX] export SAF fallback', e);
-        }
-      }
-
-      const dir = legacy.cacheDirectory ?? legacy.documentDirectory ?? '';
-      if (!dir) throw new Error('Aucun répertoire cache disponible');
-      const filePath = dir.endsWith('/') ? `${dir}${fileName}` : `${dir}/${fileName}`;
-      await legacy.writeAsStringAsync(filePath, jsonData, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
-      Alert.alert(
-        'Export réussi',
-        `Fichier : ${fileName}${Platform.OS === 'android' ? ' (stockage de l’app)' : ''}`
-      );
+      await exportDataAsJSON();
     } catch (error) {
       console.error('[ONYX] export error:', error);
       Alert.alert('Erreur', 'Impossible d\'exporter les données. Réessayez.');
@@ -128,221 +33,75 @@ export default function DataManagementScreen() {
     }
   };
 
-  const handleExportPDF = async () => {
-    setLoading(true);
+  const handleImportData = async () => {
     try {
-      const selectedMonth = new Date();
-      const getCategoryLabel = (id: string) => getCategoryById(id)?.label;
-      await exportToPDF(transactions, accounts, selectedMonth, getCategoryLabel);
-      const fileName = `ONYX_Releve_${format(selectedMonth, 'yyyy-MM')}.html`;
-      Alert.alert('Export réussi', `Relevé exporté : ${fileName}\n\nVous pouvez l’ouvrir ou le partager depuis le dialogue de partage.`);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/json', 'application/x-ndjson', 'text/plain', '*/*'],
+      });
+      if (result.canceled) return;
+
+      setLoading(true);
+      const fileUri = result.assets[0]?.uri;
+      if (!fileUri) {
+        Alert.alert('Erreur', 'Fichier invalide');
+        return;
+      }
+      await importDataFromJSON(fileUri);
     } catch (error) {
-      console.error('[ONYX] PDF export error:', error);
-      Alert.alert('Erreur', 'Impossible d’exporter le relevé. Réessayez.');
+      console.error('[ONYX] import error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImportData = async () => {
-    Alert.alert(
-      'Importer des données',
-      'Cela remplacera TOUTES vos données actuelles. Une sauvegarde sera créée avant l\'import. Continuer ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Choisir un fichier',
-          onPress: async () => {
-            try {
-              const result = await DocumentPicker.getDocumentAsync({
-                type: 'application/json',
-              });
-
-              if (result.canceled) {
-                return;
-              }
-
-              setLoading(true);
-              const fileUri = result.assets[0].uri;
-              const legacy = await import('expo-file-system/legacy');
-              let jsonData: string;
-              try {
-                jsonData = await legacy.readAsStringAsync(fileUri, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
-              } catch {
-                const dir = legacy.cacheDirectory ?? legacy.documentDirectory;
-                if (dir && (fileUri.startsWith('content://') || fileUri.startsWith('file://'))) {
-                  const tempPath = `${dir.endsWith('/') ? dir : dir + '/'}onyx-import-temp-${Date.now()}.json`;
-                  await legacy.copyAsync({ from: fileUri, to: tempPath });
-                  jsonData = await legacy.readAsStringAsync(tempPath, { encoding: legacy.EncodingType?.UTF8 ?? 'utf8' });
-                  await legacy.deleteAsync(tempPath, { idempotent: true });
-                } else {
-                  throw new Error('Impossible de lire le fichier');
-                }
-              }
-              
-              const success = await importData(jsonData);
-              
-              if (success) {
-                Alert.alert('Succès', 'Données importées ! Redémarrez l\'application.');
-              } else {
-                Alert.alert('Erreur', 'Format de fichier invalide');
-              }
-            } catch (error) {
-              console.error(error);
-              Alert.alert('Erreur', 'Impossible d\'importer les données');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
   return (
-    <LinearGradient
-      colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
-      className="flex-1"
-    >
+    <LinearGradient colors={colors.gradients.card} className="flex-1">
       <SafeAreaView className="flex-1">
-        {/* Header */}
         <View className="flex-row items-center px-6 py-4">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 rounded-full items-center justify-center mr-4"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+            style={{ backgroundColor: colors.background.tertiary }}
           >
-            <Icons.ChevronLeft size={24} color="#fff" />
+            <Icons.ChevronLeft size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">Gestion des Données</Text>
+          <Text className="text-xl font-bold" style={{ color: colors.text.primary }}>Gestion des données</Text>
         </View>
 
-        <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
-          {/* Info Version */}
-          <GlassCard className="mb-6">
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="text-onyx-500 text-sm">Version des données</Text>
-                <Text className="text-white text-2xl font-bold">v{dataVersion}</Text>
-              </View>
-              <View className="items-end">
-                <Text className="text-onyx-500 text-sm">Version cible</Text>
-                <Text className="text-accent-primary text-2xl font-bold">v{CURRENT_DATA_VERSION}</Text>
-              </View>
-            </View>
-            {dataVersion === CURRENT_DATA_VERSION && (
-              <View className="flex-row items-center mt-3 pt-3 border-t border-onyx-200/10">
-                <Icons.CheckCircle size={16} color="#10B981" />
-                <Text className="text-accent-income text-sm ml-2">Données à jour</Text>
-              </View>
-            )}
-          </GlassCard>
+        <View className="flex-1 px-6 justify-center">
+          <GlassCard>
+            <Text className="font-medium mb-2" style={{ color: colors.text.primary }}>Export / Import JSON</Text>
+            <Text className="text-sm mb-4" style={{ color: colors.text.secondary }}>
+              Exportez ou importez vos données au format JSON/NDJSON.
+            </Text>
 
-          {/* Sauvegardes locales */}
-          <View className="mb-6">
-            <Text className="text-onyx-500 text-sm font-medium mb-3 uppercase">Sauvegardes Locales</Text>
-            <GlassCard>
-              <Text className="text-white font-medium mb-2">Sauvegarde automatique</Text>
-              <Text className="text-onyx-500 text-sm mb-4">
-                ONYX crée automatiquement des sauvegardes avant chaque migration. 
-                Vous pouvez aussi en créer manuellement.
-              </Text>
-              
-              <View style={{ gap: 12 }}>
-                <Button
-                  title="Créer une sauvegarde"
-                  variant="secondary"
-                  fullWidth
-                  onPress={handleCreateBackup}
-                  disabled={loading}
-                  icon={<Icons.Save size={18} color="#6366F1" />}
-                />
-                <Button
-                  title="Restaurer la dernière sauvegarde"
-                  variant="ghost"
-                  fullWidth
-                  onPress={handleRestoreBackup}
-                  disabled={loading}
-                  icon={<Icons.RotateCcw size={18} color="#71717A" />}
-                />
-              </View>
-            </GlassCard>
-          </View>
-
-          {/* Export / Import */}
-          <View className="mb-6">
-            <Text className="text-onyx-500 text-sm font-medium mb-3 uppercase">Export / Import</Text>
-            <GlassCard>
-              <Text className="text-white font-medium mb-2">Transférer vos données</Text>
-              <Text className="text-onyx-500 text-sm mb-4">
-                Exportez vos données pour les sauvegarder ailleurs ou les transférer sur un autre appareil.
-              </Text>
-              
-              <View style={{ gap: 12 }}>
-                <Button
-                  title="Exporter toutes les données (JSON)"
-                  variant="primary"
-                  fullWidth
-                  onPress={handleExportData}
-                  disabled={loading}
-                  icon={<Icons.Download size={18} color="white" />}
-                />
-                <Button
-                  title="Exporter le relevé du mois (PDF/HTML)"
-                  variant="secondary"
-                  fullWidth
-                  onPress={handleExportPDF}
-                  disabled={loading}
-                  icon={<Icons.FileText size={18} color="#6366F1" />}
-                />
-                <Button
-                  title="Importer des données"
-                  variant="secondary"
-                  fullWidth
-                  onPress={handleImportData}
-                  disabled={loading}
-                  icon={<Icons.Upload size={18} color="#6366F1" />}
-                />
-              </View>
-            </GlassCard>
-          </View>
-
-          {/* Info sécurité */}
-          <GlassCard className="mb-6">
-            <View className="flex-row items-start">
-              <Icons.Shield size={20} color="#6366F1" />
-              <View className="flex-1 ml-3">
-                <Text className="text-white font-medium mb-1">Vos données sont sécurisées</Text>
-                <Text className="text-onyx-500 text-sm">
-                  • Stockées localement (AsyncStorage){'\n'}
-                  • Jamais envoyées sur internet{'\n'}
-                  • Préservées lors des mises à jour{'\n'}
-                  • 3 sauvegardes automatiques conservées
-                </Text>
-              </View>
+            <View style={{ gap: 12 }}>
+              <Button
+                title="Exporter en JSON"
+                variant="primary"
+                fullWidth
+                onPress={handleExportData}
+                disabled={loading}
+                icon={<Icons.Download size={18} color="white" />}
+              />
+              <Button
+                title="Importer un JSON"
+                variant="secondary"
+                fullWidth
+                onPress={handleImportData}
+                disabled={loading}
+                icon={<Icons.Upload size={18} color={colors.accent.primary} />}
+              />
             </View>
           </GlassCard>
-
-          {/* Avertissement */}
-          <View className="mb-8 p-4 rounded-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
-            <View className="flex-row items-start">
-              <Icons.AlertTriangle size={18} color="#F59E0B" />
-              <Text className="text-onyx-400 text-sm ml-2 flex-1">
-                <Text className="font-semibold text-yellow-500">Important :</Text> Si vous désinstallez l'application, 
-                toutes les données seront perdues. Pensez à exporter régulièrement !
-              </Text>
-            </View>
-          </View>
 
           {loading && (
-            <View className="items-center py-4">
+            <View className="items-center py-6">
               <ActivityIndicator size="large" color="#6366F1" />
-              <Text className="text-onyx-500 mt-2">Traitement en cours...</Text>
+              <Text className="mt-2" style={{ color: colors.text.secondary }}>Traitement en cours...</Text>
             </View>
           )}
-
-          <View className="h-12" />
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </LinearGradient>
   );

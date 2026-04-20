@@ -9,15 +9,12 @@ import { Tabs } from 'expo-router';
 import {
   LayoutDashboard,
   Wallet,
-  Target,
-  Receipt,
   BarChart3,
   Settings
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useSettingsStore, useSubscriptionStore } from '@/stores';
-import { safeParseISO } from '@/utils/format';
-import { startOfDay } from 'date-fns';
+import { useSettingsStore } from '@/stores';
+import { useTheme } from '@/hooks/useTheme';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface TabIconProps {
@@ -46,13 +43,8 @@ function TabIcon({ Icon, focused, color }: TabIconProps) {
 
 export default function TabsLayout() {
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions);
-  const today = startOfDay(new Date());
-  const overdueSubscriptionCount = subscriptions.filter((s) => {
-    if (!s.isActive) return false;
-    const next = safeParseISO(s.nextBillingDate);
-    return next != null && startOfDay(next) < today;
-  }).length;
+  const { theme } = useTheme();
+  const { colors } = theme;
 
   const handleTabPress = () => {
     if (hapticEnabled) {
@@ -66,15 +58,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0A0A0B',
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: colors.background.secondary,
+          borderTopColor: colors.background.tertiary,
           borderTopWidth: 1,
           height: Platform.OS === 'ios' ? 88 : 68,
           paddingBottom: Platform.OS === 'ios' ? 28 : 12,
           paddingTop: 12,
         },
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#71717A',
+        tabBarActiveTintColor: colors.accent.primary,
+        tabBarInactiveTintColor: colors.text.tertiary,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -109,31 +101,6 @@ export default function TabsLayout() {
       />
       
       <Tabs.Screen
-        name="goals"
-        options={{
-          title: 'Objectifs',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon Icon={Target} focused={focused} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: handleTabPress,
-        }}
-      />
-      
-      <Tabs.Screen
-        name="budgets"
-        options={{
-          title: 'Budgets',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon Icon={Receipt} focused={focused} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: handleTabPress,
-        }}
-      />
-      <Tabs.Screen
         name="stats"
         options={{
           title: 'Stats',
@@ -149,7 +116,6 @@ export default function TabsLayout() {
         name="more"
         options={{
           title: 'Plus',
-          tabBarBadge: overdueSubscriptionCount > 0 ? overdueSubscriptionCount : undefined,
           tabBarIcon: ({ focused, color }) => (
             <TabIcon Icon={Settings} focused={focused} color={color} />
           ),

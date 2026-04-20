@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '@/utils/storage';
-import { Transaction, TransactionType, TransactionCategory } from '@/types';
+import { Transaction, TransactionType, TransactionCategory, BankImportMetadata } from '@/types';
 import { generateId } from '@/utils/crypto';
 import { useAccountStore } from './accountStore';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
@@ -25,6 +25,7 @@ interface TransactionState {
   addTransfer: (fromAccountId: string, toAccountId: string, amount: number, description: string) => void;
   updateTransaction: (id: string, updates: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
+  addTransactionsForImport: (transactions: Transaction[], options?: { applyBalanceChanges?: boolean }) => void;
   
   // Getters
   getTransaction: (id: string) => Transaction | undefined;
@@ -155,6 +156,25 @@ export const useTransactionStore = create<TransactionState>()(
         
         set((state) => ({
           transactions: state.transactions.filter((tx) => tx.id !== id),
+        }));
+      },
+
+      addTransactionsForImport: (transactions, options) => {
+        if (!transactions.length) return;
+        if (options?.applyBalanceChanges) {
+          const accountStore = useAccountStore.getState();
+          transactions.forEach((tx) => {
+            let delta = 0;
+            if (tx.type === 'income') delta = tx.amount;
+            else if (tx.type === 'expense') delta = -tx.amount;
+            else if (tx.type === 'transfer') {
+              delta = tx.bankImport?.direction === 'in' ? tx.amount : -tx.amount;
+            }
+            if (delta !== 0) accountStore.updateBalance(tx.accountId, delta);
+          });
+        }
+        set((state) => ({
+          transactions: [...transactions, ...state.transactions],
         }));
       },
 

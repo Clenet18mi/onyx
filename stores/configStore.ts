@@ -145,6 +145,9 @@ interface ConfigState {
   
   // Profile actions
   updateProfile: (updates: Partial<UserProfile>) => void;
+  setCategoriesForImport: (categories: CustomCategory[]) => void;
+  setQuickExpensesForImport: (templates: QuickExpenseTemplate[]) => void;
+  setProfileForImport: (profile: UserProfile) => void;
   
   // Getters
   getVisibleCategories: (type?: 'income' | 'expense' | 'both') => CustomCategory[];
@@ -326,6 +329,18 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           profile: { ...state.profile, ...updates },
         }));
+      },
+
+      setCategoriesForImport: (categories) => {
+        set({ categories });
+      },
+
+      setQuickExpensesForImport: (templates) => {
+        set({ quickExpenses: templates });
+      },
+
+      setProfileForImport: (profile) => {
+        set({ profile });
       },
 
       // ============================================

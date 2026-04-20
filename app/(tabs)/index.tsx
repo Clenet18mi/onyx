@@ -7,26 +7,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Settings, Bell, Banknote, Eye, EyeOff } from 'lucide-react-native';
+import { Settings, Banknote, Eye, EyeOff } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useSubscriptionStore, useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore, useReminderStore } from '@/stores';
+import { useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
 import { 
   BalanceCard, 
-  CashflowChart, 
   QuickAccounts, 
   QuickActions,
   QuickExpenses,
   PaydayModal,
   TransactionFeed,
-  SmartInsights,
-  FinancialInsights,
-  BalanceForecast,
-  MerchantAnalysis,
   MonthlyRecapModal,
-  HealthScore,
-  SpendingTrends,
-  NextSubscriptionWidget,
 } from '@/components/dashboard';
 import { PlannedTransactionCard } from '@/components/planned';
 import { CalendarClock } from 'lucide-react-native';
@@ -42,8 +34,6 @@ export default function DashboardScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const toastAnim = useRef(new Animated.Value(-60)).current;
   
-  const processSubscriptions = useSubscriptionStore((state) => state.processSubscriptions);
-  const cleanOrphanReminders = useReminderStore((state) => state.cleanOrphanReminders);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const lastPaydayModal = useSettingsStore((state) => state.lastPaydayModal);
@@ -73,8 +63,6 @@ export default function DashboardScreen() {
   
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    processSubscriptions();
-    cleanOrphanReminders();
     setTimeout(() => {
       setRefreshing(false);
       setToastVisible(true);
@@ -91,7 +79,7 @@ export default function DashboardScreen() {
         }).start(() => setToastVisible(false));
       }, 2000);
     }, 800);
-  }, [processSubscriptions, cleanOrphanReminders, toastAnim]);
+  }, [toastAnim]);
 
   const handlePayday = () => {
     if (hapticEnabled) {
@@ -201,14 +189,6 @@ export default function DashboardScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity
-              onPress={() => {}}
-              className="w-10 h-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              <Bell size={20} color="#71717A" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
               onPress={() => router.push('/settings')}
               className="w-10 h-10 rounded-full items-center justify-center"
               style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
@@ -240,28 +220,8 @@ export default function DashboardScreen() {
           {/* Quick Expenses */}
           <QuickExpenses />
           
-          {/* Tendances par catégorie */}
-          <SpendingTrends />
-
           {/* Quick Accounts */}
           <QuickAccounts />
-
-          {/* Prochain abonnement */}
-          <NextSubscriptionWidget />
-
-          {/* Score de santé financière */}
-          <View className="mb-6">
-            <HealthScore />
-          </View>
-
-          {/* Smart Insights */}
-          <SmartInsights />
-
-          {/* Prédictions & tendances */}
-          <FinancialInsights />
-
-          {/* Prévision solde 30j */}
-          <BalanceForecast />
 
           {/* Transactions prévues */}
           {(overduePlanned.length > 0 || upcomingPlanned.length > 0) && (
@@ -290,12 +250,6 @@ export default function DashboardScreen() {
               )}
             </View>
           )}
-          {/* Analyse par commerçant */}
-          <MerchantAnalysis />
-          
-          {/* Cashflow Chart */}
-          <CashflowChart />
-          
           {/* Transaction Feed */}
           <TransactionFeed />
           

@@ -3,13 +3,15 @@
 // ============================================
 
 import { Stack } from 'expo-router';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function SettingsLayout() {
+  const { theme } = useTheme();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0A0B' },
+        contentStyle: { backgroundColor: theme.colors.background.primary },
         animation: 'slide_from_right',
       }}
     >
@@ -19,13 +21,9 @@ export default function SettingsLayout() {
       <Stack.Screen name="account-types" />
       <Stack.Screen name="quick-expenses" />
       <Stack.Screen name="data" />
+      <Stack.Screen name="bank-import" />
       <Stack.Screen name="changelog" />
       <Stack.Screen name="security" />
-      <Stack.Screen name="automation-rules" />
-      <Stack.Screen name="reminders" />
-      <Stack.Screen name="wishlist" />
-      <Stack.Screen name="templates" />
-      <Stack.Screen name="achievements" />
     </Stack>
   );
 }

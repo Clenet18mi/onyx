@@ -5,13 +5,16 @@
 
 import { Alert, Platform } from 'react-native';
 import { Paths, File } from 'expo-file-system';
+import { createBackup } from '@/utils/migrations';
 import { useAccountStore } from '@/stores/accountStore';
 import { useTransactionStore } from '@/stores/transactionStore';
 import { useBudgetStore } from '@/stores/budgetStore';
 import { useGoalStore } from '@/stores/goalStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
 import { usePlannedTransactionStore } from '@/stores/plannedTransactionStore';
-import type { Account, Transaction, Budget, SavingsGoal, Subscription, PlannedTransaction } from '@/types';
+import { useConfigStore } from '@/stores/configStore';
+import type { Account, Transaction, Budget, SavingsGoal, Subscription, PlannedTransaction, BankImportMetadata } from '@/types';
+import type { CustomCategory, QuickExpenseTemplate, UserProfile } from '@/stores/configStore';
 
 const EXPORT_VERSION = '1.0';
 
@@ -24,6 +27,9 @@ export interface ExportData {
   goals: SerializedGoal[];
   subscriptions: SerializedSubscription[];
   plannedTransactions: SerializedPlannedTransaction[];
+  categories: SerializedCategory[];
+  quickExpenses: SerializedQuickExpense[];
+  profile: SerializedProfile;
 }
 
 interface SerializedPlannedTransaction {
@@ -70,6 +76,7 @@ interface SerializedTransaction {
   goalId?: string;
   photoUris?: string[];
   voiceNoteUri?: string;
+  bankImport?: BankImportMetadata;
   createdAt: string;
 }
 
@@ -110,6 +117,37 @@ interface SerializedSubscription {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface SerializedCategory {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  type: string;
+  isDefault: boolean;
+  isHidden: boolean;
+  order: number;
+}
+
+interface SerializedQuickExpense {
+  id: string;
+  name: string;
+  categoryId: string;
+  defaultAmount?: number;
+  icon: string;
+  color: string;
+  isActive: boolean;
+  order: number;
+}
+
+interface SerializedProfile {
+  name: string;
+  currency: string;
+  locale: string;
+  salaryDay?: number;
+  defaultSalaryAmount?: number;
+  defaultSalaryAccountId?: string;
 }
 
 function ensureString(value: unknown): string {
@@ -160,6 +198,7 @@ function cleanTransactions(transactions: Transaction[]): SerializedTransaction[]
     goalId: t.goalId,
     photoUris: t.photoUris,
     voiceNoteUri: t.voiceNoteUri,
+    bankImport: t.bankImport,
     createdAt: ensureString(t.createdAt),
   }));
 }
@@ -229,6 +268,43 @@ function cleanPlannedTransactions(list: PlannedTransaction[]): SerializedPlanned
   }));
 }
 
+function cleanCategories(categories: CustomCategory[]): SerializedCategory[] {
+  return categories.map((c) => ({
+    id: String(c.id),
+    label: String(c.label),
+    icon: String(c.icon),
+    color: String(c.color),
+    type: String(c.type),
+    isDefault: Boolean(c.isDefault),
+    isHidden: Boolean(c.isHidden),
+    order: Number(c.order),
+  }));
+}
+
+function cleanQuickExpenses(list: QuickExpenseTemplate[]): SerializedQuickExpense[] {
+  return list.map((q) => ({
+    id: String(q.id),
+    name: String(q.name),
+    categoryId: String(q.categoryId),
+    defaultAmount: q.defaultAmount,
+    icon: String(q.icon),
+    color: String(q.color),
+    isActive: Boolean(q.isActive),
+    order: Number(q.order),
+  }));
+}
+
+function cleanProfile(profile: UserProfile): SerializedProfile {
+  return {
+    name: String(profile?.name ?? ''),
+    currency: String(profile?.currency ?? 'EUR'),
+    locale: String(profile?.locale ?? 'fr-FR'),
+    salaryDay: profile?.salaryDay,
+    defaultSalaryAmount: profile?.defaultSalaryAmount,
+    defaultSalaryAccountId: profile?.defaultSalaryAccountId,
+  };
+}
+
 function prepareDataForExport(): ExportData {
   let accounts: Account[] = [];
   let transactions: Transaction[] = [];
@@ -236,6 +312,9 @@ function prepareDataForExport(): ExportData {
   let goals: SavingsGoal[] = [];
   let subscriptions: Subscription[] = [];
   let plannedTransactions: PlannedTransaction[] = [];
+  let categories: CustomCategory[] = [];
+  let quickExpenses: QuickExpenseTemplate[] = [];
+  let profile: UserProfile | undefined;
 
   try {
     accounts = useAccountStore.getState().accounts ?? [];
@@ -267,6 +346,14 @@ function prepareDataForExport(): ExportData {
   } catch (e) {
     console.warn('[dataExport] plannedTransactionStore.getState()', e);
   }
+  try {
+    const config = useConfigStore.getState();
+    categories = config.categories ?? [];
+    quickExpenses = config.quickExpenses ?? [];
+    profile = config.profile;
+  } catch (e) {
+    console.warn('[dataExport] configStore.getState()', e);
+  }
 
   return {
     version: EXPORT_VERSION,
@@ -277,6 +364,9 @@ function prepareDataForExport(): ExportData {
     goals: cleanGoals(goals),
     subscriptions: cleanSubscriptions(subscriptions),
     plannedTransactions: cleanPlannedTransactions(plannedTransactions),
+    categories: cleanCategories(categories),
+    quickExpenses: cleanQuickExpenses(quickExpenses),
+    profile: cleanProfile(profile ?? { name: '', currency: 'EUR', locale: 'fr-FR' }),
   };
 }
 
@@ -316,6 +406,7 @@ function restoreTransactions(rows: SerializedTransaction[]): Transaction[] {
     goalId: t?.goalId,
     photoUris: Array.isArray(t?.photoUris) ? t.photoUris : undefined,
     voiceNoteUri: t?.voiceNoteUri,
+    bankImport: t?.bankImport,
     createdAt: toDateString(t?.createdAt),
   }));
 }
@@ -383,6 +474,43 @@ function restorePlannedTransactions(rows: SerializedPlannedTransaction[]): Plann
     createdAt: toDateString(p?.createdAt),
     updatedAt: toDateString(p?.updatedAt),
   }));
+}
+
+function restoreCategories(rows: SerializedCategory[]): CustomCategory[] {
+  return (Array.isArray(rows) ? rows : []).filter(Boolean).map((c) => ({
+    id: String(c?.id ?? ''),
+    label: String(c?.label ?? 'Catégorie'),
+    icon: String(c?.icon ?? 'Circle'),
+    color: String(c?.color ?? '#6366F1'),
+    type: (c?.type || 'both') as CustomCategory['type'],
+    isDefault: Boolean(c?.isDefault),
+    isHidden: Boolean(c?.isHidden),
+    order: Number(c?.order) || 0,
+  }));
+}
+
+function restoreQuickExpenses(rows: SerializedQuickExpense[]): QuickExpenseTemplate[] {
+  return (Array.isArray(rows) ? rows : []).filter(Boolean).map((q) => ({
+    id: String(q?.id ?? ''),
+    name: String(q?.name ?? 'Dépense rapide'),
+    categoryId: String(q?.categoryId ?? 'other'),
+    defaultAmount: q?.defaultAmount,
+    icon: String(q?.icon ?? 'Circle'),
+    color: String(q?.color ?? '#6366F1'),
+    isActive: Boolean(q?.isActive),
+    order: Number(q?.order) || 0,
+  }));
+}
+
+function restoreProfile(profile: SerializedProfile | undefined): UserProfile {
+  return {
+    name: String(profile?.name ?? ''),
+    currency: String(profile?.currency ?? 'EUR'),
+    locale: String(profile?.locale ?? 'fr-FR'),
+    salaryDay: profile?.salaryDay,
+    defaultSalaryAmount: profile?.defaultSalaryAmount,
+    defaultSalaryAccountId: profile?.defaultSalaryAccountId,
+  };
 }
 
 /** Format NDJSON : une ligne = un objet JSON. Plus simple et robuste qu'un gros JSON. */
@@ -583,7 +711,7 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
 
         if (parsed.data && typeof parsed.data === 'object') {
           const raw = parsed.data as Record<string, { state?: Record<string, unknown> }>;
-          data = {
+    data = {
             version: version ?? '1.0',
             exportDate: (exportDate ?? new Date().toISOString()) as string,
             accounts: Array.isArray(raw['onyx-accounts']?.state?.accounts) ? (raw['onyx-accounts'].state.accounts as SerializedAccount[]) : [],
@@ -592,6 +720,9 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
             goals: Array.isArray(raw['onyx-goals']?.state?.goals) ? (raw['onyx-goals'].state.goals as SerializedGoal[]) : [],
             subscriptions: Array.isArray(raw['onyx-subscriptions']?.state?.subscriptions) ? (raw['onyx-subscriptions'].state.subscriptions as SerializedSubscription[]) : [],
             plannedTransactions: Array.isArray(raw['onyx-planned-transactions']?.state?.plannedTransactions) ? (raw['onyx-planned-transactions'].state.plannedTransactions as SerializedPlannedTransaction[]) : [],
+            categories: Array.isArray(raw['onyx-config']?.state?.categories) ? (raw['onyx-config'].state.categories as SerializedCategory[]) : [],
+            quickExpenses: Array.isArray(raw['onyx-config']?.state?.quickExpenses) ? (raw['onyx-config'].state.quickExpenses as SerializedQuickExpense[]) : [],
+            profile: (raw['onyx-config']?.state?.profile as SerializedProfile) ?? { name: '', currency: 'EUR', locale: 'fr-FR' },
           };
         } else {
           data = {
@@ -603,6 +734,9 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
             goals: Array.isArray(parsed.goals) ? (parsed.goals as SerializedGoal[]) : [],
             subscriptions: Array.isArray(parsed.subscriptions) ? (parsed.subscriptions as SerializedSubscription[]) : [],
             plannedTransactions: Array.isArray(parsed.plannedTransactions) ? (parsed.plannedTransactions as SerializedPlannedTransaction[]) : [],
+            categories: Array.isArray(parsed.categories) ? (parsed.categories as SerializedCategory[]) : [],
+            quickExpenses: Array.isArray(parsed.quickExpenses) ? (parsed.quickExpenses as SerializedQuickExpense[]) : [],
+            profile: (parsed.profile as SerializedProfile) ?? { name: '', currency: 'EUR', locale: 'fr-FR' },
           };
         }
       }
@@ -632,6 +766,13 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
           onPress: () => {
             (async () => {
               try {
+                // Snapshot de sécurité, comme l'ancien import "migrations".
+                try {
+                  await createBackup();
+                } catch (e) {
+                  console.warn('[importDataFromJSON] createBackup failed', e);
+                }
+
                 if (data.accounts?.length) {
                   const accounts = restoreAccounts(data.accounts).filter((a) => a.id);
                   if (accounts.length) useAccountStore.getState().setAccountsForImport(accounts);
@@ -655,6 +796,17 @@ export async function importDataFromJSON(fileUri: string): Promise<void> {
                 if (data.plannedTransactions?.length) {
                   const planned = restorePlannedTransactions(data.plannedTransactions).filter((p) => p.id && p.accountId);
                   if (planned.length) usePlannedTransactionStore.getState().setPlannedTransactionsForImport(planned);
+                }
+                if (data.categories?.length) {
+                  const categories = restoreCategories(data.categories).filter((c) => c.id);
+                  if (categories.length) useConfigStore.getState().setCategoriesForImport(categories);
+                }
+                if (data.quickExpenses?.length) {
+                  const quickExpenses = restoreQuickExpenses(data.quickExpenses).filter((q) => q.id);
+                  if (quickExpenses.length) useConfigStore.getState().setQuickExpensesForImport(quickExpenses);
+                }
+                if (data.profile) {
+                  useConfigStore.getState().setProfileForImport(restoreProfile(data.profile));
                 }
                 // Laisser le temps au persist Zustand d'écrire en AsyncStorage avant le rechargement
                 await new Promise((r) => setTimeout(r, 600));

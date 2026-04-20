@@ -9,7 +9,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { 
   TrendingUp, 
   TrendingDown, 
-  Sparkles,
 } from 'lucide-react-native';
 import Animated, { 
   useAnimatedStyle, 
@@ -19,7 +18,7 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
-import { useAccountStore, useTransactionStore, useBudgetStore, useSettingsStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSettingsStore } from '@/stores';
 import { formatCurrency, formatPercentage, formatCompactCurrency, displayAmount, safeParseISO } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
@@ -28,9 +27,6 @@ export function BalanceCard() {
   const totalBalance = useAccountStore((state) => state.getTotalBalance());
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const transactions = useTransactionStore((state) => state.transactions);
-  const budgetsAtRisk = useBudgetStore((state) => 
-    state.getAllBudgetsProgress().filter(b => b.percentage >= 80)
-  );
   const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
   const currency = useSettingsStore((state) => state.currency);
   const locale = useSettingsStore((state) => state.locale);
@@ -114,20 +110,7 @@ export function BalanceCard() {
       {/* Header */}
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="text-onyx-500 text-sm">Patrimoine Total</Text>
-            {budgetsAtRisk.length > 0 && (
-              <View 
-                className="ml-2 px-2 py-0.5 rounded-full flex-row items-center"
-                style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)' }}
-              >
-                <Sparkles size={10} color="#F59E0B" />
-                <Text className="text-amber-500 text-xs ml-1">
-                  {budgetsAtRisk.length} alerte{budgetsAtRisk.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Text className="text-onyx-500 text-sm">Patrimoine Total</Text>
           
           <Animated.View style={animatedStyle}>
             <Text 

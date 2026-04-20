@@ -162,7 +162,7 @@ export default function QuickExpensesSettingsScreen() {
 
         <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
           <Text className="text-onyx-500 text-sm mb-4">
-            Ces boutons apparaissent sur le dashboard pour ajouter rapidement des dépenses courantes.
+            Gère les dépenses rapides utilisées dans l'ajout de transaction.
           </Text>
 
           {sortedTemplates.map((template) => {

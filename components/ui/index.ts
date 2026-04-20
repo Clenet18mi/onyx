@@ -14,8 +14,6 @@ export { AnimatedNumber } from './AnimatedNumber';
 export type { AnimatedNumberProps } from './AnimatedNumber';
 export { AnimatedProgress } from './AnimatedProgress';
 export type { AnimatedProgressProps } from './AnimatedProgress';
-export { Calculator } from './Calculator';
-export type { CalculatorProps } from './Calculator';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps, EmptyStateVariant } from './EmptyState';
 export { Skeleton, SkeletonCard } from './Skeleton';

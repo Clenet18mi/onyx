@@ -16,7 +16,7 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore, useSubscriptionStore, useGoalStore } from '@/stores';
+import { useAccountStore, useTransactionStore, useSettingsStore, useConfigStore } from '@/stores';
 import { formatCurrency } from '@/utils/format';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -39,11 +39,7 @@ export function PaydayModal({ visible, onClose, onDismissLater, onRecordSalary }
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const profile = useConfigStore((state) => state.profile);
-  const subscriptionsMonthly = useSubscriptionStore((state) => state.getTotalMonthlySubscriptions());
-  const goals = useGoalStore((state) => state.goals.filter((g) => !g.isCompleted));
   const salaryConfig = profile?.defaultSalaryAmount ?? 0;
-  const goalsContribution = 0;
-  const freeBudget = Math.max(0, salaryConfig - subscriptionsMonthly - goalsContribution);
   
   // Animation
   const scale = useSharedValue(0.8);
@@ -179,29 +175,6 @@ export function PaydayModal({ visible, onClose, onDismissLater, onRecordSalary }
                 <TouchableOpacity onPress={onClose}>
                   <Icons.X size={24} color="#71717A" />
                 </TouchableOpacity>
-              </View>
-
-              {/* Répartition */}
-              <View className="mb-6 p-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                <Text className="text-onyx-500 text-xs mb-2">Répartition du mois</Text>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-onyx-400 text-sm">Salaire configuré</Text>
-                  <Text className="text-accent-success font-medium">{formatCurrency(salaryConfig)}</Text>
-                </View>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-onyx-400 text-sm">Abonnements du mois</Text>
-                  <Text className="text-accent-danger font-medium">−{formatCurrency(subscriptionsMonthly)}</Text>
-                </View>
-                {goalsContribution > 0 && (
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-onyx-400 text-sm">Contribution objectifs</Text>
-                    <Text className="text-onyx-400 font-medium">−{formatCurrency(goalsContribution)}</Text>
-                  </View>
-                )}
-                <View className="flex-row justify-between mt-2 pt-2" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
-                  <Text className="text-white font-medium">Budget libre</Text>
-                  <Text className="text-white font-semibold">{formatCurrency(freeBudget)}</Text>
-                </View>
               </View>
 
               {/* Montant */}
