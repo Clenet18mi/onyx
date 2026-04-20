@@ -201,6 +201,8 @@ export interface Settings {
   lastPaydayModal?: string;
   /** Dernier compte utilisé pour une transaction (présélection à l'ajout) */
   lastUsedAccountId?: string;
+  /** Dernier compte utilisé pour l'import bancaire CSV */
+  lastBankImportAccountId?: string;
   /** Mode discret : masque les montants (••••• €) */
   privacyMode?: boolean;
 }

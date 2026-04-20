@@ -22,6 +22,7 @@
     "android:build": "powershell -NoProfile -ExecutionPolicy Bypass -File build-android.ps1 release",
     "android:build:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File build-android.ps1 debug",
     "android:build:fast": "powershell -NoProfile -Command \"Push-Location android; .\\gradlew.bat assembleRelease --build-cache --parallel --max-workers=4 --console=plain; Pop-Location\"",
+    "test:bank-import": "npm exec --yes tsx scripts/test-bank-import.ts",
     "prebuild:clean": "expo prebuild --platform android --clean",
     "android:config": "powershell -ExecutionPolicy Bypass -File scripts/ensure-local-properties.ps1",
     "android:logcat": "powershell -ExecutionPolicy Bypass -File scripts/logcat-crash.ps1"

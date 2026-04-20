@@ -31,7 +31,6 @@ const defaultSettings: Settings = {
   duplicateAlertEnabled: true,
   ignoredDuplicateSignatures: [],
   privacyMode: false,
-  lastBankImportAccountId: undefined,
 };
 
 export const useSettingsStore = create<SettingsState>()(

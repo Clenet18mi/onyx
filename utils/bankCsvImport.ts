@@ -2,24 +2,9 @@ import * as Crypto from 'expo-crypto';
 import { File } from 'expo-file-system';
 import type { Transaction, TransactionCategory, TransactionType, BankImportMetadata } from '@/types';
 import { generateId } from '@/utils/crypto';
-import { useAccountStore, useConfigStore, useTransactionStore } from '@/stores';
+import { useAccountStore, useTransactionStore } from '@/stores';
 import { safeParseISO } from '@/utils/format';
-
-export interface BankCsvRow {
-  accountingDate: string;
-  simplifiedLabel: string;
-  operationLabel: string;
-  reference: string;
-  additionalInfo: string;
-  operationType: string;
-  category: string;
-  subCategory: string;
-  debit: number;
-  credit: number;
-  operationDate: string;
-  valueDate: string;
-  pointage: string;
-}
+export { parseBankCsvRaw, summarizeBankRows, suggestBankImportAccountId, buildBankImportReconciliation } from './bankCsvImportCore';
 
 export interface BankImportPreview {
   fileName: string;
@@ -57,114 +42,6 @@ function normalizeText(value: string | undefined | null): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-function normalizeKey(value: string | undefined | null): string {
-  return normalizeText(value).toLowerCase();
-}
-
-function splitCsvLine(line: string, separator = ';'): string[] {
-  const cells: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    const next = line[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (char === separator && !inQuotes) {
-      cells.push(current);
-      current = '';
-      continue;
-    }
-
-    current += char;
-  }
-
-  cells.push(current);
-  return cells.map((cell) => cell.replace(/^\uFEFF/, '').trim());
-}
-
-function parseFrenchAmount(raw: string | undefined): number {
-  const normalized = normalizeText(raw).replace(/\s/g, '').replace(/\+/g, '').replace(/€/g, '').replace(/\./g, '').replace(',', '.');
-  const value = Number.parseFloat(normalized);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function mapTransactionType(row: BankCsvRow): TransactionType {
-  const operationType = normalizeKey(row.operationType);
-  const category = normalizeKey(row.category);
-  const subCategory = normalizeKey(row.subCategory);
-
-  if (category.includes('transaction exclue') || subCategory.includes('virement interne') || operationType.includes('virement interne')) {
-    return 'transfer';
-  }
-
-  if (row.credit > 0) {
-    return 'income';
-  }
-
-  if (row.debit > 0) {
-    return 'expense';
-  }
-
-  if (operationType.includes('virement recu') || category.includes('revenus') || category.includes('rentrees')) {
-    return 'income';
-  }
-
-  return 'expense';
-}
-
-function mapCategory(row: BankCsvRow, type: TransactionType): TransactionCategory {
-  const category = normalizeKey(row.category);
-  const subCategory = normalizeKey(row.subCategory);
-  const operationType = normalizeKey(row.operationType);
-
-  if (type === 'transfer') return 'transfer';
-
-  if (category.includes('alimentation')) return 'food';
-  if (category.includes('transport')) return 'transport';
-  if (category.includes('sante')) return 'health';
-  if (category.includes('education') || category.includes('famille')) return 'education';
-  if (category.includes('shopping')) return 'shopping';
-  if (category.includes('loisirs') || category.includes('vacances')) return 'travel';
-  if (category.includes('logement')) return 'housing';
-  if (category.includes('banque') || category.includes('assurance')) return 'insurance';
-  if (category.includes('revenus') || category.includes('rentrees')) return 'salary';
-
-  if (subCategory.includes('carburant')) return 'transport';
-  if (subCategory.includes('train') || subCategory.includes('avion') || subCategory.includes('ferry')) return 'travel';
-  if (subCategory.includes('restaurant') || subCategory.includes('restauration')) return 'food';
-  if (subCategory.includes('cinema') || subCategory.includes('bar')) return 'entertainment';
-  if (subCategory.includes('virement recu') && operationType.includes('virement')) return 'salary';
-
-  return 'other';
-}
-
-function buildRowSignature(row: BankCsvRow, accountId: string): string {
-  return [
-    accountId,
-    normalizeKey(row.reference),
-    normalizeKey(row.operationDate),
-    normalizeKey(row.valueDate),
-    normalizeKey(row.operationType),
-    normalizeKey(row.category),
-    normalizeKey(row.subCategory),
-    normalizeKey(row.simplifiedLabel),
-    normalizeKey(row.operationLabel),
-    row.debit.toFixed(2),
-    row.credit.toFixed(2),
-  ].join('|');
-}
-
 async function hashRowSignature(signature: string): Promise<string> {
   return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, signature, {
     encoding: Crypto.CryptoEncoding.HEX,
@@ -181,42 +58,6 @@ async function readTextFile(fileUri: string): Promise<string> {
   }
 }
 
-export async function readBankCsv(fileUri: string): Promise<{ rows: BankCsvRow[]; raw: string }> {
-  const raw = (await readTextFile(fileUri)).replace(/^\uFEFF/, '').trim();
-  if (!raw) throw new Error('Fichier vide');
-
-  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length < 2) throw new Error('CSV vide ou incomplet');
-
-  const headers = splitCsvLine(lines[0]);
-  const rows: BankCsvRow[] = [];
-
-  for (const line of lines.slice(1)) {
-    const cells = splitCsvLine(line);
-    if (cells.length < headers.length) continue;
-    const get = (name: string) => cells[headers.findIndex((h) => normalizeKey(h) === normalizeKey(name))] ?? '';
-    const debit = parseFrenchAmount(get('Debit'));
-    const credit = parseFrenchAmount(get('Credit'));
-    rows.push({
-      accountingDate: get('Date de comptabilisation'),
-      simplifiedLabel: get('Libelle simplifie'),
-      operationLabel: get('Libelle operation'),
-      reference: get('Reference'),
-      additionalInfo: get('Informations complementaires'),
-      operationType: get('Type operation'),
-      category: get('Categorie'),
-      subCategory: get('Sous categorie'),
-      debit,
-      credit,
-      operationDate: get('Date operation'),
-      valueDate: get('Date de valeur'),
-      pointage: get('Pointage operation'),
-    });
-  }
-
-  return { rows, raw };
-}
-
 function transactionIdentity(tx: Transaction): string {
   const importMeta = tx.bankImport;
   if (importMeta?.rowHash) return `${tx.accountId}|${importMeta.rowHash}`;
@@ -229,6 +70,13 @@ function transactionIdentity(tx: Transaction): string {
     normalizeKey(tx.description),
     normalizeKey(tx.toAccountId),
   ].join('|');
+}
+
+export function suggestBankImportAccountId(accounts: Array<{ id: string; type: string; isArchived?: boolean }>, lastBankImportAccountId?: string | null): string {
+  const activeAccounts = accounts.filter((account) => !account.isArchived);
+  if (!activeAccounts.length) return '';
+  if (lastBankImportAccountId && activeAccounts.some((account) => account.id === lastBankImportAccountId)) return lastBankImportAccountId;
+  return activeAccounts.find((account) => account.type === 'checking')?.id ?? activeAccounts[0].id;
 }
 
 export function buildBankImportReconciliation(currentBalance: number, importedNet: number, targetBalance?: number): BankImportReconciliation {
@@ -282,33 +130,30 @@ function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, 
   };
 }
 
-export async function previewBankCsvImport(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportBatch> {
-  const { rows } = await readBankCsv(fileUri);
-  const account = useAccountStore.getState().getAccount(accountId);
-  if (!account) throw new Error('Compte cible introuvable');
+export async function previewBankCsvRows(rows: BankCsvRow[], bankAccount: { id: string; name: string; balance?: number; type?: string }, fileName = 'releve.csv'): Promise<BankImportBatch> {
+  if (!bankAccount?.id) throw new Error('Compte cible introuvable');
 
-  const existing = useTransactionStore.getState().getTransactionsByAccount(accountId);
+  const existing = useTransactionStore.getState().getTransactionsByAccount(bankAccount.id);
   const existingIds = new Set(existing.map(transactionIdentity));
   const existingHashes = new Set(
     existing
       .map((tx) => tx.bankImport?.rowHash)
       .filter((value): value is string => Boolean(value))
-      .map((value) => `${accountId}|${value}`)
+      .map((value) => `${bankAccount.id}|${value}`)
   );
 
   const seenInFile = new Set<string>();
   const transactions: Transaction[] = [];
   let duplicateRows = 0;
   let ignoredRows = 0;
-  const typeBreakdown: Record<TransactionType, number> = { income: 0, expense: 0, transfer: 0 };
-  const categoryAgg = new Map<TransactionCategory, { count: number; amount: number }>();
+  const summary = summarizeBankRows(rows);
   const sampleRows: BankImportPreview['sampleRows'] = [];
 
-  for (const row of rows) {
-    const signature = buildRowSignature(row, accountId);
+  for (const { row, type, category, amount } of summary.normalizedRows) {
+    const signature = buildRowSignature(row, bankAccount.id);
     const rowHash = await hashRowSignature(signature);
-    const key = `${accountId}|${rowHash}`;
-    const tx = rowToTransaction(row, accountId, fileName, rowHash);
+    const key = `${bankAccount.id}|${rowHash}`;
+    const tx = rowToTransaction(row, bankAccount.id, fileName, rowHash);
 
     if (!tx) {
       ignoredRows += 1;
@@ -343,18 +188,13 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
 
     seenInFile.add(key);
     transactions.push(tx);
-    typeBreakdown[tx.type] += 1;
-    const entry = categoryAgg.get(tx.category) ?? { count: 0, amount: 0 };
-    entry.count += 1;
-    entry.amount += tx.amount;
-    categoryAgg.set(tx.category, entry);
     if (sampleRows.length < 20) {
       sampleRows.push({
         date: tx.date,
         label: tx.description,
-        amount: tx.amount,
-        type: tx.type,
-        category: tx.category,
+        amount,
+        type,
+        category,
         status: 'new',
       });
     }
@@ -370,25 +210,59 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
     transactions,
     preview: {
       fileName,
-      accountId,
-      accountName: account.name,
+      accountId: bankAccount.id,
+      accountName: bankAccount.name,
       totalRows: rows.length,
       newRows: transactions.length,
       duplicateRows,
       ignoredRows,
-      typeBreakdown,
-      categoryBreakdown: [...categoryAgg.entries()]
-        .map(([category, value]) => ({ category, count: value.count, amount: value.amount }))
-        .sort((a, b) => b.count - a.count || b.amount - a.amount),
+      typeBreakdown: summary.typeBreakdown,
+      categoryBreakdown: summary.categoryBreakdown,
       sampleRows,
     },
   };
 }
 
-export async function importBankCsv(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportPreview> {
+export async function previewBankCsvImport(fileUri: string, accountId: string, fileName = 'releve.csv'): Promise<BankImportBatch> {
+  const { rows } = await readBankCsv(fileUri);
+  const account = useAccountStore.getState().getAccount(accountId);
+  if (!account) throw new Error('Compte cible introuvable');
+  return await previewBankCsvRows(rows, account, fileName);
+}
+
+export async function importBankCsv(fileUri: string, accountId: string, fileName = 'releve.csv', options?: { targetBalance?: number; createReconciliationTransaction?: boolean }): Promise<BankImportPreview> {
   const { transactions, preview } = await previewBankCsvImport(fileUri, accountId, fileName);
+  const balanceBeforeImport = useAccountStore.getState().getAccount(accountId)?.balance ?? 0;
   if (transactions.length) {
     useTransactionStore.getState().addTransactionsForImport(transactions, { applyBalanceChanges: true });
+  }
+
+  const shouldReconcile = Boolean(options?.createReconciliationTransaction && Number.isFinite(options?.targetBalance));
+  if (shouldReconcile) {
+    const importedNet = preview.typeBreakdown.income - preview.typeBreakdown.expense;
+    const reconciliation = buildBankImportReconciliation(balanceBeforeImport, importedNet, options?.targetBalance);
+    if (Math.abs(reconciliation.adjustment) >= 0.005) {
+      useTransactionStore.getState().addTransactionsForImport([
+        {
+          id: generateId(),
+          accountId,
+          type: reconciliation.adjustment > 0 ? 'income' : 'expense',
+          category: 'other',
+          amount: Math.abs(reconciliation.adjustment),
+          description: 'Réconciliation de solde',
+          date: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          bankImport: {
+            source: 'caisse-epargne-csv',
+            accountId,
+            rowHash: `reconciliation:${preview.fileName}:${Date.now()}`,
+            additionalInfo: `target=${options?.targetBalance ?? ''}`,
+            direction: reconciliation.adjustment > 0 ? 'in' : 'out',
+            fileName: preview.fileName,
+          },
+        },
+      ], { applyBalanceChanges: true });
+    }
   }
   return preview;
 }

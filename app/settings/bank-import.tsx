@@ -8,7 +8,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { useAccountStore, useSettingsStore } from '@/stores';
-import { buildBankImportReconciliation, importBankCsv, previewBankCsvImport, type BankImportPreview } from '@/utils/bankCsvImport';
+import { buildBankImportReconciliation, importBankCsv, previewBankCsvImport, suggestBankImportAccountId, type BankImportPreview } from '@/utils/bankCsvImport';
 import { formatCurrency } from '@/utils/format';
 
 export default function BankImportScreen() {
@@ -16,7 +16,7 @@ export default function BankImportScreen() {
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const lastBankImportAccountId = useSettingsStore((state) => state.lastBankImportAccountId);
   const setLastBankImportAccountId = useSettingsStore((state) => state.setLastBankImportAccountId);
-  const [selectedAccountId, setSelectedAccountId] = useState(lastBankImportAccountId ?? accounts[0]?.id ?? '');
+  const [selectedAccountId, setSelectedAccountId] = useState(suggestBankImportAccountId(accounts, lastBankImportAccountId));
   const [fileUri, setFileUri] = useState<string | null>(null);
   const [fileName, setFileName] = useState('releve.csv');
   const [preview, setPreview] = useState<BankImportPreview | null>(null);
@@ -30,19 +30,11 @@ export default function BankImportScreen() {
   );
 
   useEffect(() => {
-    if (!selectedAccountId && accounts.length > 0) {
-      const preferred = lastBankImportAccountId && accounts.some((account) => account.id === lastBankImportAccountId)
-        ? lastBankImportAccountId
-        : accounts.find((account) => account.type === 'checking')?.id ?? accounts[0].id;
-      setSelectedAccountId(preferred);
+    const suggested = suggestBankImportAccountId(accounts, lastBankImportAccountId);
+    if (suggested && suggested !== selectedAccountId) {
+      setSelectedAccountId(suggested);
     }
   }, [accounts, lastBankImportAccountId, selectedAccountId]);
-
-  useEffect(() => {
-    if (!selectedAccountId && accounts[0]?.id) {
-      setSelectedAccountId(accounts[0].id);
-    }
-  }, [accounts, selectedAccountId]);
 
   const pickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -85,7 +77,10 @@ export default function BankImportScreen() {
 
     setImporting(true);
     try {
-      const finalPreview = await importBankCsv(fileUri, selectedAccountId, fileName);
+      const finalPreview = await importBankCsv(fileUri, selectedAccountId, fileName, {
+        targetBalance,
+        createReconciliationTransaction: Number.isFinite(targetBalance ?? NaN),
+      });
       const currentBalance = selectedAccount?.balance ?? 0;
       const reconciliation = buildBankImportReconciliation(currentBalance, finalPreview.newRows ? finalPreview.typeBreakdown.income - finalPreview.typeBreakdown.expense : 0, targetBalance);
       Alert.alert(
