@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Icons from 'lucide-react-native';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { useTheme } from '@/hooks/useTheme';
 
 // Données générées par node scripts/generate-changelog.js
 const changelogData = require('@/constants/changelog.json') as {
@@ -33,16 +34,18 @@ function formatLabel(msg: string): string {
 
 export default function ChangelogScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const { colors } = theme;
   const { appVersion, buildNumber, entries } = changelogData;
 
   return (
-    <LinearGradient colors={['#0A0A0B', '#1F1F23', '#0A0A0B']} style={{ flex: 1 }}>
+    <LinearGradient colors={colors.gradients.card} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }}>
           <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
-            <Icons.ChevronLeft size={24} color="#fff" />
+            <Icons.ChevronLeft size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>Journal des versions</Text>
+          <Text style={{ color: colors.text.primary, fontSize: 20, fontWeight: '700' }}>Journal des versions</Text>
         </View>
 
         <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
@@ -52,23 +55,23 @@ export default function ChangelogScreen() {
                 width: 56,
                 height: 56,
                 borderRadius: 16,
-                backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                backgroundColor: `${colors.accent.primary}20`,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 12,
               }}
             >
-              <Icons.GitBranch size={28} color="#6366F1" />
+              <Icons.GitBranch size={28} color={colors.accent.primary} />
             </View>
-            <Text style={{ color: '#fff', fontSize: 24, fontWeight: '700' }}>ONYX {appVersion}</Text>
-            <Text style={{ color: '#71717A', fontSize: 14, marginTop: 4 }}>Build {buildNumber}</Text>
+            <Text style={{ color: colors.text.primary, fontSize: 24, fontWeight: '700' }}>ONYX {appVersion}</Text>
+            <Text style={{ color: colors.text.secondary, fontSize: 14, marginTop: 4 }}>Build {buildNumber}</Text>
           </GlassCard>
 
           {entries.map((entry, idx) => (
             <View key={idx} style={{ marginBottom: 24 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 12 }}>
-                <Text style={{ color: '#6366F1', fontWeight: '700', fontSize: 16 }}>v{entry.version}</Text>
-                <Text style={{ color: '#71717A', fontSize: 13, marginLeft: 8 }}>{entry.date}</Text>
+                <Text style={{ color: colors.accent.primary, fontWeight: '700', fontSize: 16 }}>v{entry.version}</Text>
+                <Text style={{ color: colors.text.secondary, fontSize: 13, marginLeft: 8 }}>{entry.date}</Text>
               </View>
               <GlassCard noPadding>
                 <View style={{ padding: 16 }}>
@@ -81,8 +84,8 @@ export default function ChangelogScreen() {
                         marginBottom: i < entry.logs.length - 1 ? 10 : 0,
                       }}
                     >
-                      <Text style={{ color: '#71717A', fontSize: 12, marginRight: 8, marginTop: 2 }}>•</Text>
-                      <Text style={{ color: '#E4E4E7', fontSize: 14, flex: 1 }}>{formatLabel(log)}</Text>
+                        <Text style={{ color: colors.text.secondary, fontSize: 12, marginRight: 8, marginTop: 2 }}>•</Text>
+                        <Text style={{ color: colors.text.primary, fontSize: 14, flex: 1 }}>{formatLabel(log)}</Text>
                     </View>
                   ))}
                 </View>

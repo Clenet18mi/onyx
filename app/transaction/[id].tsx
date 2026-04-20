@@ -14,10 +14,13 @@ import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function EditTransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { theme } = useTheme();
+  const { colors } = theme;
   const getTransaction = useTransactionStore((s) => s.getTransaction);
   const updateTransaction = useTransactionStore((s) => s.updateTransaction);
   const deleteTransaction = useTransactionStore((s) => s.deleteTransaction);
@@ -107,42 +110,43 @@ export default function EditTransactionScreen() {
 
   if (!tx) {
     return (
-      <LinearGradient colors={['#0A0A0B', '#1F1F23']} className="flex-1 items-center justify-center">
-        <Text className="text-white">Transaction introuvable</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 px-6 py-2 rounded-xl bg-accent-primary">
-          <Text className="text-white font-medium">Retour</Text>
+      <LinearGradient colors={colors.gradients.card} className="flex-1 items-center justify-center">
+        <Text style={{ color: colors.text.primary }}>Transaction introuvable</Text>
+        <TouchableOpacity onPress={() => router.back()} className="mt-4 px-6 py-2 rounded-xl" style={{ backgroundColor: colors.accent.primary }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Retour</Text>
         </TouchableOpacity>
       </LinearGradient>
     );
   }
 
   return (
-    <LinearGradient colors={['#0A0A0B', '#1F1F23', '#0A0A0B']} className="flex-1">
+    <LinearGradient colors={colors.gradients.card} className="flex-1">
       <SafeAreaView className="flex-1">
         <View className="flex-row items-center justify-between px-6 py-4">
           <TouchableOpacity onPress={() => router.back()}>
-            <Icons.X size={24} color="#71717A" />
+            <Icons.X size={24} color={colors.text.secondary} />
           </TouchableOpacity>
-          <Text className="text-white text-lg font-semibold">Modifier</Text>
+          <Text className="text-lg font-semibold" style={{ color: colors.text.primary }}>Modifier</Text>
           <View className="flex-row items-center" style={{ gap: 12 }}>
             <TouchableOpacity onPress={handleDuplicate}>
-              <Icons.Copy size={22} color="#6366F1" />
+              <Icons.Copy size={22} color={colors.accent.primary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleDelete}>
-              <Icons.Trash2 size={22} color="#EF4444" />
+              <Icons.Trash2 size={22} color={colors.accent.danger} />
             </TouchableOpacity>
           </View>
         </View>
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View className="px-6 mb-6">
-            <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
               {(['expense', 'income'] as const).map((t) => (
                 <TouchableOpacity
                   key={t}
                   onPress={() => setType(t)}
-                  className={`flex-1 py-3 rounded-xl ${type === t ? (t === 'income' ? 'bg-accent-success' : 'bg-accent-danger') : ''}`}
+                  className="flex-1 py-3 rounded-xl"
+                  style={{ backgroundColor: type === t ? (t === 'income' ? colors.accent.success : colors.accent.danger) : 'transparent' }}
                 >
-                  <Text className={`text-center font-semibold ${type === t ? 'text-white' : 'text-onyx-500'}`}>
+                  <Text className="text-center font-semibold" style={{ color: type === t ? '#fff' : colors.text.secondary }}>
                     {t === 'expense' ? 'Dépense' : 'Revenu'}
                   </Text>
                 </TouchableOpacity>
@@ -150,25 +154,25 @@ export default function EditTransactionScreen() {
             </View>
           </View>
           <View className="px-6 mb-8 items-center">
-            <Text className="text-onyx-500 text-sm mb-2">Montant</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Montant</Text>
             <TouchableOpacity activeOpacity={1} onPress={() => amountInputRef.current?.focus()} className="flex-row items-center justify-center min-h-[72px]">
-              <Text className="text-4xl font-bold mr-1" style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}>{type === 'income' ? '+' : '-'}</Text>
+              <Text className="text-4xl font-bold mr-1" style={{ color: type === 'income' ? colors.accent.success : colors.accent.danger }}>{type === 'income' ? '+' : '-'}</Text>
               <TextInput
                 ref={amountInputRef}
                 value={amount}
                 onChangeText={handleAmountChange}
                 placeholder="0"
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                placeholderTextColor={colors.text.tertiary}
                 keyboardType="decimal-pad"
                 className="text-4xl font-bold text-center px-2 py-1"
-                style={{ color: type === 'income' ? '#10B981' : '#EF4444', minWidth: 100 }}
+                style={{ color: type === 'income' ? colors.accent.success : colors.accent.danger, minWidth: 100 }}
                 selectTextOnFocus
               />
-              <Text className="text-4xl font-bold ml-1" style={{ color: type === 'income' ? '#10B981' : '#EF4444' }}> €</Text>
+              <Text className="text-4xl font-bold ml-1" style={{ color: type === 'income' ? colors.accent.success : colors.accent.danger }}> €</Text>
             </TouchableOpacity>
           </View>
           <View className="px-6 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Compte</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View className="flex-row" style={{ gap: 8 }}>
                 {accounts.map((account) => {
@@ -178,11 +182,11 @@ export default function EditTransactionScreen() {
                     <TouchableOpacity
                       key={account.id}
                       onPress={() => setAccountId(account.id)}
-                      className={`px-4 py-3 rounded-xl flex-row items-center ${sel ? 'border-2' : ''}`}
-                      style={{ backgroundColor: sel ? `${account.color}20` : 'rgba(255,255,255,0.08)', borderColor: sel ? account.color : 'transparent' }}
+                      className="px-4 py-3 rounded-xl flex-row items-center"
+                      style={{ backgroundColor: sel ? `${account.color}20` : colors.background.secondary, borderWidth: sel ? 1 : 1, borderColor: sel ? account.color : colors.background.tertiary }}
                     >
-                      <Icon size={18} color={sel ? account.color : '#71717A' } />
-                      <Text className={`ml-2 font-medium ${sel ? 'text-white' : 'text-onyx-500'}`}>{account.name}</Text>
+                      <Icon size={18} color={sel ? account.color : colors.text.secondary } />
+                      <Text className="ml-2 font-medium" style={{ color: sel ? colors.text.primary : colors.text.secondary }}>{account.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -190,7 +194,7 @@ export default function EditTransactionScreen() {
             </ScrollView>
           </View>
           <View className="px-6 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Catégorie</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Catégorie</Text>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {filteredCategories.map((cat) => {
                 const Icon = getIcon(cat.icon);
@@ -199,19 +203,19 @@ export default function EditTransactionScreen() {
                   <TouchableOpacity
                     key={cat.id}
                     onPress={() => setCategory(cat.id)}
-                    className={`px-3 py-2 rounded-xl flex-row items-center ${sel ? 'border' : ''}`}
-                    style={{ backgroundColor: sel ? `${cat.color}20` : 'rgba(255,255,255,0.08)', borderColor: sel ? cat.color : 'transparent' }}
+                    className="px-3 py-2 rounded-xl flex-row items-center"
+                    style={{ backgroundColor: sel ? `${cat.color}20` : colors.background.secondary, borderWidth: 1, borderColor: sel ? cat.color : colors.background.tertiary }}
                   >
-                    <Icon size={16} color={sel ? cat.color : '#71717A'} />
-                    <Text className={`ml-2 text-sm font-medium ${sel ? 'text-white' : 'text-onyx-500'}`}>{cat.label}</Text>
+                    <Icon size={16} color={sel ? cat.color : colors.text.secondary} />
+                    <Text className="ml-2 text-sm font-medium" style={{ color: sel ? colors.text.primary : colors.text.secondary }}>{cat.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
           <View className="px-6 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Description</Text>
-            <TextInput value={description} onChangeText={setDescription} placeholder="Description" placeholderTextColor="#52525B" className="bg-onyx-100 text-white px-4 py-3 rounded-xl text-base" />
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Description</Text>
+            <TextInput value={description} onChangeText={setDescription} placeholder="Description" placeholderTextColor={colors.text.tertiary} className="px-4 py-3 rounded-xl text-base" style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }} />
           </View>
           <View className="px-6 mb-8">
             <Button title="Enregistrer" variant="primary" size="lg" fullWidth onPress={handleSave} icon={<Icons.Check size={20} color="white" />} />

@@ -19,12 +19,15 @@ import { findSimilarTransactions, getDuplicateIgnoreSignature } from '@/utils/du
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/Button';
 import { DuplicateAlertModal, ReceiptScanner, VoiceNote } from '@/components/transactions';
+import { useTheme } from '@/hooks/useTheme';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ accountId?: string; category?: string; type?: string; amount?: string; description?: string; prefill?: string }>();
+  const { theme } = useTheme();
+  const { colors } = theme;
   
   const [type, setType] = useState<TransactionType>((params.type as TransactionType) || 'expense');
   const [amount, setAmount] = useState(params.amount ?? '');
@@ -246,20 +249,17 @@ export default function AddTransactionScreen() {
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
 
-  const amountColor = type === 'income' ? '#10B981' : type === 'transfer' ? '#6366F1' : '#EF4444';
+  const amountAccent = type === 'income' ? colors.accent.success : type === 'transfer' ? colors.accent.primary : colors.accent.danger;
 
   return (
-    <LinearGradient
-      colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
-      className="flex-1"
-    >
+    <LinearGradient colors={colors.gradients.card} className="flex-1">
       <SafeAreaView className="flex-1">
         {/* Header */}
         <View className="flex-row items-center justify-between px-6 py-4">
           <TouchableOpacity onPress={() => router.back()}>
-            <Icons.X size={24} color="#71717A" />
+            <Icons.X size={24} color={colors.text.secondary} />
           </TouchableOpacity>
-          <Text className="text-white text-lg font-semibold">Nouvelle Transaction</Text>
+          <Text className="text-lg font-semibold" style={{ color: colors.text.primary }}>Nouvelle Transaction</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -270,7 +270,7 @@ export default function AddTransactionScreen() {
             onPress={() => amountInputRef.current?.focus()}
             className="flex-row items-center justify-center"
           >
-            <Text className="text-6xl font-bold mr-1" style={{ color: amountColor }}>
+            <Text className="text-6xl font-bold mr-1" style={{ color: amountAccent }}>
               {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
             </Text>
             <TextInput
@@ -278,13 +278,13 @@ export default function AddTransactionScreen() {
               value={amount}
               onChangeText={handleAmountChange}
               placeholder="0"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={colors.text.tertiary}
               keyboardType="decimal-pad"
               className="text-6xl font-bold text-center px-2 py-1"
-              style={{ color: amountColor, minWidth: 140 }}
+              style={{ color: amountAccent, minWidth: 140 }}
               selectTextOnFocus
             />
-            <Text className="text-6xl font-bold ml-1" style={{ color: amountColor }}>
+            <Text className="text-6xl font-bold ml-1" style={{ color: amountAccent }}>
               {' '}€
             </Text>
           </TouchableOpacity>
@@ -294,7 +294,7 @@ export default function AddTransactionScreen() {
         <View className="px-6 mb-4">
           <View
             className="flex-row rounded-2xl p-1 relative"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+            style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
           >
             <Animated.View
               style={[
@@ -306,24 +306,24 @@ export default function AddTransactionScreen() {
                   width: (pillContainerWidth - 8) / 3,
                   borderRadius: 12,
                 },
-                type === 'expense' && { backgroundColor: '#EF4444' },
-                type === 'income' && { backgroundColor: '#10B981' },
-                type === 'transfer' && { backgroundColor: '#6366F1' },
+                type === 'expense' && { backgroundColor: colors.accent.danger },
+                type === 'income' && { backgroundColor: colors.accent.success },
+                type === 'transfer' && { backgroundColor: colors.accent.primary },
                 pillAnimatedStyle,
               ]}
             />
             <TouchableOpacity onPress={() => setType('expense')} className="flex-1 py-3 rounded-xl z-10">
-              <Text className={`text-center font-semibold text-sm ${type === 'expense' ? 'text-white' : 'text-onyx-500'}`}>
+              <Text className="text-center font-semibold text-sm" style={{ color: type === 'expense' ? colors.text.primary : colors.text.secondary }}>
                 Dépense
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setType('income')} className="flex-1 py-3 rounded-xl z-10">
-              <Text className={`text-center font-semibold text-sm ${type === 'income' ? 'text-white' : 'text-onyx-500'}`}>
+              <Text className="text-center font-semibold text-sm" style={{ color: type === 'income' ? colors.text.primary : colors.text.secondary }}>
                 Revenu
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setType('transfer')} className="flex-1 py-3 rounded-xl z-10">
-              <Text className={`text-center font-semibold text-sm ${type === 'transfer' ? 'text-white' : 'text-onyx-500'}`}>
+              <Text className="text-center font-semibold text-sm" style={{ color: type === 'transfer' ? colors.text.primary : colors.text.secondary }}>
                 Virement
               </Text>
             </TouchableOpacity>
@@ -332,8 +332,8 @@ export default function AddTransactionScreen() {
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {isDuplicatePrefill && (
-            <View className="mx-6 mb-4 px-4 py-2 rounded-lg bg-onyx-200/30 border border-onyx-200/50">
-              <Text className="text-onyx-400 text-sm">Duplicata — modifiez si besoin avant d'enregistrer</Text>
+            <View className="mx-6 mb-4 px-4 py-2 rounded-lg" style={{ backgroundColor: `${colors.accent.warning}18`, borderWidth: 1, borderColor: `${colors.accent.warning}35` }}>
+              <Text className="text-sm" style={{ color: colors.text.secondary }}>Duplicata — modifiez si besoin avant d'enregistrer</Text>
             </View>
           )}
 
@@ -349,15 +349,15 @@ export default function AddTransactionScreen() {
                 }
               }}
               className="mx-6 mb-4 px-4 py-3 rounded-xl flex-row items-center justify-between"
-              style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' }}
+              style={{ backgroundColor: `${colors.accent.primary}18`, borderWidth: 1, borderColor: `${colors.accent.primary}35` }}
             >
               <View className="flex-1">
-                <Text className="text-onyx-400 text-xs mb-1">↩ Répéter</Text>
-                <Text className="text-white font-medium" numberOfLines={1}>
+                <Text className="text-xs mb-1" style={{ color: colors.text.secondary }}>↩ Répéter</Text>
+                <Text className="font-medium" style={{ color: colors.text.primary }} numberOfLines={1}>
                   {lastTransaction.description || getCategoryById(lastTransaction.category)?.label || lastTransaction.category} • {formatCurrency(lastTransaction.amount)}
                 </Text>
               </View>
-              <Text className="text-accent-primary font-semibold">Utiliser</Text>
+              <Text style={{ color: colors.accent.primary, fontWeight: '600' }}>Utiliser</Text>
             </TouchableOpacity>
           )}
 
@@ -367,7 +367,7 @@ export default function AddTransactionScreen() {
               <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Catégorie */}
           <View className="px-4 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Catégorie</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Catégorie</Text>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {filteredCategories.map((cat) => {
                 const CatIcon = getIcon(cat.icon);
@@ -379,15 +379,10 @@ export default function AddTransactionScreen() {
                     className={`px-3 py-2 rounded-xl flex-row items-center ${
                       isSelected ? 'border' : ''
                     }`}
-                    style={{ 
-                      backgroundColor: isSelected ? `${cat.color}20` : 'rgba(255, 255, 255, 0.08)',
-                      borderColor: isSelected ? cat.color : 'transparent',
-                    }}
+                    style={{ backgroundColor: isSelected ? `${cat.color}20` : colors.background.secondary, borderColor: isSelected ? cat.color : colors.background.tertiary }}
                   >
-                    <CatIcon size={16} color={isSelected ? cat.color : '#71717A'} />
-                    <Text 
-                      className={`ml-2 text-sm font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
-                    >
+                    <CatIcon size={16} color={isSelected ? cat.color : colors.text.secondary} />
+                    <Text className="ml-2 text-sm font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
                       {cat.label}
                     </Text>
                   </TouchableOpacity>
@@ -398,7 +393,7 @@ export default function AddTransactionScreen() {
 
           {/* Compte */}
           <View className="px-4 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Compte</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Compte</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View className="flex-row" style={{ gap: 8 }}>
                 {accounts.map((account) => {
@@ -411,15 +406,10 @@ export default function AddTransactionScreen() {
                       className={`px-4 py-3 rounded-xl flex-row items-center ${
                         isSelected ? 'border-2' : ''
                       }`}
-                      style={{ 
-                        backgroundColor: isSelected ? `${account.color}20` : 'rgba(255, 255, 255, 0.08)',
-                        borderColor: isSelected ? account.color : 'transparent',
-                      }}
+                      style={{ backgroundColor: isSelected ? `${account.color}20` : colors.background.secondary, borderColor: isSelected ? account.color : colors.background.tertiary }}
                     >
-                      <AccountIcon size={18} color={isSelected ? account.color : '#71717A'} />
-                      <Text 
-                        className={`ml-2 font-medium ${isSelected ? 'text-white' : 'text-onyx-500'}`}
-                      >
+                      <AccountIcon size={18} color={isSelected ? account.color : colors.text.secondary} />
+                      <Text className="ml-2 font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
                         {account.name}
                       </Text>
                     </TouchableOpacity>
@@ -431,21 +421,23 @@ export default function AddTransactionScreen() {
 
           {type !== 'transfer' && (
             <View className="px-4 mb-6">
-              <Text className="text-onyx-500 text-sm mb-2">Quand ?</Text>
-              <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+              <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Quand ?</Text>
+              <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
                 <TouchableOpacity
                   onPress={() => setIsPlanned(false)}
-                  className={`flex-1 py-3 rounded-xl ${!isPlanned ? 'bg-accent-primary' : ''}`}
+                  className="flex-1 py-3 rounded-xl"
+                  style={{ backgroundColor: !isPlanned ? colors.accent.primary : 'transparent' }}
                 >
-                  <Text className={`text-center font-semibold ${!isPlanned ? 'text-white' : 'text-onyx-500'}`}>
+                  <Text className="text-center font-semibold" style={{ color: !isPlanned ? '#FFFFFF' : colors.text.secondary }}>
                     Ajouter maintenant
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setIsPlanned(true)}
-                  className={`flex-1 py-3 rounded-xl ${isPlanned ? 'bg-accent-primary' : ''}`}
+                  className="flex-1 py-3 rounded-xl"
+                  style={{ backgroundColor: isPlanned ? colors.accent.primary : 'transparent' }}
                 >
-                  <Text className={`text-center font-semibold ${isPlanned ? 'text-white' : 'text-onyx-500'}`}>
+                  <Text className="text-center font-semibold" style={{ color: isPlanned ? '#FFFFFF' : colors.text.secondary }}>
                     Prévoir pour plus tard
                   </Text>
                 </TouchableOpacity>
@@ -453,14 +445,15 @@ export default function AddTransactionScreen() {
               {isPlanned && (
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
-                  className="mt-3 flex-row items-center justify-between bg-onyx-100 px-4 py-3 rounded-xl"
+                  className="mt-3 flex-row items-center justify-between px-4 py-3 rounded-xl"
+                  style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
                 >
-                  <Text className="text-onyx-500 text-sm">Date prévue</Text>
+                  <Text className="text-sm" style={{ color: colors.text.secondary }}>Date prévue</Text>
                   <View className="flex-row items-center">
-                    <Text className="text-white font-medium">
+                    <Text className="font-medium" style={{ color: colors.text.primary }}>
                       {format(plannedDate, "EEEE d MMMM yyyy", { locale: fr })}
                     </Text>
-                    <Icons.ChevronRight size={18} color="#71717A" style={{ marginLeft: 8 }} />
+                    <Icons.ChevronRight size={18} color={colors.text.secondary} style={{ marginLeft: 8 }} />
                   </View>
                 </TouchableOpacity>
               )}
@@ -493,16 +486,17 @@ export default function AddTransactionScreen() {
 
           {/* Description / Note */}
           <View className="px-4 mb-6">
-            <Text className="text-onyx-500 text-sm mb-2">Description (optionnel)</Text>
+            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Description (optionnel)</Text>
             <TextInput
               value={description}
               onChangeText={handleDescriptionChange}
               placeholder="Ex: Courses supermarché"
-              placeholderTextColor="#52525B"
-              className="bg-onyx-100 text-white px-4 py-3 rounded-xl text-base"
+              placeholderTextColor={colors.text.tertiary}
+              className="px-4 py-3 rounded-xl text-base"
+              style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }}
             />
             {autoApplied && (
-              <Text className="text-onyx-500 text-xs mt-1">✦ Catégorie appliquée automatiquement</Text>
+              <Text className="text-xs mt-1" style={{ color: colors.text.secondary }}>✦ Catégorie appliquée automatiquement</Text>
             )}
           </View>
 
@@ -511,19 +505,19 @@ export default function AddTransactionScreen() {
             <TouchableOpacity
               onPress={() => setReceiptModalVisible(true)}
               className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+              style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
             >
-              <Icons.Camera size={18} color="#71717A" />
-              <Text className="text-onyx-500 ml-2">Ticket</Text>
+              <Icons.Camera size={18} color={colors.text.secondary} />
+              <Text className="ml-2" style={{ color: colors.text.secondary }}>Ticket</Text>
               {photoUris.length > 0 && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setVoiceNoteModalVisible(true)}
               className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+              style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}
             >
-              <Icons.Mic size={18} color="#71717A" />
-              <Text className="text-onyx-500 ml-2">Note vocale</Text>
+              <Icons.Mic size={18} color={colors.text.secondary} />
+              <Text className="ml-2" style={{ color: colors.text.secondary }}>Note vocale</Text>
               {voiceNoteUri && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
             </TouchableOpacity>
           </View>
@@ -545,7 +539,7 @@ export default function AddTransactionScreen() {
 
           <Modal visible={receiptModalVisible} transparent animationType="slide">
             <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-              <View className="bg-onyx-100 rounded-t-3xl max-h-[80%]">
+              <View className="rounded-t-3xl max-h-[80%]" style={{ backgroundColor: colors.background.secondary }}>
                 <ReceiptScanner
                   onPhotosTaken={(uris) => { setPhotoUris(uris.slice(0, 3)); setReceiptModalVisible(false); }}
                   onCancel={() => setReceiptModalVisible(false)}
@@ -556,7 +550,7 @@ export default function AddTransactionScreen() {
           </Modal>
           <Modal visible={voiceNoteModalVisible} transparent animationType="slide">
             <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-              <View className="bg-onyx-100 rounded-t-3xl max-h-[80%]">
+              <View className="rounded-t-3xl max-h-[80%]" style={{ backgroundColor: colors.background.secondary }}>
                 <VoiceNote
                   onRecordingDone={(uri) => { setVoiceNoteUri(uri); setVoiceNoteModalVisible(false); }}
                   onCancel={() => setVoiceNoteModalVisible(false)}

@@ -86,7 +86,7 @@ export function Button({
       gradient: colors.gradients.card,
       textColor: colors.text.primary,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
+      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
       useGradient: false,
     },
     ghost: {

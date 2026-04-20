@@ -81,7 +81,7 @@ export function GlassCard({
   const variants = {
     default: {
       borderWidth: 1,
-      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+      borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)',
       shadow: undefined as ViewStyle['shadowColor'],
       backgroundColor: colors.background.card,
     },
@@ -92,8 +92,8 @@ export function GlassCard({
       backgroundColor: colors.background.card,
     },
     outlined: {
-      borderWidth: 2,
-      borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(99,102,241,0.3)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(109,124,255,0.22)' : 'rgba(91,108,255,0.18)',
       shadow: undefined,
       backgroundColor: 'transparent',
     },

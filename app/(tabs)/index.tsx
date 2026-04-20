@@ -1,39 +1,32 @@
 // ============================================
 // ONYX - Dashboard Screen
-// Écran principal avec vue d'ensemble complète
+// Premium minimal finance overview
 // ============================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Settings, Banknote, Eye, EyeOff } from 'lucide-react-native';
+import { Settings, Banknote, Eye, EyeOff, CalendarClock } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useSettingsStore, useAccountStore, usePlannedTransactionStore, useConfigStore } from '@/stores';
-import { 
-  BalanceCard, 
-  QuickAccounts, 
-  QuickActions,
-  QuickExpenses,
-  PaydayModal,
-  TransactionFeed,
-  MonthlyRecapModal,
-} from '@/components/dashboard';
+import { BalanceCard, QuickAccounts, QuickActions, QuickExpenses, PaydayModal, TransactionFeed, MonthlyRecapModal } from '@/components/dashboard';
 import { PlannedTransactionCard } from '@/components/planned';
-import { CalendarClock } from 'lucide-react-native';
 import { format, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [paydayModalVisible, setPaydayModalVisible] = useState(false);
   const [bilanModalVisible, setBilanModalVisible] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const toastAnim = useRef(new Animated.Value(-60)).current;
-  
+
   const hapticEnabled = useSettingsStore((state) => state.hapticEnabled);
   const lastBilanMonth = useSettingsStore((state) => state.lastBilanMonth);
   const lastPaydayModal = useSettingsStore((state) => state.lastPaydayModal);
@@ -46,9 +39,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     const prevMonthKey = format(subMonths(new Date(), 1), 'yyyy-MM');
-    if (lastBilanMonth !== prevMonthKey) {
-      setBilanModalVisible(true);
-    }
+    if (lastBilanMonth !== prevMonthKey) setBilanModalVisible(true);
   }, [lastBilanMonth]);
 
   useEffect(() => {
@@ -56,75 +47,49 @@ export default function DashboardScreen() {
     const currentMonthKey = format(now, 'yyyy-MM');
     const dayOfMonth = now.getDate();
     const isPayday = profile?.salaryDay != null && dayOfMonth === profile.salaryDay;
-    if (isPayday && lastPaydayModal !== currentMonthKey) {
-      setPaydayModalVisible(true);
-    }
+    if (isPayday && lastPaydayModal !== currentMonthKey) setPaydayModalVisible(true);
   }, [profile?.salaryDay, lastPaydayModal]);
-  
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
       setToastVisible(true);
-      Animated.timing(toastAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
       setTimeout(() => {
-        Animated.timing(toastAnim, {
-          toValue: -60,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => setToastVisible(false));
+        Animated.timing(toastAnim, { toValue: -60, duration: 300, useNativeDriver: true }).start(() => setToastVisible(false));
       }, 2000);
     }, 800);
   }, [toastAnim]);
 
   const handlePayday = () => {
-    if (hapticEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPaydayModalVisible(true);
   };
 
   const today = format(new Date(), 'EEEE d MMMM yyyy', { locale: fr });
   const capitalizedDate = today.charAt(0).toUpperCase() + today.slice(1);
-  
-  // Salutation selon l'heure et le prénom du profil
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     const firstName = profile?.name?.trim().split(/\s+/)[0] || '';
-    if (!firstName) return 'Bonjour 👋';
-    if (hour >= 5 && hour < 12) return `Bonjour, ${firstName} ☀️`;
-    if (hour >= 12 && hour < 18) return `Bon après-midi, ${firstName} 👋`;
-    if (hour >= 18 && hour < 22) return `Bonsoir, ${firstName} 🌆`;
-    return `Bonne nuit, ${firstName} 🌙`;
+    if (!firstName) return 'Bonjour';
+    if (hour >= 5 && hour < 12) return `Bonjour, ${firstName}`;
+    if (hour >= 12 && hour < 18) return `Bon après-midi, ${firstName}`;
+    if (hour >= 18 && hour < 22) return `Bonsoir, ${firstName}`;
+    return `Bonne nuit, ${firstName}`;
   };
 
-  // État vide - pas de comptes
   if (accounts.length === 0) {
     return (
-      <LinearGradient
-        colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
-        className="flex-1"
-      >
+      <LinearGradient colors={theme.colors.gradients.card} className="flex-1">
         <SafeAreaView className="flex-1 justify-center items-center px-6" edges={['top']}>
-          <View 
-            className="w-24 h-24 rounded-3xl items-center justify-center mb-6"
-            style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}
-          >
-            <Banknote size={48} color="#6366F1" />
+          <View className="w-24 h-24 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: 'rgba(109,124,255,0.16)' }}>
+            <Banknote size={48} color={theme.colors.accent.primary} />
           </View>
           <Text className="text-white text-2xl font-bold mb-2">Bienvenue sur ONYX</Text>
-          <Text className="text-onyx-500 text-center mb-8">
-            Commencez par créer votre premier compte pour suivre vos finances
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.push('/accounts')}
-            className="px-8 py-4 rounded-2xl"
-            style={{ backgroundColor: '#6366F1' }}
-          >
+          <Text className="text-onyx-500 text-center mb-8">Commencez par créer votre premier compte pour suivre vos finances.</Text>
+          <TouchableOpacity onPress={() => router.push('/accounts')} className="px-8 py-4 rounded-2xl" style={{ backgroundColor: theme.colors.accent.primary }}>
             <Text className="text-white font-semibold text-lg">Créer un compte</Text>
           </TouchableOpacity>
         </SafeAreaView>
@@ -133,149 +98,71 @@ export default function DashboardScreen() {
   }
 
   return (
-    <LinearGradient
-      colors={['#0A0A0B', '#1F1F23', '#0A0A0B']}
-      className="flex-1"
-    >
+    <LinearGradient colors={theme.colors.gradients.card} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <ErrorBoundary>
-          {/* Toast Données mises à jour */}
-        {toastVisible && (
-          <Animated.View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 24,
-              right: 24,
-              zIndex: 1000,
-              transform: [{ translateY: toastAnim }],
-            }}
-          >
-            <View
-              className="py-3 px-4 rounded-xl flex-row items-center justify-center"
-              style={{ backgroundColor: 'rgba(16, 185, 129, 0.95)' }}
-            >
-              <Text className="text-white font-medium">✓ Données mises à jour</Text>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Header */}
-        <View className="flex-row justify-between items-center px-6 py-4">
-          <View>
-            <Text className="text-onyx-500 text-sm">{capitalizedDate}</Text>
-            <Text className="text-white text-2xl font-bold">{getGreeting()}</Text>
-          </View>
-          
-          <View className="flex-row" style={{ gap: 12 }}>
-            {/* Mode discret */}
-            <TouchableOpacity
-              onPress={() => {
-                if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateSettings({ privacyMode: !privacyMode });
-              }}
-              className="w-10 h-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              {privacyMode ? <EyeOff size={20} color="#71717A" /> : <Eye size={20} color="#71717A" />}
-            </TouchableOpacity>
-            {/* Bouton Payday */}
-            <TouchableOpacity
-              onPress={handlePayday}
-              className="w-10 h-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)' }}
-            >
-              <Banknote size={20} color="#10B981" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              onPress={() => router.push('/settings')}
-              className="w-10 h-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              <Settings size={20} color="#71717A" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Content */}
-        <ScrollView
-          className="flex-1 px-6"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#6366F1"
-              colors={['#6366F1']}
-            />
-          }
-        >
-          {/* Balance Card */}
-          <BalanceCard />
-          
-          {/* Quick Actions */}
-          <QuickActions onPayday={handlePayday} />
-          
-          {/* Quick Expenses */}
-          <QuickExpenses />
-          
-          {/* Quick Accounts */}
-          <QuickAccounts />
-
-          {/* Transactions prévues */}
-          {(overduePlanned.length > 0 || upcomingPlanned.length > 0) && (
-            <View className="mb-6">
-              <View className="flex-row items-center mb-3">
-                <CalendarClock size={22} color="#6366F1" />
-                <Text className="text-white text-lg font-semibold ml-2">Transactions prévues</Text>
+          {toastVisible && (
+            <Animated.View style={{ position: 'absolute', top: 0, left: 24, right: 24, zIndex: 1000, transform: [{ translateY: toastAnim }] }}>
+              <View className="py-3 px-4 rounded-xl flex-row items-center justify-center" style={{ backgroundColor: 'rgba(45, 212, 161, 0.95)' }}>
+                <Text className="text-white font-medium">✓ Données mises à jour</Text>
               </View>
-              {overduePlanned.length > 0 && (
-                <View className="mb-4 p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)' }}>
-                  <Text className="text-red-400 font-semibold mb-2">
-                    {overduePlanned.length} en retard
-                  </Text>
-                  {overduePlanned.map((pt) => (
-                    <PlannedTransactionCard key={pt.id} planned={pt} overdue />
-                  ))}
-                </View>
-              )}
-              {upcomingPlanned.length > 0 && (
-                <View className="mb-4">
-                  <Text className="text-onyx-500 text-sm mb-2">Prochaines 7 jours</Text>
-                  {upcomingPlanned.map((pt) => (
-                    <PlannedTransactionCard key={pt.id} planned={pt} />
-                  ))}
-                </View>
-              )}
-            </View>
+            </Animated.View>
           )}
-          {/* Transaction Feed */}
-          <TransactionFeed />
-          
-          {/* Bottom spacing */}
-          <View className="h-24" />
-        </ScrollView>
+
+          <View className="flex-row justify-between items-start px-6 py-4">
+            <View className="flex-1 pr-3">
+              <Text className="text-onyx-500 text-sm">{capitalizedDate}</Text>
+              <Text className="text-white text-2xl font-bold leading-8 mt-1">{getGreeting()}</Text>
+              <Text className="text-onyx-500 text-sm mt-1">Votre suivi financier, simple et rapide.</Text>
+            </View>
+
+            <View className="flex-row" style={{ gap: 12 }}>
+              <TouchableOpacity onPress={() => { if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateSettings({ privacyMode: !privacyMode }); }} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                {privacyMode ? <EyeOff size={20} color={theme.colors.text.secondary} /> : <Eye size={20} color={theme.colors.text.secondary} />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handlePayday} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(45, 212, 161, 0.14)' }}>
+                <Banknote size={20} color={theme.colors.accent.success} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/settings')} className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                <Settings size={20} color={theme.colors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent.primary} colors={[theme.colors.accent.primary]} />}>
+            <BalanceCard />
+            <QuickActions onPayday={handlePayday} />
+            <QuickExpenses />
+            <QuickAccounts />
+
+            {(overduePlanned.length > 0 || upcomingPlanned.length > 0) && (
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <CalendarClock size={22} color={theme.colors.accent.primary} />
+                  <Text className="text-white text-lg font-semibold ml-2">Transactions prévues</Text>
+                </View>
+                {overduePlanned.length > 0 && (
+                  <View className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(248, 113, 113, 0.10)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.25)' }}>
+                    <Text className="text-red-300 font-semibold mb-2">{overduePlanned.length} en retard</Text>
+                    {overduePlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue />)}
+                  </View>
+                )}
+                {upcomingPlanned.length > 0 && (
+                  <View className="mb-4">
+                    <Text className="text-onyx-500 text-sm mb-2">Prochaines 7 jours</Text>
+                    {upcomingPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} />)}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <TransactionFeed />
+            <View className="h-24" />
+          </ScrollView>
         </ErrorBoundary>
-        
-        {/* Payday Modal */}
-        <PaydayModal 
-          visible={paydayModalVisible}
-          onClose={() => setPaydayModalVisible(false)}
-          onDismissLater={() => {
-            updateSettings({ lastPaydayModal: format(new Date(), 'yyyy-MM') });
-            setPaydayModalVisible(false);
-          }}
-          onRecordSalary={() => {
-            updateSettings({ lastPaydayModal: format(new Date(), 'yyyy-MM') });
-          }}
-        />
-        
-        {/* Bilan de fin de mois (mois précédent) */}
-        <MonthlyRecapModal
-          visible={bilanModalVisible}
-          onClose={() => setBilanModalVisible(false)}
-        />
+
+        <PaydayModal visible={paydayModalVisible} onClose={() => setPaydayModalVisible(false)} />
+        <MonthlyRecapModal visible={bilanModalVisible} onClose={() => setBilanModalVisible(false)} />
       </SafeAreaView>
     </LinearGradient>
   );

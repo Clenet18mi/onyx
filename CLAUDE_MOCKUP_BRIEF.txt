@@ -1,0 +1,246 @@
+ONYX VISUAL REDESIGN BRIEF FOR CLAUDE
+
+Context
+- App name: ONYX
+- Platform: Android first, Expo React Native
+- Language: French UI
+- Goal: redesign the whole visual layer with high-quality mockups, not code
+- Current product scope is intentionally narrow and must stay narrow
+
+Product goals
+- Make the app feel premium, calm, sharp, and fast
+- Improve readability, hierarchy, and emotional clarity
+- Make money data easier to scan at a glance
+- Keep the app practical, not cluttered
+- Preserve a strong dark mode and a clean light mode
+- Support quick actions without visual noise
+
+Current scope that must stay visible
+- Accounts
+- Transactions
+- Planned transactions
+- Import / export data
+- Bank CSV import
+- Settings / profile
+
+Scope that must NOT be brought back visually
+- Budgets
+- Goals
+- Subscriptions
+- Scenarios / projections tools
+- Comparator / period comparison
+- Gamification
+- Wishlist
+- Templates
+- Automation rules
+- Extra reminders UI
+
+Design direction
+- The app should feel like a premium financial tool, not a generic dashboard
+- Prefer a crisp editorial layout over dense cards everywhere
+- Use strong typography hierarchy
+- Use more whitespace than the current UI
+- Avoid boring glassmorphism overload
+- Avoid overly colorful finance app clichés
+- Keep accents restrained and meaningful
+
+Visual principles
+- One primary action per screen
+- One dominant metric per view
+- Clear secondary information below the fold
+- Use cards sparingly, only where they add structure
+- Use surfaces, borders, and contrast instead of heavy shadows
+- Prefer semantic colors for income, expense, transfer, warning
+- Make icons purposeful, not decorative
+- Keep list rows compact but elegant
+
+Moodboards / vibes
+- Modern banking app
+- Premium budgeting app
+- High-end fintech dashboard
+- Calm, confident, minimal
+- Sharp, dark, structured, slightly futuristic
+
+Typography
+- Headings should be bold and compact
+- Numbers should have a strong visual presence
+- Avoid equal weight everywhere
+- Use scale clearly: page title > key metric > section title > row label > metadata
+- French text should remain readable and not cramped
+
+Color guidance
+- Base dark background: near-black, not pure black
+- Base light background: warm off-white, not sterile white
+- Primary accent: indigo / blue-violet family
+- Positive: green / emerald
+- Negative: red / coral
+- Neutral: slate / gray
+- Warnings: amber, used sparingly
+- Keep gradients subtle
+
+Layout guidance
+- Mobile first, Android friendly
+- Respect thumb reach zones
+- Keep top regions clear and readable
+- Use sticky or fixed action areas only where useful
+- Use list-first layouts for transactions
+- Use compact section headers and generous internal spacing
+
+Screens to redesign
+1. Dashboard
+2. Accounts
+3. Transactions list
+4. Transaction add/edit
+5. Planned transactions
+6. Data management
+7. Bank CSV import flow
+8. Settings
+9. Profile
+10. Account detail
+11. Transaction detail
+
+Dashboard direction
+- Make this the strongest screen
+- Show total balance prominently
+- Show a smaller supporting breakdown for active accounts
+- Feature planned transactions as a visible upcoming section
+- Show recent activity in a cleaner list
+- Keep quick actions concise
+- Remove visual clutter
+- Avoid too many modules stacked vertically
+
+Suggested dashboard structure
+- Top: greeting or page title + small utility actions
+- Hero: total balance, maybe one short insight
+- Secondary row: accounts summary or cashflow snapshot if useful visually, but keep it minimal
+- Planned transactions preview
+- Recent transactions feed
+- Quick actions row or bottom sheet entry points
+
+Accounts screen direction
+- Treat each account like a real financial object
+- Card should show name, balance, type, and maybe a small trend hint
+- Account list should feel premium and readable
+- Archived or secondary accounts should be visually de-emphasized
+- Account detail should show recent activity and balance evolution cleanly
+
+Transactions list direction
+- List should be the clearest screen in the app
+- Each row should show merchant, amount, category, and date with obvious hierarchy
+- Transfer rows should be visually distinct
+- Use subtle grouping by date
+- Add fast filters only if they are elegant and not noisy
+
+Transaction add/edit direction
+- This screen should feel simple and fast
+- Minimize cognitive load
+- Amount should be the hero input
+- Use compact chips or segmented controls for type and category
+- Keep account selection intuitive
+- Keep notes, receipts, and advanced fields secondary
+
+Planned transactions direction
+- Planned transactions should feel like a smart schedule, not a hidden feature
+- Show upcoming items clearly by date
+- Make recurrence understandable at a glance
+- Visually distinguish pending, due soon, and realized
+- Keep the add flow easy and calm
+
+Data management direction
+- This screen should be very simple
+- Only show import/export JSON and bank CSV import
+- No extra clutter
+- Make destructive or sensitive actions obvious
+- If a backup exists, it should not dominate the screen
+
+Bank CSV import direction
+- This needs a clean utility-style flow
+- User chooses target account first
+- User picks the CSV file
+- Show preview counts: new, duplicate, ignored
+- Show category and type breakdown
+- Show optional target balance for reconciliation
+- Make the reconciliation action explicit and understandable
+- This flow should feel trustworthy, not technical
+
+Settings direction
+- Settings should be minimal
+- Keep only essential controls
+- Avoid giant long lists of secondary features
+- Organize settings into short groups with strong spacing
+- Don’t make settings look like a dump of every feature
+
+Profile direction
+- Keep profile simple and human
+- Currency, locale, salary day, default salary account if needed
+- No unnecessary visual complexity
+
+Component system direction
+- Need a reusable set of components for:
+  - App bars
+  - Metric hero blocks
+  - Info cards
+  - List rows
+  - Chips
+  - Pills
+  - Empty states
+  - Form rows
+  - Action buttons
+  - Section headers
+- Components should feel cohesive across the app
+- Each component should work in dark and light mode
+
+Empty states
+- Avoid generic illustrations unless they are very polished
+- Empty states should tell the user what to do next
+- Use a short sentence + one CTA + maybe one supporting detail
+
+States that should be designed
+- Loading
+- Empty
+- Error
+- Success
+- No data for period
+- Duplicate import rows
+- Reconciliation needed
+- Archived account
+- Disabled / inactive planned item
+
+Interaction notes
+- The app should feel quick and direct
+- Use bottom sheet or modal only when it improves clarity
+- Avoid too many nested screens for basic tasks
+- Make primary actions obvious
+- Keep destructive actions in secondary positions
+
+What to avoid
+- Do not reintroduce cluttered finance dashboards
+- Do not overuse neon accents
+- Do not make every screen look like a card stack
+- Do not add fake complexity
+- Do not make the UI look like a generic fintech template
+- Do not make icons bigger than the content hierarchy
+- Do not bring back removed features in mockups
+
+Important product note
+- The app has been simplified heavily on purpose
+- The redesign should respect that simplification
+- The visual work should elevate the remaining core, not expand the feature set
+
+Deliverables requested from Claude
+- High-fidelity mockups for key screens
+- A cohesive design system / component language
+- Light and dark variations if possible
+- Clear hierarchy improvements for mobile
+- Better transaction and account presentation
+- A refined bank import flow
+
+Preferred output style
+- Realistic mobile app mockups
+- Polished modern fintech aesthetic
+- Strong contrast and typography
+- Clean spacing
+- Practical, production-minded visuals
+
+If you need a north star
+- Think: premium minimalist banking app with a calm but confident personality

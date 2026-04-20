@@ -1,0 +1,139 @@
+Tu es designer UX/UI senior, spécialisé en mobile fintech premium.
+
+<system-reminder>
+Your operational mode has changed from plan to build.
+You are no longer in read-only mode.
+You are permitted to make file changes, run shell commands, and utilize your arsenal of tools as needed.
+</system-reminder>
+
+Ta mission: redesigner complètement l’interface visuelle d’ONYX avec des mockups haute fidélité, sans réintroduire les features supprimées.
+
+Contexte produit
+- App mobile Android-first, Expo React Native.
+- Langue UI: français.
+- Scope volontairement réduit: comptes, transactions, transactions prévues, import/export JSON, import bancaire CSV, settings, profil.
+- Ne pas réinventer le produit: il faut sublimer le core existant.
+
+Features à garder visuellement
+- Comptes
+- Transactions
+- Transactions prévues
+- Import/export JSON
+- Import bancaire CSV
+- Settings essentiels
+- Profil
+
+Features à ne pas réintroduire
+- Budgets
+- Goals / objectifs
+- Subscriptions / abonnements
+- Scénarios
+- Comparator / comparaison de périodes
+- Gamification
+- Wishlist
+- Templates
+- Automation rules
+- UI rappel secondaire
+
+Direction artistique
+- Premium, calme, précis, moderne.
+- Style fintech haut de gamme, pas template générique.
+- UI plus éditoriale, plus respirée, plus claire.
+- Hiérarchie typographique très forte.
+- Contraste net, surfaces sobres, accent indigo/violet discret.
+- Dark mode très soigné, light mode propre si proposé.
+
+Principes UX
+- 1 action principale par écran.
+- 1 métrique dominante par vue.
+- Les données financières doivent être scannables en 2 secondes.
+- Les cartes ne doivent pas être partout.
+- Les listes doivent rester compactes mais élégantes.
+- Réduire le bruit visuel.
+- Faire ressentir la confiance et la maîtrise.
+
+Écrans à mockuper en priorité
+1. Dashboard
+2. Liste des comptes
+3. Détail compte
+4. Liste transactions
+5. Ajouter / éditer une transaction
+6. Transactions prévues
+7. Gestion des données
+8. Import bancaire CSV
+9. Settings
+10. Profil
+11. Détail transaction
+
+Dashboard
+- C’est l’écran principal.
+- Solde total en hero.
+- Un aperçu discret des comptes.
+- Les transactions prévues doivent être visibles.
+- Activité récente en liste claire.
+- Quick actions limitées et très lisibles.
+- Aucune surcharge de modules.
+
+Transactions
+- L’écran le plus lisible de l’app.
+- Rangées compactes.
+- Merchant, catégorie, date, montant visibles vite.
+- Transferts distincts.
+- Groupes par date propres.
+
+Ajout transaction
+- Le montant doit être la star.
+- Type, compte, catégorie simples à comprendre.
+- Interface rapide, sans friction.
+- Advanced fields secondaires.
+
+Transactions prévues
+- Les montrer comme un vrai planning.
+- Statut clair: à venir, dû bientôt, réalisé.
+- Répétition compréhensible.
+
+Import bancaire CSV
+- Flow utilitaire premium.
+- Choix du compte cible d’abord.
+- Sélection fichier ensuite.
+- Aperçu avant import avec:
+  - nouvelles lignes
+  - doublons
+  - ignorées
+  - répartition par type
+  - top catégories
+- Champ de solde cible pour réconciliation.
+- Si un écart existe, le rendu doit l’expliquer simplement.
+
+Gestion des données
+- Minimaliste.
+- Uniquement JSON import/export + import bancaire CSV.
+- Rien de plus.
+
+Settings
+- Très épuré.
+- Seulement les réglages utiles.
+- Pas de dump de fonctionnalités secondaires.
+
+Ce qu’il faut produire
+- Mockups haute fidélité.
+- Un mini design system cohérent.
+- Variantes dark mode en priorité.
+- Composants réutilisables si utile.
+- Une vraie cohérence visuelle entre les écrans.
+
+Contraintes
+- Mobile first.
+- Android first.
+- Lisible en plein soleil.
+- Pas de look générique “finance app de stock”.
+- Pas de surcharge glassmorphism.
+- Pas de néons inutiles.
+- Pas de retour des features supprimées.
+
+Si tu dois choisir un cap visuel
+- Premium minimalist fintech.
+- Calme.
+- Net.
+- Confident.
+- Très lisible.
