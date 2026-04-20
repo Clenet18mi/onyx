@@ -73,48 +73,41 @@ export function PlannedTransactionCard({ planned, overdue }: Props) {
 
   return (
     <GlassCard className={`mb-2 ${overdue ? 'border-l-4 border-red-500' : ''}`}>
-      <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-1">
-          <Text className="text-white font-semibold" numberOfLines={1}>
-            {planned.description || 'Sans description'}
-          </Text>
-          <Text className="text-onyx-500 text-sm mt-0.5">
-            {dateStr}
-            {overdue && ' • En retard'}
-            {planned.isRecurring && ' • 🔁 Récurrent'}
-          </Text>
+      <View className="flex-row items-start justify-between mb-2">
+        <View className="flex-1 pr-3">
+          <View className="flex-row flex-wrap items-center" style={{ gap: 6 }}>
+            <Text className="text-white font-semibold" numberOfLines={1}>
+              {planned.description || 'Sans description'}
+            </Text>
+            {overdue && (
+              <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.16)' }}>
+                <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '700' }}>EN RETARD</Text>
+              </View>
+            )}
+            {planned.isRecurring && (
+              <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(139, 92, 246, 0.18)' }}>
+                <Text style={{ color: '#C4B5FD', fontSize: 11, fontWeight: '700' }}>RÉCURRENT</Text>
+              </View>
+            )}
+          </View>
+          <Text className="text-onyx-500 text-sm mt-1" numberOfLines={1}>{dateStr}</Text>
         </View>
-        <Text
-          className="text-lg font-bold"
-          style={{ color: isIncome ? '#10B981' : '#EF4444' }}
-        >
+        <Text className="text-lg font-bold" style={{ color: isIncome ? '#10B981' : '#EF4444' }}>
           {isIncome ? '+' : '−'}{formatCurrency(planned.amount)}
         </Text>
       </View>
       <View className="flex-row" style={{ gap: 8 }}>
-        <TouchableOpacity
-          onPress={handleChangeDate}
-          className="flex-1 py-2.5 rounded-xl items-center"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-        >
+        <TouchableOpacity onPress={handleChangeDate} className="flex-1 py-2.5 rounded-xl items-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}>
           <Icons.Calendar size={18} color="#71717A" />
-          <Text className="text-onyx-500 text-sm font-semibold mt-1">Changer la date</Text>
+          <Text className="text-onyx-500 text-sm font-semibold mt-1">Date</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleRealize}
-          className="flex-1 py-2.5 rounded-xl items-center"
-          style={{ backgroundColor: 'rgba(99, 102, 241, 0.3)' }}
-        >
+        <TouchableOpacity onPress={handleRealize} className="flex-1 py-2.5 rounded-xl items-center" style={{ backgroundColor: 'rgba(99, 102, 241, 0.3)' }}>
           <Icons.Check size={18} color="#6366F1" />
-          <Text className="text-accent-primary text-sm font-semibold mt-1">Réaliser</Text>
+          <Text className="text-accent-primary text-sm font-semibold mt-1">Créer</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleCancel}
-          className="flex-1 py-2.5 rounded-xl items-center"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-        >
+        <TouchableOpacity onPress={handleCancel} className="flex-1 py-2.5 rounded-xl items-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}>
           <Icons.X size={18} color="#71717A" />
-          <Text className="text-onyx-500 text-sm font-semibold mt-1">Annuler</Text>
+          <Text className="text-onyx-500 text-sm font-semibold mt-1">Suppr.</Text>
         </TouchableOpacity>
       </View>
 

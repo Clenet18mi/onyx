@@ -37,6 +37,18 @@ export default function DashboardScreen() {
   const profile = useConfigStore((state) => state.profile);
   const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
   const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
+  const recurringPlanned = usePlannedTransactionStore((s) => s.plannedTransactions.filter((pt) => pt.status === 'pending' && pt.isRecurring));
+  const nonRecurringOverduePlanned = overduePlanned.filter((pt) => !pt.isRecurring);
+  const nonRecurringUpcomingPlanned = upcomingPlanned.filter((pt) => !pt.isRecurring);
+
+  const isPlannedOverdue = (plannedDate: string) => {
+    const date = new Date(plannedDate);
+    if (Number.isNaN(date.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    return date < today;
+  };
 
   useEffect(() => {
     const prevMonthKey = format(subMonths(new Date(), 1), 'yyyy-MM');
@@ -132,26 +144,46 @@ export default function DashboardScreen() {
 
           <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent.primary} colors={[theme.colors.accent.primary]} />}>
             <BalanceCard />
-            <QuickActions onPayday={handlePayday} />
+            <QuickActions onPayday={handlePayday} onPlanned={() => router.push('/planned-transaction/add')} />
             <QuickExpenses />
             <QuickAccounts />
 
-            {(overduePlanned.length > 0 || upcomingPlanned.length > 0) && (
-              <View className="mb-6">
-                <View className="flex-row items-center mb-3">
-                  <CalendarClock size={22} color={theme.colors.accent.primary} />
-                  <Text style={{ color: theme.colors.text.primary, fontSize: 18, fontWeight: '700', marginLeft: 8 }}>Transactions prévues</Text>
+            {(overduePlanned.length > 0 || upcomingPlanned.length > 0 || recurringPlanned.length > 0) && (
+              <View className="mb-6 p-4 rounded-3xl" style={{ backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.background.tertiary }}>
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center flex-1 pr-3">
+                    <CalendarClock size={20} color={theme.colors.accent.primary} />
+                    <Text style={{ color: theme.colors.text.primary, fontSize: 17, fontWeight: '700', marginLeft: 8 }}>Transactions prévues</Text>
+                  </View>
+                  <Text style={{ color: theme.colors.text.secondary, fontSize: 12, fontWeight: '600' }}>
+                    {recurringPlanned.length + nonRecurringOverduePlanned.length + nonRecurringUpcomingPlanned.length}
+                  </Text>
                 </View>
-                {overduePlanned.length > 0 && (
-                  <View className="mb-4 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(248, 113, 113, 0.08)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.22)' }}>
-                    <Text style={{ color: theme.colors.accent.danger, fontWeight: '700', marginBottom: 8 }}>{overduePlanned.length} en retard</Text>
-                    {overduePlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue />)}
+                {recurringPlanned.length > 0 && (
+                  <View className="mb-3 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.08)', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.22)' }}>
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text style={{ color: theme.colors.accent.primary, fontWeight: '700' }}>Récurrents</Text>
+                      <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{recurringPlanned.length}</Text>
+                    </View>
+                    {recurringPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue={isPlannedOverdue(pt.plannedDate)} />)}
                   </View>
                 )}
-                {upcomingPlanned.length > 0 && (
-                  <View className="mb-4">
-                    <Text style={{ color: theme.colors.text.secondary, fontSize: 13, marginBottom: 8 }}>Prochains 7 jours</Text>
-                    {upcomingPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} />)}
+                {nonRecurringOverduePlanned.length > 0 && (
+                  <View className="mb-3 p-3 rounded-2xl" style={{ backgroundColor: 'rgba(248, 113, 113, 0.08)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.22)' }}>
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text style={{ color: theme.colors.accent.danger, fontWeight: '700' }}>En retard</Text>
+                      <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{nonRecurringOverduePlanned.length}</Text>
+                    </View>
+                    {nonRecurringOverduePlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue />)}
+                  </View>
+                )}
+                {nonRecurringUpcomingPlanned.length > 0 && (
+                  <View className="mb-1">
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text style={{ color: theme.colors.text.secondary, fontSize: 13, fontWeight: '600' }}>Prochains 7 jours</Text>
+                      <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{nonRecurringUpcomingPlanned.length}</Text>
+                    </View>
+                    {nonRecurringUpcomingPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} />)}
                   </View>
                 )}
               </View>

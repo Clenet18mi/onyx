@@ -12,6 +12,8 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
+  bank?: string;
+  bankLabel?: string;
   balance: number;
   color: string;
   icon: string;
@@ -203,6 +205,8 @@ export interface Settings {
   lastUsedAccountId?: string;
   /** Dernier compte utilisé pour l'import bancaire CSV */
   lastBankImportAccountId?: string;
+  /** Dernière banque utilisée pour un compte */
+  lastUsedBankLabel?: string;
   /** Mode discret : masque les montants (••••• €) */
   privacyMode?: boolean;
 }

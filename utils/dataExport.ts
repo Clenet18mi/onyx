@@ -54,6 +54,8 @@ interface SerializedAccount {
   id: string;
   name: string;
   type: string;
+  bank?: string;
+  bankLabel?: string;
   balance: number;
   color: string;
   icon: string;
@@ -174,6 +176,8 @@ function cleanAccounts(accounts: Account[]): SerializedAccount[] {
     id: String(a.id),
     name: String(a.name),
     type: String(a.type),
+    bank: a.bank,
+    bankLabel: a.bankLabel,
     balance: Number(a.balance),
     color: String(a.color),
     icon: String(a.icon),
@@ -382,6 +386,8 @@ function restoreAccounts(rows: SerializedAccount[]): Account[] {
     id: String(a?.id ?? ''),
     name: String(a?.name ?? 'Compte'),
     type: (a?.type || 'checking') as Account['type'],
+    bank: a?.bank,
+    bankLabel: a?.bankLabel,
     balance: Number(a?.balance) || 0,
     color: String(a?.color || '#6366F1'),
     icon: String(a?.icon || 'Wallet'),

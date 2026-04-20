@@ -61,6 +61,8 @@ export const useAccountStore = create<AccountState>()(
             id: account.id,
             name: account.name,
             type: 'checking',
+            bank: undefined,
+            bankLabel: undefined,
             balance: account.balance ?? 0,
             color: account.color || '#6366F1',
             icon: 'Wallet',

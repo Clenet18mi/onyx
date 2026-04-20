@@ -73,7 +73,7 @@ function transactionIdentity(tx: Transaction): string {
 }
 
 function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, rowHash: string): Transaction | null {
-  const type = row.credit > 0 ? 'income' : row.debit > 0 ? 'expense' : row.operationType.toLowerCase().includes('virement') ? 'transfer' : 'expense';
+  const type = row.credit > 0 ? 'income' : row.debit < 0 || row.debit > 0 ? 'expense' : row.operationType.toLowerCase().includes('virement') ? 'transfer' : 'expense';
   const category = type === 'transfer'
     ? 'transfer'
     : row.category.toLowerCase().includes('alimentation')
@@ -85,7 +85,7 @@ function rowToTransaction(row: BankCsvRow, accountId: string, fileName: string, 
           : row.category.toLowerCase().includes('revenus') || row.category.toLowerCase().includes('rentrees')
             ? 'salary'
             : 'other';
-  const amount = row.credit > 0 ? row.credit : row.debit > 0 ? row.debit : 0;
+  const amount = row.credit > 0 ? row.credit : row.debit !== 0 ? Math.abs(row.debit) : 0;
   if (!amount || amount <= 0) return null;
 
   const date = row.operationDate || row.accountingDate || row.valueDate || new Date().toISOString();
@@ -156,8 +156,8 @@ export async function previewBankCsvImport(fileUri: string, accountId: string, f
       row.subCategory,
       row.simplifiedLabel,
       row.operationLabel,
-      row.debit.toFixed(2),
-      row.credit.toFixed(2),
+      Math.abs(row.debit).toFixed(2),
+      Math.abs(row.credit).toFixed(2),
     ].join('|');
     const rowHash = await hashRowSignature(signature);
     const key = `${accountId}|${rowHash}`;
@@ -240,7 +240,11 @@ export async function importBankCsv(fileUri: string, accountId: string, fileName
 
   const shouldReconcile = Boolean(options?.createReconciliationTransaction && Number.isFinite(options?.targetBalance));
   if (shouldReconcile) {
-    const importedNet = preview.typeBreakdown.income - preview.typeBreakdown.expense;
+    const importedNet = transactions.reduce((total, tx) => {
+      if (tx.type === 'income') return total + tx.amount;
+      if (tx.type === 'expense') return total - tx.amount;
+      return total;
+    }, 0);
     const reconciliation = buildBankImportReconciliation(balanceBeforeImport, importedNet, options?.targetBalance);
     if (Math.abs(reconciliation.adjustment) >= 0.005) {
       useTransactionStore.getState().addTransactionsForImport([

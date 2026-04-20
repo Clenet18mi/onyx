@@ -52,7 +52,13 @@ function nextOccurrence(plannedDate: string, recurrence: PlannedTransactionRecur
   }
   const endDateParsed = recurrence.endDate ? safeParseISO(recurrence.endDate) : null;
   if (endDateParsed && isAfter(next, endDateParsed)) return null;
-  return next.toISOString();
+  return new Date(next.getFullYear(), next.getMonth(), next.getDate()).toISOString();
+}
+
+function normalizePlannedDate(date: Date | string): string {
+  const parsed = typeof date === 'string' ? safeParseISO(date) : date;
+  if (!parsed) return new Date().toISOString();
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).toISOString();
 }
 
 export const usePlannedTransactionStore = create<PlannedTransactionState>()(
@@ -66,6 +72,7 @@ export const usePlannedTransactionStore = create<PlannedTransactionState>()(
         const now = new Date().toISOString();
         const planned: PlannedTransaction = {
           ...data,
+          plannedDate: normalizePlannedDate(data.plannedDate),
           id,
           status: 'pending',
           createdAt: now,

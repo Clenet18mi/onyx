@@ -263,15 +263,15 @@ export default function AddTransactionScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Haut ~30% : montant très grand, centré, couleur dynamique */}
-        <View className="items-center justify-center px-6" style={{ height: '28%' }}>
+        {/* Montant principal */}
+        <View className="px-6 pt-2 pb-4">
           <TouchableOpacity
             activeOpacity={1}
             onPress={() => amountInputRef.current?.focus()}
-            className="flex-row items-center justify-center px-5 py-4 rounded-3xl"
-            style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, elevation: 1 }}
+            className="flex-row items-center justify-center px-4 py-4 rounded-3xl"
+            style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, elevation: 1 }}
           >
-            <Text className="text-6xl font-bold mr-1" style={{ color: amountAccent }}>
+            <Text className="text-5xl font-bold mr-1" style={{ color: amountAccent }}>
               {type === 'income' ? '+' : type === 'transfer' ? '' : '-'}
             </Text>
             <TextInput
@@ -281,11 +281,11 @@ export default function AddTransactionScreen() {
               placeholder="0"
               placeholderTextColor={colors.text.tertiary}
               keyboardType="decimal-pad"
-              className="text-6xl font-bold text-center px-2 py-1"
-              style={{ color: amountAccent, minWidth: 140 }}
+              className="text-5xl font-bold text-center px-2 py-1"
+              style={{ color: amountAccent, minWidth: 120 }}
               selectTextOnFocus
             />
-            <Text className="text-6xl font-bold ml-1" style={{ color: amountAccent }}>
+            <Text className="text-5xl font-bold ml-1" style={{ color: amountAccent }}>
               {' '}€
             </Text>
           </TouchableOpacity>
@@ -362,174 +362,194 @@ export default function AddTransactionScreen() {
             </TouchableOpacity>
           )}
 
-          {/* GlassCard : catégorie, compte, date, note */}
+          {/* Détails */}
           <View className="px-6 mb-8">
             <GlassCard variant="light" className="overflow-hidden">
               <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* Catégorie */}
-          <View className="px-4 mb-6">
-            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Catégorie</Text>
-            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-              {filteredCategories.map((cat) => {
-                const CatIcon = getIcon(cat.icon);
-                const isSelected = category === cat.id;
-                return (
-                    <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
-                    className="px-3 py-2 rounded-xl flex-row items-center"
-                    style={{ backgroundColor: isSelected ? `${cat.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? cat.color : colors.background.tertiary, shadowColor: isSelected ? cat.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
-                  >
-                    <CatIcon size={16} color={isSelected ? cat.color : colors.text.secondary} />
-                    <Text className="ml-2 text-sm font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Compte */}
-          <View className="px-4 mb-6">
-            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Compte</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row" style={{ gap: 8 }}>
-                {accounts.map((account) => {
-                  const AccountIcon = getIcon(account.icon);
-                  const isSelected = accountId === account.id;
-                  return (
-                    <TouchableOpacity
-                      key={account.id}
-                      onPress={() => setAccountId(account.id)}
-                      className="px-4 py-3 rounded-xl flex-row items-center"
-                      style={{ backgroundColor: isSelected ? `${account.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? account.color : colors.background.tertiary, shadowColor: isSelected ? account.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
-                    >
-                      <AccountIcon size={18} color={isSelected ? account.color : colors.text.secondary} />
-                      <Text className="ml-2 font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
-                        {account.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </View>
-
-          {type !== 'transfer' && (
-            <View className="px-4 mb-6">
-              <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Quand ?</Text>
-              <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
-                <TouchableOpacity
-                  onPress={() => setIsPlanned(false)}
-                  className="flex-1 py-3 rounded-xl"
-                style={{ backgroundColor: !isPlanned ? colors.accent.primary : 'transparent', shadowColor: !isPlanned ? colors.accent.primary : '#000', shadowOpacity: !isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: !isPlanned ? 2 : 0 }}
-                >
-                  <Text className="text-center font-semibold" style={{ color: !isPlanned ? '#FFFFFF' : colors.text.secondary }}>
-                    Ajouter maintenant
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setIsPlanned(true)}
-                  className="flex-1 py-3 rounded-xl"
-                style={{ backgroundColor: isPlanned ? colors.accent.primary : 'transparent', shadowColor: isPlanned ? colors.accent.primary : '#000', shadowOpacity: isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: isPlanned ? 2 : 0 }}
-                >
-                  <Text className="text-center font-semibold" style={{ color: isPlanned ? '#FFFFFF' : colors.text.secondary }}>
-                    Prévoir pour plus tard
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {isPlanned && (
-                <TouchableOpacity
-                  onPress={() => setShowDatePicker(true)}
-                  className="mt-3 flex-row items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
-                >
-                  <Text className="text-sm" style={{ color: colors.text.secondary }}>Date prévue</Text>
-                  <View className="flex-row items-center">
-                    <Text className="font-medium" style={{ color: colors.text.primary }}>
-                      {format(plannedDate, "EEEE d MMMM yyyy", { locale: fr })}
-                    </Text>
-                    <Icons.ChevronRight size={18} color={colors.text.secondary} style={{ marginLeft: 8 }} />
+                <View className="px-4 pt-5 pb-6" style={{ gap: 18 }}>
+                  <View>
+                    <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Catégorie</Text>
+                    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                      {filteredCategories.map((cat) => {
+                        const CatIcon = getIcon(cat.icon);
+                        const isSelected = category === cat.id;
+                        return (
+                          <TouchableOpacity
+                            key={cat.id}
+                            onPress={() => { setCategory(cat.id); setAutoApplied(false); }}
+                            className="px-3 py-2 rounded-xl flex-row items-center"
+                            style={{ backgroundColor: isSelected ? `${cat.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? cat.color : colors.background.tertiary, shadowColor: isSelected ? cat.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
+                          >
+                            <CatIcon size={16} color={isSelected ? cat.color : colors.text.secondary} />
+                            <Text className="ml-2 text-sm font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
+                              {cat.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </View>
-                </TouchableOpacity>
-              )}
-              {showDatePicker && (
-                <View className="mt-2">
-                  <DateTimePicker
-                    value={plannedDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(_, d) => {
-                      setShowDatePicker(false);
-                      if (d) setPlannedDate(d);
-                    }}
-                    minimumDate={new Date()}
-                    locale="fr-FR"
-                    {...(Platform.OS === 'ios' && { style: { height: 180 } })}
-                  />
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker(false)}
-                      className="mt-2 py-2"
-                    >
-                      <Text className="text-accent-primary text-center font-medium">Valider la date</Text>
-                    </TouchableOpacity>
+
+                  <View>
+                    <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Compte</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View className="flex-row" style={{ gap: 8 }}>
+                        {accounts.map((account) => {
+                          const AccountIcon = getIcon(account.icon);
+                          const isSelected = accountId === account.id;
+                          return (
+                            <TouchableOpacity
+                              key={account.id}
+                              onPress={() => setAccountId(account.id)}
+                              className="px-4 py-3 rounded-xl flex-row items-center"
+                              style={{ backgroundColor: isSelected ? `${account.color}26` : colors.background.card, borderWidth: 1, borderColor: isSelected ? account.color : colors.background.tertiary, shadowColor: isSelected ? account.color : '#000', shadowOpacity: isSelected ? 0.10 : 0.04, shadowRadius: 6, elevation: 0 }}
+                            >
+                              <AccountIcon size={18} color={isSelected ? account.color : colors.text.secondary} />
+                              <Text className="ml-2 font-medium" style={{ color: isSelected ? colors.text.primary : colors.text.secondary }}>
+                                {account.name}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+                  </View>
+
+                  {type !== 'transfer' && (
+                    <View>
+                      <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Quand ?</Text>
+                      <View className="flex-row rounded-2xl p-1" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
+                        <TouchableOpacity
+                          onPress={() => setIsPlanned(false)}
+                          className="flex-1 py-3 rounded-xl"
+                          style={{ backgroundColor: !isPlanned ? colors.accent.primary : 'transparent', shadowColor: !isPlanned ? colors.accent.primary : '#000', shadowOpacity: !isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: !isPlanned ? 2 : 0 }}
+                        >
+                          <Text className="text-center font-semibold" style={{ color: !isPlanned ? '#FFFFFF' : colors.text.secondary }}>
+                            Ajouter maintenant
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setIsPlanned(true)}
+                          className="flex-1 py-3 rounded-xl"
+                          style={{ backgroundColor: isPlanned ? colors.accent.primary : 'transparent', shadowColor: isPlanned ? colors.accent.primary : '#000', shadowOpacity: isPlanned ? 0.18 : 0, shadowRadius: 8, elevation: isPlanned ? 2 : 0 }}
+                        >
+                          <Text className="text-center font-semibold" style={{ color: isPlanned ? '#FFFFFF' : colors.text.secondary }}>
+                            Prévoir pour plus tard
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {isPlanned && (
+                        <>
+                          <TouchableOpacity
+                            onPress={() => setShowDatePicker(true)}
+                            className="mt-3 flex-row items-center justify-between px-4 py-3 rounded-xl"
+                            style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
+                          >
+                            <View>
+                              <Text className="text-sm" style={{ color: colors.text.secondary }}>Date prévue</Text>
+                              <Text className="font-medium mt-1" style={{ color: colors.text.primary }}>
+                                {format(plannedDate, "EEEE d MMMM yyyy", { locale: fr })}
+                              </Text>
+                            </View>
+                            <Icons.ChevronRight size={18} color={colors.text.secondary} />
+                          </TouchableOpacity>
+
+                          <View className="mt-3 rounded-xl px-4 py-3" style={{ backgroundColor: `${colors.accent.primary}12`, borderWidth: 1, borderColor: `${colors.accent.primary}24` }}>
+                            <View className="flex-row items-center justify-between">
+                              <View className="flex-1 pr-3">
+                                <Text style={{ color: colors.text.primary, fontWeight: '600' }}>Paiement régulier</Text>
+                                <Text className="text-xs mt-1" style={{ color: colors.text.secondary }}>Créer une transaction prévue qui revient automatiquement.</Text>
+                              </View>
+                              <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }} thumbColor={colors.background.secondary} />
+                            </View>
+                            {isRecurring && (
+                              <View className="mt-3 flex-row" style={{ gap: 8 }}>
+                                {(['weekly', 'monthly'] as const).map((f) => (
+                                  <TouchableOpacity key={f} onPress={() => setFrequency(f)} className="flex-1 py-3 rounded-xl" style={{ backgroundColor: frequency === f ? colors.accent.primary : colors.background.card, borderWidth: 1, borderColor: frequency === f ? colors.accent.primary : colors.background.tertiary }}>
+                                    <Text className="text-center font-medium" style={{ color: frequency === f ? '#fff' : colors.text.secondary }}>{f === 'weekly' ? 'Hebdo' : 'Mensuel'}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+
+                          {showDatePicker && (
+                            <View className="mt-2">
+                              <DateTimePicker
+                                value={plannedDate}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={(_, d) => {
+                                  setShowDatePicker(false);
+                                  if (d) setPlannedDate(d);
+                                }}
+                                minimumDate={new Date()}
+                                locale="fr-FR"
+                                {...(Platform.OS === 'ios' && { style: { height: 180 } })}
+                              />
+                              {Platform.OS === 'ios' && (
+                                <TouchableOpacity onPress={() => setShowDatePicker(false)} className="mt-2 py-2">
+                                  <Text className="text-accent-primary text-center font-medium">Valider la date</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )}
+                        </>
+                      )}
+                    </View>
                   )}
                 </View>
-              )}
-            </View>
-          )}
 
-          {/* Description / Note */}
-          <View className="px-4 mb-6">
-            <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Description (optionnel)</Text>
-            <TextInput
-              value={description}
-              onChangeText={handleDescriptionChange}
-              placeholder="Ex: Courses supermarché"
-              placeholderTextColor={colors.text.tertiary}
-              className="px-4 py-3 rounded-xl text-base"
-              style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }}
-            />
-            {autoApplied && (
-              <Text className="text-xs mt-1" style={{ color: colors.text.secondary }}>✦ Catégorie appliquée automatiquement</Text>
-            )}
-          </View>
+                {/* Description / Note */}
+                <View className="px-4 pb-6">
+                  <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Description (optionnel)</Text>
+                  <TextInput
+                    value={description}
+                    onChangeText={handleDescriptionChange}
+                    placeholder="Ex: Courses supermarché"
+                    placeholderTextColor={colors.text.tertiary}
+                    className="px-4 py-3 rounded-xl text-base"
+                    style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }}
+                  />
+                  {autoApplied && (
+                    <Text className="text-xs mt-1" style={{ color: colors.text.secondary }}>✦ Catégorie appliquée automatiquement</Text>
+                  )}
+                </View>
 
-          {/* Ticket + Note vocale */}
-          <View className="px-4 mb-6 flex-row" style={{ gap: 12 }}>
-            <TouchableOpacity
-              onPress={() => setReceiptModalVisible(true)}
-              className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
-            >
-              <Icons.Camera size={18} color={colors.text.secondary} />
-              <Text className="ml-2" style={{ color: colors.text.secondary }}>Ticket</Text>
-              {photoUris.length > 0 && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setVoiceNoteModalVisible(true)}
-              className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
-              style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
-            >
-              <Icons.Mic size={18} color={colors.text.secondary} />
-              <Text className="ml-2" style={{ color: colors.text.secondary }}>Note vocale</Text>
-              {voiceNoteUri && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
-            </TouchableOpacity>
-          </View>
+                {/* Ticket + Note vocale */}
+                <View className="px-4 pb-6 flex-row" style={{ gap: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setReceiptModalVisible(true)}
+                    className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
+                    style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
+                  >
+                    <Icons.Camera size={18} color={colors.text.secondary} />
+                    <Text className="ml-2" style={{ color: colors.text.secondary }}>Ticket</Text>
+                    {photoUris.length > 0 && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setVoiceNoteModalVisible(true)}
+                    className="flex-1 flex-row items-center justify-center py-3 rounded-xl"
+                    style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
+                  >
+                    <Icons.Mic size={18} color={colors.text.secondary} />
+                    <Text className="ml-2" style={{ color: colors.text.secondary }}>Note vocale</Text>
+                    {voiceNoteUri && <View className="ml-2 w-2 h-2 rounded-full bg-accent-primary" />}
+                  </TouchableOpacity>
+                </View>
 
-          {/* Save Button */}
-          <View className="px-4 mb-6">
-            <Button
-              title="Enregistrer"
-              variant="primary"
-              size="lg"
-              fullWidth
-              onPress={handleSave}
-              icon={<Icons.Check size={20} color="white" />}
-            />
-          </View>
+                {/* Save Button */}
+                <View className="px-4 pb-6">
+                  <Button
+                    title="Enregistrer"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    onPress={handleSave}
+                    icon={<Icons.Check size={20} color="white" />}
+                  />
+                </View>
               </ScrollView>
             </GlassCard>
           </View>

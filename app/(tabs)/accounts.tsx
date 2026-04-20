@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
 
 const AVAILABLE_ICONS = ['Wallet', 'PiggyBank', 'Banknote', 'TrendingUp', 'Bitcoin', 'Building', 'CreditCard', 'Landmark', 'Coins', 'DollarSign', 'Euro', 'Briefcase', 'Home', 'Car', 'ShoppingBag'];
+const BANK_OPTIONS = ['Caisse d\'Épargne', 'Crédit Agricole', 'BNP Paribas', 'Société Générale', 'La Banque Postale', 'LCL', 'Hello bank!', 'Boursorama', 'N26', 'Revolut'];
 
 export default function AccountsScreen() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function AccountsScreen() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [name, setName] = useState('');
   const [type, setType] = useState<string>('checking');
+  const [bank, setBank] = useState('');
+  const [bankLabel, setBankLabel] = useState('');
   const [balance, setBalance] = useState('');
   const [color, setColor] = useState(AVAILABLE_COLORS[0]);
   const [icon, setIcon] = useState('Wallet');
@@ -32,13 +35,13 @@ export default function AccountsScreen() {
   const activeAccounts = accounts.filter((a) => !a.isArchived);
   const totalBalance = getTotalBalance();
   const getIcon = (iconName: string) => (Icons as any)[iconName] || Icons.Wallet;
-  const resetForm = () => { setName(''); setType('checking'); setBalance(''); setColor(AVAILABLE_COLORS[0]); setIcon('Wallet'); setEditingAccount(null); };
+  const resetForm = () => { setName(''); setType('checking'); setBank(''); setBankLabel(''); setBalance(''); setColor(AVAILABLE_COLORS[0]); setIcon('Wallet'); setEditingAccount(null); };
   const openAddModal = () => { resetForm(); setModalVisible(true); };
-  const openEditModal = (account: Account) => { setEditingAccount(account); setName(account.name); setType(account.type); setBalance(account.balance.toString()); setColor(account.color); setIcon(account.icon); setModalVisible(true); };
+  const openEditModal = (account: Account) => { setEditingAccount(account); setName(account.name); setType(account.type); setBank(account.bank ?? ''); setBankLabel(account.bankLabel ?? account.bank ?? ''); setBalance(account.balance.toString()); setColor(account.color); setIcon(account.icon); setModalVisible(true); };
 
   const handleSave = () => {
     if (!name.trim()) { Alert.alert('Erreur', 'Le nom du compte est requis'); return; }
-    const accountData = { name: name.trim(), type: type as any, balance: parseFloat(balance) || 0, color, icon, currency: 'EUR', isArchived: false };
+    const accountData = { name: name.trim(), type: type as any, bank: bank.trim() || undefined, bankLabel: bankLabel.trim() || bank.trim() || undefined, balance: parseFloat(balance) || 0, color, icon, currency: 'EUR', isArchived: false };
     if (editingAccount) updateAccount(editingAccount.id, accountData); else addAccount(accountData);
     setModalVisible(false); resetForm();
   };
@@ -88,6 +91,7 @@ export default function AccountsScreen() {
                     <View className="flex-1">
                       <Text style={{ color: colors.text.primary, fontSize: 18, fontWeight: '600' }}>{account.name}</Text>
                       <Text style={{ color: colors.text.secondary, fontSize: 13 }}>{accountType?.label || 'Compte'}</Text>
+                      <Text style={{ color: colors.text.tertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{account.bank || 'Banque non renseignée'}</Text>
                     </View>
                     <Text className="text-xl font-bold" style={{ color: account.balance >= 0 ? colors.accent.success : colors.accent.danger }}>{formatCurrency(account.balance)}</Text>
                   </View>
@@ -114,6 +118,23 @@ export default function AccountsScreen() {
               </View>
               <ScrollView className="flex-1 px-6 py-4">
                 <View className="mb-6"><Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Nom du compte</Text><TextInput value={name} onChangeText={setName} placeholder="Ex: Compte courant" placeholderTextColor={colors.text.tertiary} className="px-4 py-3 rounded-xl text-base" style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }} /></View>
+                <View className="mb-6">
+                  <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Banque</Text>
+                  <Text className="text-xs mb-3" style={{ color: colors.text.tertiary }}>Sélectionnez une banque ou saisissez-en une autre.</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+                    <View className="flex-row" style={{ gap: 8 }}>
+                      {BANK_OPTIONS.map((option) => {
+                        const active = bankLabel === option;
+                        return (
+                          <TouchableOpacity key={option} onPress={() => { setBank(option); setBankLabel(option); }} className="px-4 py-3 rounded-2xl" style={{ backgroundColor: active ? `${colors.accent.primary}20` : colors.background.secondary, borderWidth: 1, borderColor: active ? colors.accent.primary : colors.background.tertiary }}>
+                            <Text style={{ color: active ? colors.text.primary : colors.text.secondary, fontWeight: '600' }}>{option}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+                  <TextInput value={bank} onChangeText={(text) => { setBank(text); if (!bankLabel) setBankLabel(text); }} placeholder="Banque personnalisée" placeholderTextColor={colors.text.tertiary} className="px-4 py-3 rounded-xl text-base" style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }} />
+                </View>
                 <View className="mb-6"><Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Type de compte</Text><ScrollView horizontal showsHorizontalScrollIndicator={false}><View className="flex-row" style={{ gap: 8 }}>{ACCOUNT_TYPES.map((accountType) => { const TypeIcon = getIcon(accountType.icon); return (<TouchableOpacity key={accountType.id} onPress={() => setType(accountType.id)} className="px-4 py-3 rounded-2xl flex-row items-center" style={{ backgroundColor: type === accountType.id ? `${colors.accent.primary}20` : colors.background.secondary, borderWidth: 1, borderColor: type === accountType.id ? colors.accent.primary : colors.background.tertiary }}><TypeIcon size={16} color={type === accountType.id ? colors.accent.primary : accountType.defaultColor} /><Text className="ml-2 font-medium" style={{ color: type === accountType.id ? colors.text.primary : colors.text.secondary }}>{accountType.label}</Text></TouchableOpacity>); })}</View></ScrollView></View>
                 <View className="mb-6"><Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Solde initial</Text><TextInput value={balance} onChangeText={setBalance} placeholder="0.00" placeholderTextColor={colors.text.tertiary} keyboardType="decimal-pad" className="px-4 py-3 rounded-xl text-base" style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }} /></View>
                 <View className="mb-6"><Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Icône</Text><View className="flex-row flex-wrap" style={{ gap: 10 }}>{AVAILABLE_ICONS.map((iconName) => { const IconComp = getIcon(iconName); return (<TouchableOpacity key={iconName} onPress={() => setIcon(iconName)} className="w-12 h-12 rounded-xl items-center justify-center" style={{ backgroundColor: icon === iconName ? `${colors.accent.primary}20` : colors.background.secondary, borderWidth: 1, borderColor: icon === iconName ? colors.accent.primary : colors.background.tertiary }}><IconComp size={22} color={icon === iconName ? colors.accent.primary : colors.text.secondary} /></TouchableOpacity>); })}</View></View>

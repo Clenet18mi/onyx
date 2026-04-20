@@ -55,9 +55,10 @@ function ActionButton({ icon, label, color, onPress, highlight }: ActionButtonPr
 
 interface QuickActionsProps {
   onPayday?: () => void;
+  onPlanned?: () => void;
 }
 
-export function QuickActions({ onPayday }: QuickActionsProps) {
+export function QuickActions({ onPayday, onPlanned }: QuickActionsProps) {
   const router = useRouter();
 
   return (
@@ -78,19 +79,22 @@ export function QuickActions({ onPayday }: QuickActionsProps) {
           highlight
         />
       )}
+
+      {onPlanned && (
+        <ActionButton
+          icon={<CalendarClock size={24} color="#8B5CF6" />}
+          label="Récurrent"
+          color="#8B5CF6"
+          onPress={onPlanned}
+          highlight
+        />
+      )}
       
       <ActionButton
         icon={<ArrowLeftRight size={24} color="#6366F1" />}
         label="Virement"
         color="#6366F1"
         onPress={() => router.push('/transfer')}
-      />
-      
-      <ActionButton
-        icon={<CalendarClock size={24} color="#8B5CF6" />}
-        label="Prévoir"
-        color="#8B5CF6"
-        onPress={() => router.push('/planned-transaction/add')}
       />
     </View>
   );
