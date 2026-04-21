@@ -18,6 +18,7 @@ import { fr } from 'date-fns/locale';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useTheme } from '@/hooks/useTheme';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { safeParseISO } from '@/utils/format';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -35,12 +36,7 @@ export default function DashboardScreen() {
   const privacyMode = useSettingsStore((state) => state.privacyMode ?? false);
   const accounts = useAccountStore((state) => state.accounts.filter((a) => !a.isArchived));
   const profile = useConfigStore((state) => state.profile);
-  const overduePlanned = usePlannedTransactionStore((s) => s.getOverdue());
-  const upcomingPlanned = usePlannedTransactionStore((s) => s.getUpcoming(7));
-  const recurringPlanned = usePlannedTransactionStore((s) => s.plannedTransactions.filter((pt) => pt.status === 'pending' && pt.isRecurring));
-  const nonRecurringOverduePlanned = overduePlanned.filter((pt) => !pt.isRecurring);
-  const nonRecurringUpcomingPlanned = upcomingPlanned.filter((pt) => !pt.isRecurring);
-
+  const pendingPlanned = usePlannedTransactionStore((s) => s.getPending());
   const isPlannedOverdue = (plannedDate: string) => {
     const date = new Date(plannedDate);
     if (Number.isNaN(date.getTime())) return false;
@@ -49,6 +45,19 @@ export default function DashboardScreen() {
     date.setHours(0, 0, 0, 0);
     return date < today;
   };
+  const sortByPlannedDate = (a: { plannedDate: string }, b: { plannedDate: string }) => {
+    const aTime = safeParseISO(a.plannedDate)?.getTime() ?? 0;
+    const bTime = safeParseISO(b.plannedDate)?.getTime() ?? 0;
+    return aTime - bTime;
+  };
+  const recurringPlanned = pendingPlanned.filter((pt) => pt.isRecurring).sort(sortByPlannedDate);
+  const nonRecurringPlanned = pendingPlanned.filter((pt) => !pt.isRecurring);
+  const nonRecurringOverduePlanned = nonRecurringPlanned.filter((pt) => isPlannedOverdue(pt.plannedDate)).sort(sortByPlannedDate);
+  const nonRecurringUpcomingPlanned = nonRecurringPlanned.filter((pt) => !isPlannedOverdue(pt.plannedDate)).sort(sortByPlannedDate);
+  const upcomingIncomePlanned = nonRecurringUpcomingPlanned.filter((pt) => pt.type === 'income');
+  const upcomingExpensePlanned = nonRecurringUpcomingPlanned.filter((pt) => pt.type === 'expense');
+
+  const toneForPlanned = (type: 'income' | 'expense') => (type === 'income' ? 'income' : 'expense');
 
   useEffect(() => {
     const prevMonthKey = format(subMonths(new Date(), 1), 'yyyy-MM');
@@ -148,7 +157,7 @@ export default function DashboardScreen() {
             <QuickExpenses />
             <QuickAccounts />
 
-            {(overduePlanned.length > 0 || upcomingPlanned.length > 0 || recurringPlanned.length > 0) && (
+            {pendingPlanned.length > 0 && (
               <View className="mb-6 p-4 rounded-3xl" style={{ backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.background.tertiary }}>
                 <View className="flex-row items-center justify-between mb-3">
                   <View className="flex-row items-center flex-1 pr-3">
@@ -156,7 +165,7 @@ export default function DashboardScreen() {
                     <Text style={{ color: theme.colors.text.primary, fontSize: 17, fontWeight: '700', marginLeft: 8 }}>Transactions prévues</Text>
                   </View>
                   <Text style={{ color: theme.colors.text.secondary, fontSize: 12, fontWeight: '600' }}>
-                    {recurringPlanned.length + nonRecurringOverduePlanned.length + nonRecurringUpcomingPlanned.length}
+                    {pendingPlanned.length}
                   </Text>
                 </View>
                 {recurringPlanned.length > 0 && (
@@ -165,7 +174,14 @@ export default function DashboardScreen() {
                       <Text style={{ color: theme.colors.accent.primary, fontWeight: '700' }}>Récurrents</Text>
                       <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{recurringPlanned.length}</Text>
                     </View>
-                    {recurringPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue={isPlannedOverdue(pt.plannedDate)} />)}
+                     {recurringPlanned.map((pt) => (
+                       <PlannedTransactionCard
+                         key={pt.id}
+                         planned={pt}
+                         overdue={isPlannedOverdue(pt.plannedDate)}
+                         tone={toneForPlanned(pt.type)}
+                       />
+                     ))}
                   </View>
                 )}
                 {nonRecurringOverduePlanned.length > 0 && (
@@ -174,16 +190,38 @@ export default function DashboardScreen() {
                       <Text style={{ color: theme.colors.accent.danger, fontWeight: '700' }}>En retard</Text>
                       <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{nonRecurringOverduePlanned.length}</Text>
                     </View>
-                    {nonRecurringOverduePlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} overdue />)}
+                    {nonRecurringOverduePlanned.map((pt) => (
+                      <PlannedTransactionCard
+                        key={pt.id}
+                        planned={pt}
+                        overdue
+                        tone={toneForPlanned(pt.type)}
+                      />
+                    ))}
                   </View>
                 )}
                 {nonRecurringUpcomingPlanned.length > 0 && (
                   <View className="mb-1">
                     <View className="flex-row items-center justify-between mb-2">
-                      <Text style={{ color: theme.colors.text.secondary, fontSize: 13, fontWeight: '600' }}>Prochains 7 jours</Text>
+                      <Text style={{ color: theme.colors.text.secondary, fontSize: 13, fontWeight: '600' }}>À venir</Text>
                       <Text style={{ color: theme.colors.text.secondary, fontSize: 12 }}>{nonRecurringUpcomingPlanned.length}</Text>
                     </View>
-                    {nonRecurringUpcomingPlanned.map((pt) => <PlannedTransactionCard key={pt.id} planned={pt} />)}
+                    {upcomingIncomePlanned.length > 0 && (
+                      <View className="mb-2">
+                        <Text style={{ color: theme.colors.accent.success, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>Revenus à venir</Text>
+                        {upcomingIncomePlanned.map((pt) => (
+                          <PlannedTransactionCard key={pt.id} planned={pt} tone="income" />
+                        ))}
+                      </View>
+                    )}
+                    {upcomingExpensePlanned.length > 0 && (
+                      <View>
+                        <Text style={{ color: theme.colors.accent.danger, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>Dépenses à venir</Text>
+                        {upcomingExpensePlanned.map((pt) => (
+                          <PlannedTransactionCard key={pt.id} planned={pt} tone="expense" />
+                        ))}
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
