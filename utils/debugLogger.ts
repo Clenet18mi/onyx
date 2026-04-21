@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@onyx_debug_last_error';
+const HISTORY_KEY = '@onyx_debug_error_history';
 const DEBUG_MODE_KEY = '@onyx_debug_mode';
 
 /** Active/désactive le mode debug (persisté). Quand actif, l'erreur est conservée pour affichage au prochain lancement. */
@@ -37,6 +38,17 @@ export interface CapturedError {
 
 let lastError: CapturedError | null = null;
 let initDone = false;
+
+async function pushErrorHistory(captured: CapturedError): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(HISTORY_KEY);
+    const history = raw ? (JSON.parse(raw) as CapturedError[]) : [];
+    history.unshift(captured);
+    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 50)));
+  } catch {
+    // ignore
+  }
+}
 
 /** Récupère la dernière erreur capturée (mémoire + stockage) */
 export async function getLastError(): Promise<CapturedError | null> {
@@ -72,6 +84,7 @@ export function setLastError(error: unknown, options?: { componentStack?: string
   };
   lastError = captured;
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(captured)).catch(() => {});
+  pushErrorHistory(captured).catch(() => {});
   if (__DEV__) {
     console.error('[ONYX] DebugLogger captured:', message, stack || '');
   }
@@ -82,6 +95,27 @@ export async function clearLastError(): Promise<void> {
   lastError = null;
   try {
     await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Récupère tout l'historique d'erreurs stocké */
+export async function getErrorHistory(): Promise<CapturedError[]> {
+  try {
+    const raw = await AsyncStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CapturedError[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Efface tout l'historique d'erreurs stocké */
+export async function clearErrorHistory(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(HISTORY_KEY);
   } catch {
     // ignore
   }

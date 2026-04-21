@@ -20,6 +20,7 @@ interface SettingsState extends Settings {
   clearIgnoredDuplicateSignatures: () => void;
   setLastUsedAccountId: (accountId: string) => void;
   setLastBankImportAccountId: (accountId: string) => void;
+  setSafeModeEnabled: (enabled: boolean) => void;
 }
 
 const defaultSettings: Settings = {
@@ -31,6 +32,7 @@ const defaultSettings: Settings = {
   duplicateAlertEnabled: true,
   ignoredDuplicateSignatures: [],
   privacyMode: false,
+  safeModeEnabled: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -80,6 +82,9 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setLastBankImportAccountId: (accountId: string) => {
         set({ lastBankImportAccountId: accountId });
+      },
+      setSafeModeEnabled: (enabled: boolean) => {
+        set({ safeModeEnabled: enabled });
       },
 }),
     {

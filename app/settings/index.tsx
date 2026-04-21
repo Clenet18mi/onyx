@@ -65,7 +65,7 @@ export default function SettingsScreen() {
   const { colors } = theme;
 
   const { lock, biometricEnabled, enableBiometric, wipeAllData } = useAuthStore();
-  const { hapticEnabled, toggleHaptic, duplicateAlertEnabled, updateSettings, ignoredDuplicateSignatures, clearIgnoredDuplicateSignatures } = useSettingsStore();
+  const { hapticEnabled, toggleHaptic, duplicateAlertEnabled, updateSettings, ignoredDuplicateSignatures, clearIgnoredDuplicateSignatures, safeModeEnabled, setSafeModeEnabled } = useSettingsStore();
   const { profile, categories, accountTypes, quickExpenses } = useConfigStore();
   const ignoredCount = ignoredDuplicateSignatures?.length ?? 0;
   const visibleCategories = categories.filter((c) => !c.isHidden).length;
@@ -162,6 +162,12 @@ export default function SettingsScreen() {
                 label="Verrouiller maintenant"
                 onPress={() => lock()}
               />
+              <SettingsItem
+                icon={<Icons.Wrench size={20} color={colors.text.secondary} />}
+                label="Mode secours"
+                sublabel="Désactive les écrans lourds après un crash"
+                rightElement={<Switch value={safeModeEnabled ?? false} onValueChange={setSafeModeEnabled} trackColor={switchTrack} thumbColor={colors.background.secondary} />}
+              />
             </GlassCard>
           </View>
 
@@ -216,6 +222,12 @@ export default function SettingsScreen() {
                 label="Journal des versions"
                 sublabel="Historique des mises à jour"
                 onPress={() => router.push('/settings/changelog')}
+              />
+              <SettingsItem
+                icon={<Icons.Bug size={20} color={colors.accent.danger} />}
+                label="Journal d'erreurs"
+                sublabel="Erreurs capturées et stack traces"
+                onPress={() => router.push('/settings/errors')}
               />
               <SettingsItem
                 icon={<Icons.Trash2 size={20} color={colors.accent.danger} />}

@@ -8,7 +8,7 @@ import { AppState, AppStateStatus, View, StatusBar, Alert, Text, TouchableOpacit
 import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useAuthStore, usePlannedTransactionStore } from '@/stores';
+import { useAuthStore, usePlannedTransactionStore, useSettingsStore } from '@/stores';
 import { useTheme } from '@/hooks/useTheme';
 import { LockScreen, SetupPinScreen } from '@/components/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -30,10 +30,12 @@ function CrashReportScreen({
   error,
   onContinue,
   onReset,
+  onSafeMode,
 }: {
   error: CapturedError;
   onContinue: () => void;
   onReset: () => void;
+  onSafeMode: () => void;
 }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0A0B', padding: 20 }}>
@@ -68,6 +70,12 @@ function CrashReportScreen({
         >
           <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Continuer quand même</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onSafeMode}
+          style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 }}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Mode secours</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -81,6 +89,7 @@ function RootLayoutContent() {
   const router = useRouter();
   const { theme } = useTheme();
   const { isSetup, isAuthenticated } = useAuthStore();
+  const safeModeEnabled = useSettingsStore((state) => state.safeModeEnabled);
   const bgColor = theme.colors.background.primary;
   const isDark = theme.colors.background.primary === '#0A0A0F';
 
@@ -165,6 +174,12 @@ function RootLayoutContent() {
     }
   }, [appIsReady, fontsLoaded]);
 
+  useEffect(() => {
+    if (appIsReady && fontsLoaded && storesHydrated) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [appIsReady, fontsLoaded, storesHydrated]);
+
   // Si on reste bloqué sur l'écran de chargement (ex. après import corrompu), proposer de réinitialiser
   useEffect(() => {
     const loading = !appIsReady || !fontsLoaded || !storesHydrated;
@@ -175,7 +190,7 @@ function RootLayoutContent() {
 
   // Alerte une fois par session : transactions prévues en retard
   useEffect(() => {
-    if (!storesHydrated || !isAuthenticated || hasShownLateAlert.current) return;
+    if (!storesHydrated || !isAuthenticated || hasShownLateAlert.current || safeModeEnabled) return;
     const overdue = usePlannedTransactionStore.getState().getOverdue();
     if (overdue.length === 0) return;
     hasShownLateAlert.current = true;
@@ -301,10 +316,18 @@ function RootLayoutContent() {
   }
 
   // Authentifié - Navigation principale
+  const showSafeModeBanner = safeModeEnabled;
   return (
     <ErrorBoundary>
       <View className="flex-1" style={{ backgroundColor: bgColor }}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
+        {showSafeModeBanner ? (
+          <View style={{ backgroundColor: '#7C2D12', paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ color: '#FFF7ED', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>
+              Mode secours activé
+            </Text>
+          </View>
+        ) : null}
         <Stack
           screenOptions={{
             headerShown: false,
@@ -366,6 +389,12 @@ export default function RootLayout() {
     });
   }, []);
 
+  useEffect(() => {
+    if (errorCheckDone && lastError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [errorCheckDone, lastError]);
+
   if (!errorCheckDone) {
     return null;
   }
@@ -374,6 +403,12 @@ export default function RootLayout() {
       <CrashReportScreen
         error={lastError}
         onContinue={async () => {
+          await clearLastError();
+          setLastError(null);
+        }}
+        onSafeMode={async () => {
+          const { useSettingsStore } = await import('@/stores/settingsStore');
+          useSettingsStore.getState().setSafeModeEnabled(true);
           await clearLastError();
           setLastError(null);
         }}

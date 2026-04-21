@@ -193,6 +193,7 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system';
   hapticEnabled: boolean;
   notificationsEnabled: boolean;
+  safeModeEnabled?: boolean;
   /** Alerte doublons avant ajout transaction */
   duplicateAlertEnabled?: boolean;
   /** Signatures "ne plus alerter" (type|catégorie|tranche montant) */

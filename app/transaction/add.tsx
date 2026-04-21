@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform, useWindowDimensions, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
