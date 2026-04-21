@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform, useWindowDimensions, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-na
 import * as Icons from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useAccountStore, useTransactionStore, useSettingsStore, usePlannedTransactionStore, useConfigStore, useAutomationStore } from '@/stores';
 import { TransactionCategory, TransactionType } from '@/types';
 import { formatCurrency } from '@/utils/format';
@@ -22,6 +23,7 @@ import { DuplicateAlertModal, ReceiptScanner, VoiceNote } from '@/components/tra
 import { useTheme } from '@/hooks/useTheme';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { openNativeDatePicker } from '@/utils/datePicker';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
@@ -223,6 +225,15 @@ export default function AddTransactionScreen() {
     if (parts.length > 2) return;
     if (parts[1] != null && parts[1].length > 2) return;
     setAmount(cleaned);
+  };
+
+  const openPlannedDatePicker = () => {
+    openNativeDatePicker({
+      value: plannedDate,
+      minimumDate: new Date(),
+      onPick: setPlannedDate,
+      onFallback: () => setShowDatePicker(true),
+    });
   };
 
   const handleDescriptionChange = (text: string) => {
@@ -442,7 +453,7 @@ export default function AddTransactionScreen() {
                       {isPlanned && (
                         <>
                           <TouchableOpacity
-                            onPress={() => setShowDatePicker(true)}
+                            onPress={openPlannedDatePicker}
                             className="mt-3 flex-row items-center justify-between px-4 py-3 rounded-xl"
                             style={{ backgroundColor: colors.background.card, borderWidth: 1, borderColor: colors.background.tertiary, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 0 }}
                           >
@@ -455,26 +466,7 @@ export default function AddTransactionScreen() {
                             <Icons.ChevronRight size={18} color={colors.text.secondary} />
                           </TouchableOpacity>
 
-                          <View className="mt-3 rounded-xl px-4 py-3" style={{ backgroundColor: `${colors.accent.primary}12`, borderWidth: 1, borderColor: `${colors.accent.primary}24` }}>
-                            <View className="flex-row items-center justify-between">
-                              <View className="flex-1 pr-3">
-                                <Text style={{ color: colors.text.primary, fontWeight: '600' }}>Paiement régulier</Text>
-                                <Text className="text-xs mt-1" style={{ color: colors.text.secondary }}>Créer une transaction prévue qui revient automatiquement.</Text>
-                              </View>
-                              <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }} thumbColor={colors.background.secondary} />
-                            </View>
-                            {isRecurring && (
-                              <View className="mt-3 flex-row" style={{ gap: 8 }}>
-                                {(['weekly', 'monthly'] as const).map((f) => (
-                                  <TouchableOpacity key={f} onPress={() => setFrequency(f)} className="flex-1 py-3 rounded-xl" style={{ backgroundColor: frequency === f ? colors.accent.primary : colors.background.card, borderWidth: 1, borderColor: frequency === f ? colors.accent.primary : colors.background.tertiary }}>
-                                    <Text className="text-center font-medium" style={{ color: frequency === f ? '#fff' : colors.text.secondary }}>{f === 'weekly' ? 'Hebdo' : 'Mensuel'}</Text>
-                                  </TouchableOpacity>
-                                ))}
-                              </View>
-                            )}
-                          </View>
-
-                          {showDatePicker && (
+                          {showDatePicker && Platform.OS === 'ios' && (
                             <View className="mt-2">
                               <DateTimePicker
                                 value={plannedDate}

@@ -12,6 +12,7 @@ import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '@/hooks/useTheme';
+import { openNativeDatePicker } from '@/utils/datePicker';
 
 function toLocalDateIso(date: Date): string {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
@@ -41,6 +42,14 @@ export default function AddPlannedTransactionScreen() {
   React.useEffect(() => { if (accounts.length && !accountId) setAccountId(accounts[0].id); }, [accounts, accountId]);
   const filteredCategories = getVisibleCategories(type === 'income' ? 'income' : 'expense');
   const getIcon = (name: string) => (Icons as any)[name] || Icons.CircleDot;
+  const openDatePicker = () => {
+    openNativeDatePicker({
+      value: plannedDate,
+      minimumDate: new Date(),
+      onPick: setPlannedDate,
+      onFallback: () => setShowCustomDatePicker(true),
+    });
+  };
 
   const handleSave = () => {
     const amountNum = parseFloat(amount?.replace(',', '.') ?? '0');
@@ -74,7 +83,7 @@ export default function AddPlannedTransactionScreen() {
               {QUICK_DATES.map(({ label, get }) => {
                 if (label === 'Autre date') {
                   return (
-                    <TouchableOpacity key={label} onPress={() => setShowCustomDatePicker(true)} className="px-4 py-3 rounded-xl" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
+                    <TouchableOpacity key={label} onPress={openDatePicker} className="px-4 py-3 rounded-xl" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
                       <Text style={{ color: colors.text.secondary }}>Autre date</Text>
                     </TouchableOpacity>
                   );
@@ -112,7 +121,29 @@ export default function AddPlannedTransactionScreen() {
             </View>
           ) : null}
 
-          {showCustomDatePicker ? (<>{Platform.OS === 'ios' ? (<Modal visible transparent animationType="slide"><TouchableOpacity activeOpacity={1} onPress={() => setShowCustomDatePicker(false)} className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}><View className="p-4 rounded-t-2xl" style={{ backgroundColor: colors.background.secondary }}><View className="flex-row justify-between items-center mb-4"><TouchableOpacity onPress={() => setShowCustomDatePicker(false)}><Text style={{ color: colors.text.secondary }}>Annuler</Text></TouchableOpacity><Text style={{ color: colors.text.primary, fontWeight: '700' }}>Choisir la date</Text><TouchableOpacity onPress={() => setShowCustomDatePicker(false)}><Text style={{ color: colors.accent.primary, fontWeight: '700' }}>OK</Text></TouchableOpacity></View><DateTimePicker value={plannedDate} mode="date" display="spinner" onChange={(_, d) => d && setPlannedDate(d)} locale="fr-FR" /></View></TouchableOpacity></Modal>) : (<DateTimePicker value={plannedDate} mode="date" display="default" onChange={(_, d) => { if (d) setPlannedDate(d); setShowCustomDatePicker(false); }} />)}</>) : null}
+          {showCustomDatePicker ? (
+            <Modal visible transparent animationType="slide">
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setShowCustomDatePicker(false)}
+                className="flex-1 justify-end"
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+              >
+                <View className="p-4 rounded-t-2xl" style={{ backgroundColor: colors.background.secondary }}>
+                  <View className="flex-row justify-between items-center mb-4">
+                    <TouchableOpacity onPress={() => setShowCustomDatePicker(false)}>
+                      <Text style={{ color: colors.text.secondary }}>Annuler</Text>
+                    </TouchableOpacity>
+                    <Text style={{ color: colors.text.primary, fontWeight: '700' }}>Choisir la date</Text>
+                    <TouchableOpacity onPress={() => setShowCustomDatePicker(false)}>
+                      <Text style={{ color: colors.accent.primary, fontWeight: '700' }}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker value={plannedDate} mode="date" display="spinner" onChange={(_, d) => d && setPlannedDate(d)} locale="fr-FR" />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          ) : null}
 
           <View className="mb-6"><Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Compte</Text><ScrollView horizontal showsHorizontalScrollIndicator={false}><View className="flex-row" style={{ gap: 8 }}>{accounts.map((acc) => { const Icon = getIcon(acc.icon); const sel = accountId === acc.id; return (<TouchableOpacity key={acc.id} onPress={() => setAccountId(acc.id)} className="px-4 py-3 rounded-xl flex-row items-center" style={{ backgroundColor: sel ? `${acc.color}20` : colors.background.secondary, borderWidth: 1, borderColor: sel ? acc.color : colors.background.tertiary }}><Icon size={18} color={sel ? acc.color : colors.text.secondary} /><Text className="ml-2 font-medium" style={{ color: sel ? colors.text.primary : colors.text.secondary }}>{acc.name}</Text></TouchableOpacity>); })}</View></ScrollView></View>
 

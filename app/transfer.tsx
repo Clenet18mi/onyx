@@ -42,6 +42,17 @@ export default function TransferScreen() {
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
 
+  const updateAmount = (value: string) => {
+    const normalized = value.replace(',', '.');
+    const cleaned = normalized.replace(/[^0-9.]/g, '');
+    const dotIndex = cleaned.indexOf('.');
+    if (dotIndex === -1) {
+      setAmount(cleaned);
+      return;
+    }
+    setAmount(`${cleaned.slice(0, dotIndex)}.${cleaned.slice(dotIndex + 1).replace(/\./g, '').slice(0, 2)}`);
+  };
+
   const swapAccounts = () => {
     if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const temp = fromAccountId;
@@ -85,7 +96,18 @@ export default function TransferScreen() {
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View className="px-6 mb-8 items-center">
             <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Montant à transférer</Text>
-            <Text style={{ color: colors.text.primary, fontSize: 54, fontWeight: '700' }}>{amount || '0'} €</Text>
+            <TextInput
+              value={amount}
+              onChangeText={updateAmount}
+              placeholder="0"
+              placeholderTextColor={colors.text.tertiary}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              onSubmitEditing={handleTransfer}
+              className="w-full px-4 py-3 rounded-2xl text-center"
+              style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary, fontSize: 36, fontWeight: '700' }}
+            />
+            <Text style={{ color: colors.text.secondary, fontSize: 13, marginTop: 10 }}>Saisissez le montant avec le clavier du téléphone</Text>
           </View>
 
           <View className="px-6 mb-6">
@@ -121,16 +143,6 @@ export default function TransferScreen() {
           <View className="px-6 mb-6">
             <Text className="text-sm mb-2" style={{ color: colors.text.secondary }}>Note (optionnel)</Text>
             <TextInput value={description} onChangeText={setDescription} placeholder="Ex: Épargne mensuelle" placeholderTextColor={colors.text.tertiary} className="px-4 py-3 rounded-xl text-base" style={{ backgroundColor: colors.background.secondary, color: colors.text.primary, borderWidth: 1, borderColor: colors.background.tertiary }} />
-          </View>
-
-          <View className="px-6 mb-6">
-            <View className="flex-row flex-wrap justify-center" style={{ gap: 12 }}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'delete'].map((value) => (
-                <TouchableOpacity key={value} onPress={() => (hapticEnabled ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) : null) || (value === 'delete' ? setAmount((prev) => prev.slice(0, -1)) : value === '.' ? (!amount.includes('.') ? setAmount((prev) => prev + '.') : null) : ((amount.split('.')[1]?.length ?? 0) >= 2 ? null : setAmount((prev) => prev + value)))} className="w-20 h-14 rounded-2xl items-center justify-center" style={{ backgroundColor: colors.background.secondary, borderWidth: 1, borderColor: colors.background.tertiary }}>
-                  {value === 'delete' ? <Icons.Delete size={24} color={colors.text.secondary} /> : <Text style={{ color: colors.text.primary, fontSize: 20, fontWeight: '700' }}>{value}</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
 
           <View className="px-6 mb-8"><Button title="Effectuer le virement" variant="primary" size="lg" fullWidth onPress={handleTransfer} icon={<Icons.ArrowLeftRight size={20} color="white" />} /></View>
